@@ -51,6 +51,8 @@ This roadmap is the source of truth for the Linux port. Update the checkboxes on
 - [ ] Build a capability matrix for common Linux environments and document degraded behavior.
 - [ ] Decide which Android features must be adapted, simplified, or omitted based on verified feasibility.
 
+> Execution checklist and safe host/Flatpak test commands: [Linux network feasibility test plan](docs/linux-network-feasibility-test-plan.md). The matrix in that document must be filled with observed results; documentation alone does not count as a pass.
+
 ### Security acceptance criteria
 
 - [ ] The application never requests root, sudo, or an administrator password.
