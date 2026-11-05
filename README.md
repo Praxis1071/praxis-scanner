@@ -1,6 +1,6 @@
-# Network Scanner for Linux
+# Praxis Scanner
 
-A planned Linux desktop port of the Android **Network Scanner** project, built with **Rust**, **GTK4**, and **libadwaita**.
+A planned Linux desktop network scanner in the **Praxis Scanner** project family, built with **Rust**, **GTK4**, and **libadwaita**. It is a Linux-native companion to the Android Network Scanner codebase, not an Android build.
 
 > **Project status: Planning**
 >
@@ -95,7 +95,7 @@ The following are targets, not claims of current implementation. Each feature mu
 
 ## Project roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the phased research, architecture, implementation, testing, and release plan.
+See [ROADMAP.md](ROADMAP.md) for the phased research, architecture, implementation, testing, and release plan. The current Android source analysis and preliminary Linux feature-parity decisions are documented in [docs/linux-port-audit.md](docs/linux-port-audit.md).
 
 ## License
 
