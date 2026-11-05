@@ -33,6 +33,30 @@ flatpak --version
 
 Do not include public IP addresses, SSIDs, MAC addresses or other identifying network details in public issue reports unless intentionally disclosed.
 
+
+
+## 1A. First host baseline (run before any proof of concept)
+
+Run these commands as the logged-in desktop user, without `sudo`. They only read local system/network state; they do not send discovery packets or change configuration.
+
+```sh
+cat /etc/os-release
+uname -r
+id
+ip -brief link
+ip -brief address
+ip route
+ip neigh show
+cat /proc/sys/net/ipv4/ping_group_range
+flatpak --version
+```
+
+If a command is unavailable, report that fact rather than installing packages yet. The output is used to choose the next safe test, not to assume that every feature is supported.
+
+Before sharing output, redact public addresses, private IPs, MAC addresses, interface names, SSIDs, hostnames, and usernames if you prefer. Keep the shape of the output and the numeric ping-group range/user group IDs where possible, because those values affect the technical assessment.
+
+**Do not run a subnet sweep, a full port scan, change sysctls, add capabilities, or install a privileged helper during this phase.** The next tests will be chosen only after reviewing this baseline.
+
 ## 2. Host interface and route inspection
 
 Run as the ordinary desktop user:
