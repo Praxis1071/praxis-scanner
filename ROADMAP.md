@@ -37,7 +37,7 @@ This roadmap is the source of truth for the Linux port. Update the checkboxes on
 
 ## 2. Linux feasibility and unprivileged networking research
 
- > Initial kernel, Flatpak and Rust-crate research notes are in [the Linux port audit](docs/linux-port-audit.md). Items below remain unchecked until experimentally verified on Linux and in Flatpak.
+> Initial kernel, Flatpak and Rust-crate research notes are in [the Linux port audit](docs/linux-port-audit.md). Items below remain unchecked until experimentally verified on Linux and in Flatpak.
 
 - [ ] Verify Linux unprivileged ICMP options across target distributions and Flatpak runtime constraints.
 - [ ] Verify whether the required ping socket behavior is available without `CAP_NET_RAW`; do not assume it is enabled.
