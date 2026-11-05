@@ -70,6 +70,8 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 > Initial kernel, Flatpak and Rust-crate research notes are in [the Linux port audit](docs/linux-port-audit.md). Items below remain unchecked until experimentally verified on the host and in Flatpak.
 
+- [x] Refresh current Linux kernel, Flatpak, rtnetlink, ICMP, GTK4 and libadwaita documentation; record newly identified security caveats in the audit. (Documentation research only; runtime behavior remains unverified.)
+- [x] Add a safe, read-only first-pass host baseline command set to the feasibility test plan.
 - [ ] Record the target development system details (distribution, kernel, user/group context, network interfaces, routes, neighbor table, Flatpak availability, and ping-group range).
 - [ ] Verify Linux unprivileged ICMP options across target distributions and Flatpak runtime constraints.
 - [ ] Verify whether the required ping socket behavior is available without `CAP_NET_RAW`; do not assume it is enabled.
