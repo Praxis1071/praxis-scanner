@@ -178,3 +178,35 @@ The following items remain open before the source-audit phase can be fully close
 4. Finalize the Rust dependency and architecture design.
 
 **No Rust source, GTK UI, Flatpak manifest or executable Linux code has been created.**
+
+
+## 9. Preliminary Rust ecosystem research (not a dependency lock)
+
+The following crates are research candidates only. No dependency has been added to the repository, and none is approved for implementation yet.
+
+| Area | Candidate | What the current documentation indicates | Decision |
+| --- | --- | --- | --- |
+| Linux interfaces, routes and neighbors | `rtnetlink` (latest docs currently show 0.24.x) | Rust netlink API for links, addresses, neighbor/ARP and routes; MIT-licensed upstream | Strong candidate for read-only interface/route/neighbor queries. Wrap only GET/dump operations; do not expose mutation APIs to the scanner core. |
+| mDNS / DNS-SD | `mdns-sd` (0.21.7) | Maintained DNS-SD library; uses a dedicated daemon thread and flume channels, so it is not tied to a particular async runtime; Apache-2.0 OR MIT | Strong candidate. Test interface selection, multicast behavior, shutdown and sandbox operation. |
+| SSDP / UPnP | `ssdp-client` (2.1.0) | Async SSDP discovery API using Tokio; Apache-2.0 OR MIT | Candidate for discovery only. Device-description fetching and XML parsing still need a separate hardened design. |
+| ICMPv4 | `icmp-socket2` (0.6.4) or direct `socket2` use | Exposes a datagram ICMPv4 socket as well as a separate raw-socket type; datagram operation depends on the kernel's `ping_group_range` | Conditional candidate. Only the datagram path may be considered. Never use the raw-socket implementation or add capabilities. |
+| GTK4 / GNOME desktop | `gtk4` + `libadwaita` from gtk-rs | Official Rust bindings and GNOME HIG widgets; GTK objects are not thread-safe and must stay on the GTK main thread | Confirmed technology direction. Keep all scan/network work away from GTK objects and deliver state changes to the main context. |
+
+### Runtime and integration implications
+
+- `rtnetlink`'s common configuration uses Tokio; `ssdp-client` also uses Tokio. This makes Tokio a plausible scan-engine runtime, but it is not yet a final decision.
+- `mdns-sd` owns its own daemon thread and communicates through channels; it does not require the scanner to adopt its runtime.
+- GTK/GLib owns the UI main loop. GTK widgets must only be accessed from that main thread. If the scanner uses a separate Tokio runtime, the boundary must be explicit and use channels or main-context dispatch.
+- Do not run blocking socket operations, large scans, XML parsing or persistence work on the GTK main thread.
+- Pin compatible crate versions only after a minimal proof-of-concept has built against the selected Flatpak runtime and the complete dependency tree has passed license and security review.
+
+### Research links
+
+- `rtnetlink`: https://docs.rs/rtnetlink/latest/rtnetlink/
+- `mdns-sd`: https://docs.rs/mdns-sd/latest/mdns_sd/
+- `ssdp-client`: https://docs.rs/ssdp-client/latest/ssdp_client/
+- `icmp-socket2`: https://docs.rs/icmp-socket2/latest/icmp_socket2/
+- `socket2`: https://docs.rs/socket2/latest/socket2/
+- gtk-rs main-loop and async integration: https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html
+
+**Dependency decision:** deferred. API suitability, transitive dependency count, security advisories, exact license metadata, platform compatibility, and behavior in Flatpak must all be reviewed before implementation.
