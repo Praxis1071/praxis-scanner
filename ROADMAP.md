@@ -216,7 +216,7 @@ Implementation must proceed incrementally. Each item needs tests and review befo
 - [ ] Resolve blocking bugs and repeat affected regression tests.
 - [ ] Obtain explicit maintainer approval for the completed Linux port.
 - [ ] Review the complete branch diff and confirm Android source files and Android behavior remain untouched.
-- [ ] Merge the Linux work into `main) only after explicit approval.
+- [ ] Merge the Linux work into `main` only after explicit approval.
 - [ ] Tag the first stable Linux release and publish the corresponding source and release artifacts.
 
 ## Definition of done — the final objective
