@@ -18,24 +18,26 @@ This roadmap is the source of truth for the Linux port. Update the checkboxes on
 - [x] Treat unprivileged operation as a hard requirement, even if that means omitting a feature.
 - [x] Keep the Android implementation on the existing `main` branch untouched while planning and porting on a dedicated branch.
 - [x] Do not start coding until the maintainer explicitly says to begin.
-- [ ] Confirm the final Linux repository name and whether this branch will remain in this repository or later be split into a standalone repository.
+- [x] Confirm the repository and product name as **Praxis Scanner** (`praxis-scanner`). The long-term branch-versus-standalone-repository decision remains open.
 
 ## 1. Source-project audit
 
-- [ ] Inspect the complete Android repository tree and identify the responsibilities of each module.
-- [ ] Trace the full scan lifecycle from UI action to discovery, enrichment, and result presentation.
-- [ ] Document the existing discovery algorithms, timeouts, concurrency model, and fallback behavior.
-- [ ] Inspect ICMP/TCP reachability checks and determine which parts can be reproduced without raw sockets or capabilities.
-- [ ] Inspect ARP and MAC address acquisition; identify what can be read from Linux's existing neighbor table without elevated privileges.
-- [ ] Inspect mDNS, SSDP/UPnP, and NetBIOS implementations and their protocol details.
-- [ ] Inspect port scanning, banner collection, service identification, and OS/device fingerprint heuristics.
-- [ ] Inspect vendor/OUI data sources, update strategy, and licensing.
-- [ ] Inspect device naming, icon assignment, network-interface selection, and preferences persistence.
-- [ ] Review Android screenshots and map each screen and interaction to a Linux desktop equivalent.
-- [ ] Record reusable algorithms, platform-specific code that must be replaced, and code that should not be ported.
-- [ ] Produce a feature parity matrix: Android behavior, Linux approach, privilege requirements, limitations, and decision.
+- [x] Inspect the Android repository tree and identify the responsibilities of each module. (See [Linux port audit](docs/linux-port-audit.md).)
+- [x] Trace the full scan lifecycle from UI action to discovery, enrichment, and result presentation.
+- [x] Document the existing discovery algorithms, timeouts, concurrency model, and fallback behavior.
+- [x] Inspect ICMP/TCP reachability checks and determine which parts can be reproduced without raw sockets or capabilities.
+- [x] Inspect Android ARP/MAC acquisition and identify the Linux read-only neighbor-table candidate; runtime permissions remain unverified.
+- [x] Inspect mDNS, SSDP/UPnP, and NetBIOS implementations and their protocol details.
+- [x] Inspect port scanning, banner collection, service identification, and OS/device fingerprint heuristics.
+- [ ] Inspect vendor/OUI data source and update strategy. **Licensing/redistribution review remains open; do not bundle the current database yet.**
+- [x] Inspect device naming, icon assignment, network-interface selection, and preferences persistence.
+- [ ] Review Android screenshot images visually and approve desktop wireframes. Source-level screen/interaction mapping is documented; visual review remains open.
+- [x] Record reusable behavior, platform-specific code that must be replaced, and code that must not be ported.
+- [x] Produce the preliminary feature parity matrix. Runtime and Flatpak verification remain open.
 
 ## 2. Linux feasibility and unprivileged networking research
+
+> Initial research notes are in [the Linux port audit](docs/linux-port-audit.md). Items below remain unchecked until experimentally verified on Linux and in Flatpak.
 
 - [ ] Verify Linux unprivileged ICMP options across target distributions and Flatpak runtime constraints.
 - [ ] Verify whether the required ping socket behavior is available without `CAP_NET_RAW`; do not assume it is enabled.
