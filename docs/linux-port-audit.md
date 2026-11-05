@@ -231,7 +231,7 @@ This section records a fresh documentation review. These findings refine the can
 
 ### Current Rust/GTK candidate documentation
 
-- Current docs.rs pages surfaced `rtnetlink` 0.24.x, `mdns-sd` 0.21.7, `icmp-socket2` 0.6.4, `gtk4` 0.11.5 and `libadwaita` 0.9.2. These are research snapshots, not pinned dependency choices. Re-check exact versions, MSRV, system-library requirements, transitive licenses and security advisories at implementation time.
+- Current documentation snapshots surfaced `rtnetlink` 0.24.0, `mdns-sd` 0.21.7, `icmp-socket2` 0.6.4, `gtk4` 0.11.5 and `libadwaita` 0.9.2. However, the rust-netlink GitHub release page still identifies v0.23.0 as its latest tagged release. Treat the apparent 0.24.0 docs.rs version as unconfirmed until the crates.io index and `cargo info rtnetlink` agree. These are research snapshots, not pinned dependency choices. Re-check exact versions, MSRV, system-library requirements, transitive licenses and security advisories at implementation time.
 - `mdns-sd` documents itself as beta software and runs its daemon on a dedicated thread with flume channels. It remains a candidate, but lifecycle, interface selection, shutdown and resource limits need explicit tests.
 - `ssdp-client` 2.1.0 remains a discovery candidate using Tokio. Its presence on docs.rs is not sufficient evidence of maintenance quality or production suitability. Review recent upstream activity, open issues, parser behavior, and whether a small audited in-house M-SEARCH implementation would be safer and simpler.
 - gtk-rs documents GTK objects as not `Send`/`Sync` and GTK calls from other threads as invalid. Keep every GTK object on the main thread. The network engine may use worker tasks, but must communicate using owned, thread-safe domain messages and main-context dispatch.
@@ -259,3 +259,37 @@ This section records a fresh documentation review. These findings refine the can
 - Flathub application requirements: https://docs.flathub.org/docs/for-app-authors/requirements
 
 **Updated research conclusion:** TCP connect remains the dependable baseline. ICMP is optional and must use an explicitly datagram-only path. Read-only rtnetlink is promising but unverified in the target environment. Flatpak network sharing is likely necessary but has a documented abstract-socket exposure trade-off. No production dependency has been selected or added.
+
+
+## 11. Runtime lifecycle and dependency-source cross-check (2026-11-05)
+
+This review adds a source-of-truth check for the Flatpak runtime and resolves a version discrepancy found during dependency research.
+
+### Flatpak / Freedesktop runtime lifecycle
+
+The Freedesktop SDK release timeline currently lists:
+
+- **26.08** — supported until September 2028.
+- **25.08** — supported until September 2027.
+- **24.08** — reached end of life in September 2026.
+
+For a project being developed in November 2026, do not select 24.08 as the new baseline. 26.08 is the longest-lived current candidate; 25.08 remains a supported compatibility candidate. The final choice must still be checked against the matching GNOME runtime/SDK, GTK4 and libadwaita versions, Rust toolchain availability, and Flathub build requirements. Do not infer that the Freedesktop runtime lifecycle automatically establishes the GNOME runtime lifecycle.
+
+### rtnetlink version discrepancy
+
+The current docs.rs documentation view displays `rtnetlink` 0.24.0, while the upstream `rust-netlink/rtnetlink` GitHub releases page identifies 0.23.0 as its latest tagged release (2026-08-18). This is a source discrepancy, not a reason to guess or pin 0.24.0.
+
+**Decision:** keep rtnetlink as an unapproved candidate. Before adding it, verify the published crates.io version and exact dependency graph using the Cargo registry (for example, `cargo info rtnetlink` and `cargo tree` after creating an isolated POC). Record the resolved version and lockfile, then audit every transitive dependency. The application must expose only read/dump operations even if the crate also provides mutation APIs.
+
+### mDNS-SD maintenance signal
+
+The upstream `mdns-sd` changelog records version 0.21.7 as a bug-fix release on 2026-11-01, with fixes during late October and CI modernization. This is evidence of recent maintenance, improving confidence that the project is active. It does not replace our own review of its daemon-thread lifecycle, interface selection, bounded resource use, multicast behavior, cancellation/shutdown, dependency licenses, or Flatpak behavior.
+
+### Sources reviewed
+
+- Freedesktop SDK release lifecycle: https://freedesktop-sdk.gitlab.io/documentation/wiki/Releases.html
+- rtnetlink upstream releases: https://github.com/rust-netlink/rtnetlink/releases
+- rtnetlink docs.rs version view: https://docs.rs/rtnetlink/latest/rtnetlink/
+- mdns-sd upstream changelog: https://github.com/keepsimple1/mdns-sd/blob/main/CHANGELOG.md
+
+**Conclusion:** use a currently supported Flatpak runtime (26.08 preferred for lifecycle, subject to GNOME runtime compatibility); do not treat docs.rs' apparent rtnetlink 0.24.0 as a confirmed published release; and retain mdns-sd only as a candidate pending isolated runtime and sandbox tests.
