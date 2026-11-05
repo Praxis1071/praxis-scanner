@@ -210,3 +210,52 @@ The following crates are research candidates only. No dependency has been added 
 - gtk-rs main-loop and async integration: https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html
 
 **Dependency decision:** deferred. API suitability, transitive dependency count, security advisories, exact license metadata, platform compatibility, and behavior in Flatpak must all be reviewed before implementation.
+
+
+## 10. Updated ecosystem and sandbox review (2026-11-05)
+
+This section records a fresh documentation review. These findings refine the candidate list; they do **not** count as host/Flatpak runtime test results and do not approve production dependencies.
+
+### Important ICMP library safety finding
+
+- The Linux kernel documents `net.ipv4.ping_group_range` as the group-ID range allowed to create ICMP datagram sockets. The documented default `1 0` permits nobody. This setting must be observed, never modified by Praxis Scanner.
+- `icmp-socket2` exposes a distinct `DgramIcmpSocket4` (`SOCK_DGRAM`) type and a separate raw `IcmpSocket4` type. If ICMP is implemented, the code must instantiate only the datagram type and return an unavailable/permission-denied result if it cannot be created.
+- **Do not adopt `ping-tokio` without a strict audit/configuration:** its current documentation says it tries an unprivileged datagram socket first but automatically falls back to a raw socket when denied. That fallback conflicts with this project's non-negotiable policy. The same concern applies to any library that silently changes socket type or asks for capabilities.
+- A successful call to the system `ping` command is not proof that the application's exact datagram-socket path is available. The Rust proof of concept must directly test the datagram socket.
+
+### rtnetlink read-only boundary
+
+- The kernel's rtnetlink implementation distinguishes GET requests/dumps from mutating operations and applies a generic `CAP_NET_ADMIN` check to non-GET operations. This supports investigating read-only `RTM_GETLINK`, `RTM_GETADDR`, `RTM_GETROUTE`, and `RTM_GETNEIGH` operations.
+- This is not a blanket guarantee: operation-specific checks, network namespaces, sandboxing and distribution behavior still need tests. Keep the scanner API read-only and do not expose add/delete/set requests.
+- Neighbor entries remain cache observations. Preserve their interface index and NUD state; never label STALE, INCOMPLETE or FAILED entries as confirmed live devices.
+
+### Current Rust/GTK candidate documentation
+
+- Current docs.rs pages surfaced `rtnetlink` 0.24.x, `mdns-sd` 0.21.7, `icmp-socket2` 0.6.4, `gtk4` 0.11.5 and `libadwaita` 0.9.2. These are research snapshots, not pinned dependency choices. Re-check exact versions, MSRV, system-library requirements, transitive licenses and security advisories at implementation time.
+- `mdns-sd` documents itself as beta software and runs its daemon on a dedicated thread with flume channels. It remains a candidate, but lifecycle, interface selection, shutdown and resource limits need explicit tests.
+- `ssdp-client` 2.1.0 remains a discovery candidate using Tokio. Its presence on docs.rs is not sufficient evidence of maintenance quality or production suitability. Review recent upstream activity, open issues, parser behavior, and whether a small audited in-house M-SEARCH implementation would be safer and simpler.
+- gtk-rs documents GTK objects as not `Send`/`Sync` and GTK calls from other threads as invalid. Keep every GTK object on the main thread. The network engine may use worker tasks, but must communicate using owned, thread-safe domain messages and main-context dispatch.
+
+### Flatpak permission security nuance
+
+- Flatpak's official permissions documentation confirms network access is denied by default and `--share=network` grants network access.
+- The same documentation warns that sharing the host network namespace also exposes host abstract Unix-domain sockets to the sandbox. Treat this as a meaningful security trade-off, not a harmless checkbox. The application still needs network access for its core purpose, but must request no unrelated host filesystem, system D-Bus, device, or capability permissions; document the permission and test its actual effective sandbox.
+- Flathub's current requirements emphasize keeping static permissions to an absolute minimum and using portals where they fit. A network-scanning use case has no obvious portal substitute for raw local-network socket discovery, but the manifest must still be minimal and justified.
+
+### Sources reviewed
+
+- Linux kernel IP sysctl (`ping_group_range`): https://kernel.org/doc/html/latest/networking/ip-sysctl.html
+- `icmp-socket2` datagram and raw socket API: https://docs.rs/icmp-socket2/latest/icmp_socket2/socket/index.html
+- `ping-tokio` permission behavior and automatic raw fallback: https://docs.rs/ping-tokio/latest/ping_tokio/
+- Linux rtnetlink manual: https://man7.org/linux/man-pages/man7/rtnetlink.7.html
+- Linux kernel rtnetlink implementation: https://github.com/torvalds/linux/blob/master/net/core/rtnetlink.c
+- Linux kernel neighbor netlink specification: https://docs.kernel.org/next/networking/netlink_spec/rt-neigh.html
+- `rtnetlink`: https://docs.rs/rtnetlink/latest/rtnetlink/
+- `mdns-sd`: https://docs.rs/mdns-sd/latest/mdns_sd/
+- `ssdp-client`: https://docs.rs/ssdp-client/latest/ssdp_client/
+- gtk-rs GTK4 thread-safety and MSRV notes: https://docs.rs/gtk4/latest/gtk4/
+- Rust libadwaita bindings: https://docs.rs/libadwaita/latest/libadwaita/
+- Official Flatpak sandbox permissions: https://docs.flatpak.org/en/latest/sandbox-permissions.html
+- Flathub application requirements: https://docs.flathub.org/docs/for-app-authors/requirements
+
+**Updated research conclusion:** TCP connect remains the dependable baseline. ICMP is optional and must use an explicitly datagram-only path. Read-only rtnetlink is promising but unverified in the target environment. Flatpak network sharing is likely necessary but has a documented abstract-socket exposure trade-off. No production dependency has been selected or added.
