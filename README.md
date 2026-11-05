@@ -1,127 +1,102 @@
-<div align="center">
+# Network Scanner for Linux
 
-<img src="assets/icon_readme.png" width="160" height="160" alt="Network Scanner icon">
+A planned Linux desktop port of the Android **Network Scanner** project, built with **Rust**, **GTK4**, and **libadwaita**.
 
-# Network Scanner
+> **Project status: Planning**
+>
+> This branch contains the Linux port's planning documentation. Implementation has not started. The Android application on `main` remains unchanged.
 
-A fast, privacy-focused network scanner for Android
+## Project goals
 
-<p align="center">
-  <a href="https://github.com/usamaiqb/network-scanner/actions/workflows/ci.yml"><img src="https://github.com/usamaiqb/network-scanner/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/usamaiqb/network-scanner/releases"><img src="https://img.shields.io/github/downloads/usamaiqb/network-scanner/total?logo=github&logoColor=white&label=Downloads" alt="Downloads" /></a>
-  <a href="https://f-droid.org/packages/com.networkscanner.app/"><img src="https://img.shields.io/f-droid/v/com.networkscanner.app?logo=fdroid&logoColor=white&label=F-Droid" alt="F-Droid" /></a>
-  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a>
-</p>
+Create a native Linux desktop network scanner that preserves the Android application's core discovery and device-inspection workflow while adapting it to Linux desktop conventions.
 
-</div>
+The Linux application will:
 
-Find every device on your local network, with its IP address, hostname, open ports, and device type. No ads, no tracking, no root required, and it works fully offline.
+- Run on Linux only.
+- Use Rust for the application and scanning logic.
+- Use GTK4 and libadwaita for the graphical interface.
+- Be distributed exclusively as a Flatpak.
+- Remain licensed under GNU GPL-3.0, while preserving applicable upstream copyright and license notices.
+- Perform all supported operations without root, sudo, administrator passwords, setuid helpers, privileged services, or capabilities such as `CAP_NET_RAW`.
+- Request only the minimum Flatpak permissions needed for its documented features.
 
-<p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.networkscanner.app"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80" /></a>
-  <a href="https://f-droid.org/packages/com.networkscanner.app/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80" /></a>
-</p>
+## Planned features
 
-Download the latest APK from the [Releases](https://github.com/usamaiqb/network-scanner/releases) page.
+The following are targets, not claims of current implementation. Each feature must be validated against Linux and the unprivileged execution requirement before it is committed to the product.
 
-## Screenshots
+### Network discovery
 
-<p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="Main Screen" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="Devices List" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="Device Details" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="200" alt="Device Open Ports" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="200" alt="Custom Icon" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="200" alt="Settings Screen" />
-</p>
+- Local network host discovery using unprivileged methods.
+- TCP-based reachability checks and fallback discovery.
+- Read-only use of the system neighbor table where available.
+- mDNS / Bonjour discovery.
+- SSDP / UPnP discovery.
+- NetBIOS name and workgroup discovery.
+- Network interface selection where supported by the sandbox.
 
-## Features
+### Device information
 
-### Discovery
+- IP address and hostname.
+- MAC address and vendor information when available from permitted system data.
+- Device category hints based on observed services.
+- Best-effort operating-system and service identification using connection-based probes and banners.
+- User-defined device names and icons.
 
-- **Ping sweep** - Parallel ICMP sweep with TCP fallback for devices that block ICMP
-- **ARP cache** - Picks up devices without sending any traffic
-- **mDNS / Bonjour** - Finds AirPlay, Chromecast, printers, SSH, SMB, HomeKit, and more
-- **SSDP / UPnP** - Fetches friendly name, manufacturer, and model number
-- **NetBIOS** - Resolves hostnames and workgroups for Windows and Samba devices
-- **Port heuristics** - Identifies Cast-enabled TVs and similar devices when other methods come up empty
-- **Shizuku / root** - Optionally reads the ARP table with shell or root privileges, so MAC addresses also show on Android 10+
+### Port and service inspection
 
-### Device details
+- Configurable common-port scans.
+- Optional broader TCP port scans with clear performance and network-impact warnings.
+- Service and version hints from safely collected banners.
+- Cancellation, timeouts, concurrency limits, and clear error reporting.
 
-- **MAC address & vendor** - OUI vendor lookup, with detection of randomized MAC addresses (see [Known limitations](#known-limitations))
-- **OS fingerprinting** - Detects Windows, Linux, macOS, router firmware, and printer OS from open ports and banners
-- **Device type icons** - Smartphones, laptops, TVs, routers, printers, NAS, and more
-- **Port scanning** - Deep scan of common ports with banner grabbing and version detection, or a full sweep of all 65,535 ports
-- **Copy & open** - Long press any detail to copy it, or tap an open web port to open it in your browser
-- **Customization** - Rename devices, assign icons, choose the network interface (Wi-Fi, Ethernet, VPN), and configure probed ports
+### Desktop experience
 
-## Requirements
+- A GTK4/libadwaita interface inspired by the Android application's information hierarchy and workflow.
+- Device list, device details, scan progress, and preferences.
+- Responsive layouts suitable for Linux desktop windows.
+- No advertising, tracking, or unnecessary network communication.
 
-- Android 8.0 (Oreo) or higher
-- A local network connection (Wi-Fi, Ethernet, or VPN)
+## Non-negotiable security requirements
 
-## Verification
+- No root or sudo execution.
+- No administrator password prompts.
+- No privileged helper daemon or setuid executable.
+- No requirement for raw-socket capabilities such as `CAP_NET_RAW`.
+- No broad Flatpak permissions unless a demonstrated, documented requirement makes them unavoidable; the rootless policy takes priority.
+- Features that cannot be implemented reliably without elevated privileges must be redesigned around an unprivileged alternative or omitted.
+- The application must clearly explain unavailable information instead of fabricating device details.
 
-Builds from this repository, Google Play and F-Droid are all signed with the same key. Verify the signing certificate rather than the APK file hash — each store repackages the APK, so file hashes differ while the certificate stays the same.
+**Important:** Linux distributions differ in kernel configuration, network policy, and sandbox behavior. ICMP and ARP-related behavior must be validated experimentally. The application must not silently fall back to privileged execution.
 
-- **Package:** `com.networkscanner.app`
-- **Certificate SHA-256:** `CF:89:91:3C:18:DC:8E:F3:0C:88:F0:95:7C:C4:92:EA:EA:04:20:20:44:FD:D4:26:0D:9C:CB:CA:97:9E:0F:FA`
+## Technology and distribution
 
-Check it with an on-device verifier app, or `apksigner verify --print-certs <apk>`, which prints the same value in lower case without colons.
-
-<details>
-<summary><h2>Permissions</h2></summary>
-
-- **INTERNET** - Required by Android to open any network socket, including local-network scans; the app never contacts the internet
-- **ACCESS_NETWORK_STATE** - To check network connectivity
-- **ACCESS_WIFI_STATE** - To get Wi-Fi information
-- **CHANGE_WIFI_MULTICAST_STATE** - For network device discovery
-- **NEARBY_WIFI_DEVICES** (Android 13+) - To discover nearby Wi-Fi devices. On Android 16+ this permission also gates local network access (sockets to local addresses, mDNS, SSDP), so scanning cannot work without it
-- **ACCESS_FINE_LOCATION** / **ACCESS_COARSE_LOCATION** - Optional. Used only to read Wi-Fi network details such as the SSID, and never for location tracking; scanning works without it
-
-</details>
-
-## Building
-
-Requires JDK 17 and the Android SDK (API 36).
-
-```bash
-git clone https://github.com/usamaiqb/network-scanner.git
-cd network-scanner
-./gradlew assembleDebug
-```
-
-The APK is written to `app/build/outputs/apk/debug/`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development setup.
-
-## Translations
-
-<!-- translations:start -->
-| Language | Progress |
+| Area | Decision |
 | --- | --- |
-| English | ████████████ 100% (source) |
-| العربية | ████████████ 99% |
-| Deutsch | ████████████ 100% |
-| Español | ████████████ 100% |
-| فارسی | ████████████ 100% |
-| Italiano | ████████████ 100% |
-| Română | ████████████ 100% |
-| Русский | ████████████ 100% |
-| Türkçe | ████████████ 100% |
-| Українська | ████████████ 100% |
-| 中文 (中国) | ████████████ 100% |
-<!-- translations:end -->
+| Platform | Linux only |
+| Language | Rust |
+| UI toolkit | GTK4 |
+| GNOME integration | libadwaita |
+| Packaging | Flatpak only |
+| License | GNU GPL-3.0 |
+| Privilege model | Unprivileged user process |
 
-Translations are welcome! To add or improve one, edit `app/src/main/res/values-<locale>/strings.xml`, run `bash scripts/translation-status.sh` to update the language list and the table above, and open a pull request.
+## Development principles
 
-## Known limitations
+1. Inspect and understand the Android implementation before porting behavior.
+2. Separate the UI, scan orchestration, discovery protocols, device models, and persistence.
+3. Keep the scanning engine independent from GTK wherever practical.
+4. Use asynchronous I/O and bounded concurrency so scans do not freeze the interface or overload the network.
+5. Make scans cancellable and apply explicit timeouts.
+6. Test protocol parsing and scan logic independently, then validate against real devices on a controlled local network.
+7. Test the Flatpak sandbox and permissions early, not only at release time.
+8. Avoid unnecessary dependencies and avoid collecting or transmitting user network data.
+9. Update `ROADMAP.md` as work is completed; only mark an item complete after verification.
+10. Preserve the Android implementation on `main` until the Linux port is deliberately separated or merged according to the maintainer's decision.
 
-Since Android 10, apps can't read other devices' entries from the system ARP table, so MAC address and vendor only appear for your own device and sometimes the router. This affects every network scanner app. The **MAC address access** setting works around it through [Shizuku](https://shizuku.rikka.app/) or root.
+## Project roadmap
 
-## Contributing
-
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and use [Issues](https://github.com/usamaiqb/network-scanner/issues) or [Discussions](https://github.com/usamaiqb/network-scanner/discussions) for bugs and questions.
+See [ROADMAP.md](ROADMAP.md) for the phased research, architecture, implementation, testing, and release plan.
 
 ## License
 
-[GNU General Public License v3.0](LICENSE). See the [Privacy Policy](PRIVACY_POLICY.md) for how the app handles data.
+This project is intended to remain under the [GNU General Public License v3.0](LICENSE). The Android project and its upstream contributors retain their applicable copyright. Preserve existing notices and clearly document the origin of adapted code. See the license text for the full terms.
