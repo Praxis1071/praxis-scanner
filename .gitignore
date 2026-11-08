@@ -110,3 +110,6 @@ signing.properties
 
 # IDE files
 .idea/
+
+# Rust Linux application build output
+/linux/target/
