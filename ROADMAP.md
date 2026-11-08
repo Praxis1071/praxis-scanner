@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
-> **Status:** Planning  
-> **Implementation status:** Not started  
+> **Status:** Implementation in progress  
+> **Implementation status:** Initial application foundation added; build/runtime verification pending  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -38,7 +38,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 - [x] Require no root, sudo, administrator password, setuid helper, privileged daemon, or elevated capability.
 - [x] Treat unprivileged operation as a hard requirement, even if that means omitting a feature.
 - [x] Keep Android source files unchanged during Linux planning and porting.
-- [x] Do not start implementation until the maintainer explicitly approves it.
+- [x] Obtain maintainer approval before beginning implementation (explicit approval received 2026-11-08).
 - [ ] Keep all Linux work isolated on the dedicated branch until the maintainer has tested and approved it; merge into `main` only after explicit approval.
 
 ### Non-negotiable security rules
@@ -128,9 +128,9 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 - [ ] Define logging that is useful for diagnosis without exposing unnecessary network/user information.
 - [ ] Document the final architecture, dependency decisions, and threat model before implementation.
 
-## 5. Implementation phases (only after explicit approval)
+## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation must proceed incrementally. Each item needs tests and review before dependent work is considered complete.
+Implementation is now authorized and has started on this branch. The first GTK/libadwaita shell and read-only IPv4 interface listing are present under `linux/`; they have not yet been compiled or tested. Implementation must proceed incrementally. Each item needs tests and review before dependent work is considered complete.
 
 ### 5.1 Foundation and application shell
 
