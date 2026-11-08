@@ -177,7 +177,7 @@ The following items remain open before the source-audit phase can be fully close
 3. Complete the experimental Linux/Flatpak feasibility matrix.
 4. Finalize the Rust dependency and architecture design.
 
-**No Rust source, GTK UI, Flatpak manifest or executable Linux code has been created.**
+**Implementation update (2026-11-08):** an initial Rust/GTK4/libadwaita application shell and read-only IPv4 interface enumerator have now been added under `linux/`. This foundation has not yet been compiled or run on the maintainer's host. No production scanning engine or Flatpak manifest has been approved or completed.
 
 
 ## 9. Preliminary Rust ecosystem research (not a dependency lock)
