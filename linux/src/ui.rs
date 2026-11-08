@@ -85,13 +85,11 @@ fn interface_row(interface: &NetworkInterface) -> adw::ActionRow {
     } else {
         "network"
     };
-    let prefix = interface
-        .prefix
-        .map_or_else(|| "prefix unavailable".to_owned(), |value| format!("/{value}"));
-    let subtitle = format!(
-        "{}{prefix}  ·  {kind}  ·  {state}",
-        interface.address
+    let prefix = interface.prefix.map_or_else(
+        || "prefix unavailable".to_owned(),
+        |value| format!("/{value}"),
     );
+    let subtitle = format!("{}{prefix}  ·  {kind}  ·  {state}", interface.address);
 
     adw::ActionRow::builder()
         .title(&interface.name)
