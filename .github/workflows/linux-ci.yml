@@ -1,0 +1,35 @@
+name: Linux application CI
+
+on:
+  push:
+    branches:
+      - linux/gtk4-port-planning
+    paths:
+      - "linux/**"
+      - ".github/workflows/linux-ci.yml"
+  pull_request:
+    paths:
+      - "linux/**"
+      - ".github/workflows/linux-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y git rust cargo rustfmt clippy gtk4-devel libadwaita-devel pkgconf-pkg-config gcc gcc-c++ make
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Check formatting
+        run: cargo fmt --manifest-path linux/Cargo.toml --all -- --check
+      - name: Run unit tests
+        run: cargo test --manifest-path linux/Cargo.toml --all-targets
+      - name: Run Clippy
+        run: cargo clippy --manifest-path linux/Cargo.toml --all-targets -- -D warnings
+      - name: Build release binary
+        run: cargo build --manifest-path linux/Cargo.toml --release
