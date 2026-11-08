@@ -293,3 +293,23 @@ The upstream `mdns-sd` changelog records version 0.21.7 as a bug-fix release on 
 - mdns-sd upstream changelog: https://github.com/keepsimple1/mdns-sd/blob/main/CHANGELOG.md
 
 **Conclusion:** use a currently supported Flatpak runtime (26.08 preferred for lifecycle, subject to GNOME runtime compatibility); do not treat docs.rs' apparent rtnetlink 0.24.0 as a confirmed published release; and retain mdns-sd only as a candidate pending isolated runtime and sandbox tests.
+
+
+## 12. GNOME runtime selection for the Linux application (2026-11-08)
+
+The GNOME release calendar identifies **GNOME 51 as the current stable series** (released 2026-09-16; GNOME 51.1 stable point release listed for 2026-10-10). The GNOME build metadata documents the matching Flatpak runtime naming convention as `org.gnome.Platform//51` and `org.gnome.Sdk//51`.
+
+This is distinct from the generic Freedesktop SDK lifecycle reviewed in section 11. Do not choose `org.freedesktop.Platform//26.08` and `org.gnome.Platform//51` interchangeably: the app uses GTK4/libadwaita, so the GNOME runtime is the more direct packaging candidate.
+
+**Current packaging candidate:** `org.gnome.Platform//51` with the matching `org.gnome.Sdk//51`. This is a candidate, not a finalized manifest. Before release, confirm that the exact runtime is available from the intended remote, that the Rust bindings build against its GTK/libadwaita ABI, and that the resulting Flatpak runs with only the required network permission.
+
+The initial Cargo manifest uses GTK4 0.11.5 and libadwaita 0.9.2. The GTK4 binding documentation lists Rust 1.83 as its current minimum; the project currently declares Rust 1.85. The exact transitive graph and system-library compatibility still require CI and Flatpak build verification.
+
+### Sources reviewed
+
+- GNOME release calendar: https://release.gnome.org/calendar/
+- GNOME published Flatpak build outputs: https://gnome.pages.gitlab.gnome.org/gnome-build-meta/docs/ci-outputs.html
+- gtk4 0.11.5 documentation and MSRV: https://docs.rs/gtk4/latest/gtk4/
+- libadwaita 0.9.2 package metadata: https://docs.rs/crate/libadwaita/latest
+
+**Decision:** prefer GNOME 51 runtime/SDK for the first GTK4/libadwaita Flatpak build, pending an actual build and sandbox test. Keep this separate from the generic Freedesktop runtime lifecycle note above.
