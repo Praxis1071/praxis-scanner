@@ -1,6 +1,6 @@
 //! Unprivileged, read-only network information.
- //!
- //! This module deliberately does not open raw sockets, modify routes, change
+//!
+//! This module deliberately does not open raw sockets, modify routes, change
  //! system settings, or require elevated capabilities.
 
 use std::net::Ipv4Addr;
