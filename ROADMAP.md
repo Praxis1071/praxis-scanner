@@ -7,7 +7,7 @@
 
 This roadmap is the source of truth for the Linux edition. Its final objective is a stable, secure, documented, tested, and distributable Linux desktop network scanner that delivers the feasible core experience of the Android application while respecting the strict unprivileged-operation policy below. Every phase contributes to that final objective; the roadmap is not considered complete merely because the application compiles.
 
-Update checkboxes only after the corresponding work has been completed and verified. Planning and research are not implementation. Do not begin application implementation until the maintainer explicitly approves it.
+Update checkboxes only after the corresponding work has been completed and verified. Planning and research are not implementation. The maintainer explicitly authorized implementation on 2026-11-08; continue only within the documented security and scope constraints.
 
 ## Ultimate project objective
 
@@ -130,7 +130,9 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation is now authorized and has started on this branch. The first GTK/libadwaita shell and read-only IPv4 interface listing are present under `linux/`; they have not yet been compiled or tested. Implementation must proceed incrementally. Each item needs tests and review before dependent work is considered complete.
+Implementation is now authorized and has started on this branch. The first GTK/libadwaita shell and read-only IPv4 interface listing are present under `linux/`; they have not yet been compiled or tested. A Linux CI workflow has been added, but no successful run has been observed yet. Implementation must proceed incrementally. Each item needs tests and review before dependent work is considered complete.
+
+**Current milestone:** foundation source added; build verification and the first functional TCP discovery milestone are still pending.
 
 ### 5.1 Foundation and application shell
 
