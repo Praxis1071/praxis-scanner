@@ -15,14 +15,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: linux-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     container: fedora:44
     steps:
       - name: Install build dependencies
         run: |
-          dnf install -y git rust cargo rustfmt clippy gtk4-devel libadwaita-devel pkgconf-pkg-config gcc gcc-c++ make
+          dnf install -y --setopt=timeout=30 --setopt=retries=2 git rust cargo rustfmt clippy gtk4-devel libadwaita-devel pkgconf-pkg-config gcc gcc-c++ make
       - name: Check out source
         uses: actions/checkout@v4
       - name: Check formatting
