@@ -22,14 +22,18 @@ concurrency:
 jobs:
   linux:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
-    container: fedora:44
+    runs-on: ubuntu-24.04
     steps:
-      - name: Install build dependencies
-        run: |
-          dnf install -y --setopt=timeout=30 --setopt=retries=2 git rust cargo rustfmt clippy gtk4-devel libadwaita-devel pkgconf-pkg-config gcc gcc-c++ make
       - name: Check out source
         uses: actions/checkout@v4
+      - name: Install GTK build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-4-dev libadwaita-1-dev
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - name: Check formatting
         run: cargo fmt --manifest-path linux/Cargo.toml --all -- --check
       - name: Run unit tests
