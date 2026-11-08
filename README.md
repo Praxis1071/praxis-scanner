@@ -1,10 +1,10 @@
 # Praxis Scanner
 
-A planned Linux desktop network scanner in the **Praxis Scanner** project family, built with **Rust**, **GTK4**, and **libadwaita**. It is a Linux-native companion to the Android Network Scanner codebase, not an Android build.
+A Linux desktop network scanner in active development in the **Praxis Scanner** project family, built with **Rust**, **GTK4**, and **libadwaita**. It is a Linux-native companion to the Android Network Scanner codebase, not an Android build.
 
-> **Project status: Planning**
+> **Project status: Early implementation**
 >
-> This branch contains the Linux port's planning documentation. Implementation has not started. The Android application on `main` remains unchanged.
+> The native Linux application now has an initial Rust/GTK4/libadwaita shell and read-only IPv4 interface listing under [`linux/`](linux/). This is a foundation milestone, not a complete or tested scanner. The Android Gradle project remains present and unchanged; `main` is not modified.
 
 ## Project goals
 
