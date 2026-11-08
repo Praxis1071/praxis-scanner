@@ -86,6 +86,11 @@ mod tests {
     }
 
     #[test]
+    fn reads_local_ipv4_interface_state_without_privileges() {
+        assert!(super::ipv4_interfaces().is_ok());
+    }
+
+    #[test]
     fn rejects_non_contiguous_netmask() {
         assert_eq!(netmask_prefix(Ipv4Addr::new(255, 0, 255, 0)), None);
     }
