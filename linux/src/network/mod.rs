@@ -7,7 +7,6 @@ use std::net::Ipv4Addr;
 
 use nix::ifaddrs::getifaddrs;
 use nix::net::if_::InterfaceFlags;
-use nix::sys::socket::SockaddrLike;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NetworkInterface {
@@ -35,7 +34,7 @@ pub fn ipv4_interfaces() -> Result<Vec<NetworkInterface>, String> {
         let prefix = entry
             .netmask
             .as_ref()
-            .and_then(SockaddrLike::as_sockaddr_in)
+            .and_then(|mask| mask.as_sockaddr_in())
             .and_then(|mask| netmask_prefix(mask.ip()));
 
         let interface = NetworkInterface {
