@@ -1590,8 +1590,6 @@ fn refresh_device_list(
                 current_address,
                 interface_list_for_row.clone(),
                 refresh_button_for_row.clone(),
-                interface_list_for_row.clone(),
-                refresh_button_for_row.clone(),
             );
             navigation_for_row.push(&page);
         });
@@ -1752,6 +1750,8 @@ fn refresh_device_list(
                 devices_list_for_row.clone(),
                 Rc::clone(&catalog_for_row),
                 current_address,
+                interface_list_for_row.clone(),
+                refresh_button_for_row.clone(),
             );
             navigation_for_row.push(&page);
         });
