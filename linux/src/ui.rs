@@ -2128,9 +2128,9 @@ fn start_device_deep_scan(
                                 .is_some_and(|active| active.refers_to_same_scan(&scan_identity_for_events));
                             if is_current_scan {
                                 active_for_events.borrow_mut().take();
+                                devices_list_for_events.set_sensitive(true);
                             }
                             cancel_for_events.set_sensitive(false);
-                            devices_list_for_events.set_sensitive(true);
                             progress_for_events.set_fraction(1.0);
                             progress_for_events.set_text(Some(if cancelled {
                                 "Cancelled"
