@@ -31,8 +31,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Check formatting
-        run: cargo fmt --manifest-path linux/Cargo.toml --all -- --check
+      - name: Format and verify Rust sources
+        run: |
+          cargo fmt --manifest-path linux/Cargo.toml --all
+          cargo fmt --manifest-path linux/Cargo.toml --all -- --check
 
   linux:
     name: Linux build, tests and lint
