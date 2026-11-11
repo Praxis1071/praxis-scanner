@@ -6,6 +6,7 @@
 pub mod cidr;
 pub mod mdns;
 pub mod scanner;
+pub mod ssdp;
 pub mod system;
 
 use std::net::Ipv4Addr;
