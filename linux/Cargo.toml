@@ -11,6 +11,7 @@ gtk = { package = "gtk4", version = "0.11.5" }
 adw = { package = "libadwaita", version = "0.9.2" }
 nix = { version = "0.31.3", features = ["net"] }
 mdns-sd = { version = "0.21.7", default-features = false }
+socket2 = "0.6.5"
 
 [lints.rust]
 unsafe_code = "forbid"
