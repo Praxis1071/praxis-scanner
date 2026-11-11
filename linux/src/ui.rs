@@ -1382,7 +1382,6 @@ fn device_detail_page(
     let row_for_name = device_row.clone();
     let title_for_name = title.clone();
     let address_for_name = device.address;
-    let icon_for_name = device_icon.clone();
     save_name_button.connect_clicked(move |_| {
         let custom_name = name_entry_for_save.text().to_string();
         let icon_key = preferences_for_name
@@ -1406,7 +1405,6 @@ fn device_detail_page(
                     row_for_name.set_title(&label);
                     title_for_name.set_title(&label);
                     name_status_for_save.set_text("Device name saved locally.");
-                    let _ = &icon_for_name;
                 }
                 Err(error) => name_status_for_save
                     .set_text(&format!("Could not save device name: {error}")),
