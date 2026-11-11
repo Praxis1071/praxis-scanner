@@ -1160,7 +1160,7 @@ pub fn build_ui(application: &adw::Application) {
                 let navigation_for_events = navigation_for_icmp.clone();
                 let active_device_scan_for_events = Rc::clone(&active_device_scan_for_icmp);
                 let mut replies = 0usize;
-                let mut unavailable = false;
+                let mut unavailable_message: Option<String> = None;
 
                 glib::timeout_add_local(Duration::from_millis(80), move || {
                     while let Ok(event) = events.try_recv() {
@@ -1191,7 +1191,7 @@ pub fn build_ui(application: &adw::Application) {
                                 );
                             }
                             scanner::IcmpEvent::Unavailable { message } => {
-                                unavailable = true;
+                                unavailable_message = Some(message.clone());
                                 status_for_events.set_text(&format!(
                                     "Datagram ICMP is unavailable: {message}. Check the kernel ping_group_range policy if desired. No raw-socket fallback or sysctl change is attempted."
                                 ));
@@ -1216,10 +1216,10 @@ pub fn build_ui(application: &adw::Application) {
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
 
-                                if unavailable {
-                                    status_for_events.set_text(
-                                        "ICMP check unavailable. TCP and service discovery remain usable; no raw sockets or privilege changes were attempted.",
-                                    );
+                                if let Some(message) = unavailable_message.as_deref() {
+                                    status_for_events.set_text(&format!(
+                                        "ICMP datagram socket unavailable: {message}. TCP and service discovery remain usable; no raw-socket fallback or privilege changes were attempted."
+                                    ));
                                 } else {
                                     let state = if cancelled { "cancelled" } else { "finished" };
                                     status_for_events.set_text(&format!(
