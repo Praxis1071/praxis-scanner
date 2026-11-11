@@ -394,6 +394,7 @@ mod preferences {
                 auto_scan_on_start: true,
                 theme: ThemeMode::Dark,
                 custom_ports: Vec::new(),
+                device_customizations: Vec::new(),
             };
             expected.add_custom_port(11434, "Ollama").expect("valid custom port");
             expected.set_custom_port_enabled(11434, false);
