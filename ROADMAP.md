@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, and opt-in interface-scoped mDNS/DNS-SD are present in source. Full CI passed on `b6d808a`; later validation/UI refinements are awaiting CI. Host and Flatpak runtime verification remain pending  
+> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, opt-in interface-scoped mDNS/DNS-SD, and bounded SSDP/UPnP discovery are present in source. Full CI passed on `09320a1`; SSDP implementation and UI changes are awaiting CI. Host and Flatpak runtime verification remain pending  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -130,7 +130,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, and opt-in interface-scoped IPv4 mDNS/DNS-SD service discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The latest mDNS result-deduplication refinement is awaiting its own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
+Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, opt-in interface-scoped IPv4 mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The SSDP engine and its UI integration are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
 **Current milestone:** validate the latest mDNS changes in CI; then exercise TCP and mDNS behavior on a controlled local network, refine the device/results experience, and continue protocol discovery without weakening the unprivileged security policy.
 
