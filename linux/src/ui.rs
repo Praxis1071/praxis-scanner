@@ -1061,6 +1061,184 @@ pub fn build_ui(application: &adw::Application) {
         }
     });
 
+    let status_for_icmp = status.clone();
+    let icmp_button_for_icmp = icmp_button.clone();
+    let active_icmp_for_button = Rc::clone(&active_icmp);
+    let active_tcp_for_icmp = Rc::clone(&active_scan);
+    let active_device_scan_for_icmp = Rc::clone(&active_device_scan);
+    let active_mdns_for_icmp = Rc::clone(&active_mdns);
+    let active_ssdp_for_icmp = Rc::clone(&active_ssdp);
+    let active_netbios_for_icmp = Rc::clone(&active_netbios);
+    let selected_for_icmp = Rc::clone(&selected_interface);
+    let catalog_for_icmp = Rc::clone(&device_catalog);
+    let devices_for_icmp = devices_list.clone();
+    let navigation_for_icmp = navigation_view.clone();
+    let interface_list_for_icmp = list.clone();
+    let refresh_button_for_icmp = refresh_button.clone();
+    let scan_button_for_icmp = scan_button.clone();
+    let mdns_button_for_icmp = mdns_button.clone();
+    let ssdp_button_for_icmp = ssdp_button.clone();
+    let netbios_button_for_icmp = netbios_button.clone();
+    let port_entry_for_icmp = port_entry.clone();
+
+    icmp_button.connect_clicked(move |_| {
+        if let Some(handle) = active_icmp_for_button.borrow().as_ref() {
+            handle.cancel();
+            status_for_icmp.set_text(
+                "ICMP cancellation requested; waiting for the current echo timeout to finish.",
+            );
+            icmp_button_for_icmp.set_label("Cancelling ICMP check…");
+            return;
+        }
+
+        if active_tcp_for_icmp.borrow().is_some()
+            || active_device_scan_for_icmp.borrow().is_some()
+            || active_mdns_for_icmp.borrow().is_some()
+            || active_ssdp_for_icmp.borrow().is_some()
+            || active_netbios_for_icmp.borrow().is_some()
+        {
+            status_for_icmp.set_text("Wait for the active network operation to finish before starting ICMP checks.");
+            return;
+        }
+
+        let Some(interface) = selected_for_icmp.borrow().clone() else {
+            status_for_icmp.set_text("Select an active IPv4 interface first.");
+            return;
+        };
+        if !is_scannable_interface(&interface) {
+            status_for_icmp.set_text("Select an active private or link-local IPv4 interface first.");
+            return;
+        }
+
+        let targets = catalog_for_icmp
+            .borrow()
+            .iter()
+            .filter(|device| device.has_discovery_evidence())
+            .map(|device| device.address)
+            .filter(|address| *address != interface.address)
+            .take(MAX_SCAN_TARGETS + 1)
+            .collect::<Vec<_>>();
+        if targets.is_empty() {
+            status_for_icmp.set_text(
+                "No previously discovered devices are available. Run TCP, mDNS, or SSDP discovery first.",
+            );
+            return;
+        }
+
+        match scanner::start_icmp_discovery(
+            interface.address,
+            targets,
+            scanner::DEFAULT_TCP_TIMEOUT,
+        ) {
+            Ok((handle, events)) => {
+                *active_icmp_for_button.borrow_mut() = Some(handle);
+                icmp_button_for_icmp.set_label("Cancel ICMP check");
+                scan_button_for_icmp.set_sensitive(false);
+                mdns_button_for_icmp.set_sensitive(false);
+                ssdp_button_for_icmp.set_sensitive(false);
+                netbios_button_for_icmp.set_sensitive(false);
+                refresh_button_for_icmp.set_sensitive(false);
+                interface_list_for_icmp.set_sensitive(false);
+                port_entry_for_icmp.set_sensitive(false);
+                status_for_icmp.set_text(
+                    "Checking previously discovered devices with datagram-only ICMP echo requests…",
+                );
+
+                let status_for_events = status_for_icmp.clone();
+                let icmp_button_for_events = icmp_button_for_icmp.clone();
+                let active_icmp_for_events = Rc::clone(&active_icmp_for_button);
+                let selected_for_events = Rc::clone(&selected_for_icmp);
+                let scan_button_for_events = scan_button_for_icmp.clone();
+                let mdns_button_for_events = mdns_button_for_icmp.clone();
+                let ssdp_button_for_events = ssdp_button_for_icmp.clone();
+                let netbios_button_for_events = netbios_button_for_icmp.clone();
+                let refresh_button_for_events = refresh_button_for_icmp.clone();
+                let interface_list_for_events = interface_list_for_icmp.clone();
+                let port_entry_for_events = port_entry_for_icmp.clone();
+                let catalog_for_events = Rc::clone(&catalog_for_icmp);
+                let devices_for_events = devices_for_icmp.clone();
+                let navigation_for_events = navigation_for_icmp.clone();
+                let active_device_scan_for_events = Rc::clone(&active_device_scan_for_icmp);
+                let mut replies = 0usize;
+                let mut unavailable = false;
+
+                glib::timeout_add_local(Duration::from_millis(80), move || {
+                    while let Ok(event) = events.try_recv() {
+                        match event {
+                            scanner::IcmpEvent::HostCompleted {
+                                address,
+                                round_trip_time,
+                            } => {
+                                if let Some(rtt) = round_trip_time {
+                                    replies += 1;
+                                    status_for_events.set_text(&format!(
+                                        "ICMP echo reply from {address}: {:.2} ms",
+                                        rtt.as_secs_f64() * 1000.0
+                                    ));
+                                } else {
+                                    status_for_events.set_text(&format!(
+                                        "No ICMP echo reply from {address}; this is inconclusive."
+                                    ));
+                                }
+                                catalog_for_events
+                                    .borrow_mut()
+                                    .record_icmp(address, round_trip_time);
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                );
+                            }
+                            scanner::IcmpEvent::Unavailable { message } => {
+                                unavailable = true;
+                                status_for_events.set_text(&format!(
+                                    "Datagram ICMP is unavailable: {message}. Check the kernel ping_group_range policy if desired. No raw-socket fallback or sysctl change is attempted."
+                                ));
+                            }
+                            scanner::IcmpEvent::Finished {
+                                total,
+                                completed,
+                                cancelled,
+                            } => {
+                                active_icmp_for_events.borrow_mut().take();
+                                icmp_button_for_events.set_label("Check ICMP reachability");
+                                let can_scan = selected_for_events
+                                    .borrow()
+                                    .as_ref()
+                                    .is_some_and(is_scannable_interface);
+                                scan_button_for_events.set_sensitive(can_scan);
+                                mdns_button_for_events.set_sensitive(can_scan);
+                                ssdp_button_for_events.set_sensitive(can_scan);
+                                netbios_button_for_events.set_sensitive(can_scan);
+                                icmp_button_for_events.set_sensitive(can_scan);
+                                refresh_button_for_events.set_sensitive(true);
+                                interface_list_for_events.set_sensitive(true);
+                                port_entry_for_events.set_sensitive(true);
+
+                                if unavailable {
+                                    status_for_events.set_text(
+                                        "ICMP check unavailable. TCP and service discovery remain usable; no raw sockets or privilege changes were attempted.",
+                                    );
+                                } else {
+                                    let state = if cancelled { "cancelled" } else { "finished" };
+                                    status_for_events.set_text(&format!(
+                                        "ICMP check {state}: {completed}/{total} device(s) checked; {replies} echo reply/replies. Missing replies are inconclusive."
+                                    ));
+                                }
+                                return glib::ControlFlow::Break;
+                            }
+                        }
+                    }
+                    glib::ControlFlow::Continue
+                });
+            }
+            Err(error) => {
+                status_for_icmp.set_text(&format!("Could not start ICMP checks: {error}"));
+            }
+        }
+    });
+
     let active_for_close = Rc::clone(&active_scan);
     let active_device_for_close = Rc::clone(&active_device_scan);
     let active_ssdp_for_close = Rc::clone(&active_ssdp);
