@@ -96,6 +96,129 @@ pub enum ScanEvent {
     },
 }
 
+/// Per-port progress emitted by the single-device deep scanner.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DeepScanEvent {
+    PortCompleted {
+        port: u16,
+        open: bool,
+        tcp_responded: bool,
+    },
+    Finished {
+        total: usize,
+        completed: usize,
+        cancelled: bool,
+    },
+}
+
+/// Start a bounded, parallel TCP port scan against one explicitly selected device.
+pub fn start_device_deep_scan(
+    address: Ipv4Addr,
+    mut ports: Vec<u16>,
+    timeout: Duration,
+) -> Result<(ScanHandle, mpsc::Receiver<DeepScanEvent>), ScanStartError> {
+    if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
+        return Err(ScanStartError::InvalidTimeout);
+    }
+    if ports.is_empty() {
+        return Err(ScanStartError::EmptyPortList);
+    }
+    if ports.len() > MAX_TCP_PORTS {
+        return Err(ScanStartError::TooManyPorts {
+            requested: ports.len(),
+            limit: MAX_TCP_PORTS,
+        });
+    }
+    if let Some(port) = ports.iter().find(|port| **port == 0) {
+        return Err(ScanStartError::InvalidPort(*port));
+    }
+
+    ports.sort_unstable();
+    ports.dedup();
+    if ports.len() > MAX_SCAN_PROBES {
+        return Err(ScanStartError::TooManyProbes {
+            requested: ports.len(),
+            limit: MAX_SCAN_PROBES,
+        });
+    }
+
+    let total = ports.len();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let worker_cancelled = Arc::clone(&cancelled);
+    let (event_sender, event_receiver) = mpsc::channel();
+
+    thread::spawn(move || {
+        let (job_sender, job_receiver) = mpsc::channel();
+        let shared_receiver = Arc::new(Mutex::new(job_receiver));
+        let completed = Arc::new(AtomicUsize::new(0));
+        let worker_count = total.min(MAX_CONCURRENT_WORKERS);
+        let mut workers = Vec::with_capacity(worker_count);
+
+        for _ in 0..worker_count {
+            let receiver = Arc::clone(&shared_receiver);
+            let sender = event_sender.clone();
+            let worker_cancelled = Arc::clone(&worker_cancelled);
+            let worker_completed = Arc::clone(&completed);
+
+            workers.push(thread::spawn(move || loop {
+                let next_port = receiver
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .recv();
+                let Ok(port) = next_port else {
+                    break;
+                };
+
+                if worker_cancelled.load(Ordering::Relaxed) {
+                    continue;
+                }
+
+                let socket = SocketAddr::V4(SocketAddrV4::new(address, port));
+                let (open, tcp_responded) = match TcpStream::connect_timeout(&socket, timeout) {
+                    Ok(stream) => {
+                        drop(stream);
+                        (true, true)
+                    }
+                    Err(error) if is_connection_refused(&error) => (false, true),
+                    Err(_) => (false, false),
+                };
+                worker_completed.fetch_add(1, Ordering::Relaxed);
+
+                if sender
+                    .send(DeepScanEvent::PortCompleted {
+                        port,
+                        open,
+                        tcp_responded,
+                    })
+                    .is_err()
+                {
+                    worker_cancelled.store(true, Ordering::Relaxed);
+                    break;
+                }
+            }));
+        }
+
+        for port in ports {
+            if worker_cancelled.load(Ordering::Relaxed) || job_sender.send(port).is_err() {
+                break;
+            }
+        }
+        drop(job_sender);
+
+        for worker in workers {
+            let _ = worker.join();
+        }
+
+        let _ = event_sender.send(DeepScanEvent::Finished {
+            total,
+            completed: completed.load(Ordering::Relaxed),
+            cancelled: worker_cancelled.load(Ordering::Relaxed),
+        });
+    });
+
+    Ok((ScanHandle { cancelled }, event_receiver))
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ScanStartError {
     TooManyTargets { requested: usize, limit: usize },
@@ -370,6 +493,63 @@ mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::AtomicBool;
     use std::time::Duration;
+
+    #[test]
+    fn single_device_deep_scan_reports_open_ports_and_progress() {
+        let listener =
+            TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind an ephemeral loopback port");
+        let open_port = listener.local_addr().expect("read listener address").port();
+        let (_handle, events) = super::start_device_deep_scan(
+            Ipv4Addr::LOCALHOST,
+            vec![open_port, open_port],
+            Duration::from_millis(500),
+        )
+        .expect("start bounded device deep scan");
+
+        let mut open_seen = false;
+        let mut finished_seen = false;
+        while let Ok(event) = events.recv_timeout(Duration::from_secs(2)) {
+            match event {
+                super::DeepScanEvent::PortCompleted { port, open, .. } => {
+                    assert_eq!(port, open_port);
+                    open_seen |= open;
+                }
+                super::DeepScanEvent::Finished {
+                    total,
+                    completed,
+                    cancelled,
+                } => {
+                    assert_eq!(total, 1);
+                    assert_eq!(completed, 1);
+                    assert!(!cancelled);
+                    finished_seen = true;
+                    break;
+                }
+            }
+        }
+        assert!(open_seen);
+        assert!(finished_seen);
+    }
+
+    #[test]
+    fn single_device_deep_scan_rejects_unbounded_or_invalid_port_sets() {
+        assert!(matches!(
+            super::start_device_deep_scan(
+                Ipv4Addr::LOCALHOST,
+                vec![0],
+                Duration::from_millis(100)
+            ),
+            Err(ScanStartError::InvalidPort(0))
+        ));
+        assert!(matches!(
+            super::start_device_deep_scan(
+                Ipv4Addr::LOCALHOST,
+                (1..=MAX_TCP_PORTS + 1).map(|port| port as u16).collect(),
+                Duration::from_millis(100)
+            ),
+            Err(ScanStartError::TooManyPorts { .. })
+        ));
+    }
 
     #[test]
     fn android_deep_scan_port_set_is_unique_and_within_linux_safety_limits() {
