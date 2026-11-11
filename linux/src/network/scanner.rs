@@ -3,7 +3,7 @@
 //! A timeout is deliberately not treated as proof that a host is offline.
 
 use std::io::{self, Read, Write};
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream, UdpSocket};
 use std::time::Instant;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -503,13 +503,13 @@ pub fn start_icmp_discovery(
 fn create_datagram_icmp_socket(
     source_address: Ipv4Addr,
     timeout: Duration,
-) -> io::Result<(Socket, u16)> {
-    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMPV4))?;
+) -> io::Result<(UdpSocket, u16)> {
+    let raw_socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMPV4))?;
     let source = SockAddr::from(SocketAddrV4::new(source_address, 0));
-    socket.bind(&source)?;
-    socket.set_read_timeout(Some(timeout))?;
+    raw_socket.bind(&source)?;
+    raw_socket.set_read_timeout(Some(timeout))?;
 
-    let identifier = socket
+    let identifier = raw_socket
         .local_addr()?
         .as_socket()
         .map(|address| address.port())
@@ -520,19 +520,20 @@ fn create_datagram_icmp_socket(
                 "kernel did not assign an ICMP ping identifier",
             )
         })?;
+    let socket: UdpSocket = raw_socket.into();
 
     Ok((socket, identifier))
 }
 
 fn probe_icmp_target(
-    socket: &Socket,
+    socket: &UdpSocket,
     target: Ipv4Addr,
     identifier: u16,
     sequence: u16,
     timeout: Duration,
 ) -> io::Result<Option<Duration>> {
     let packet = build_icmp_echo_request(target, identifier, sequence);
-    let destination = SockAddr::from(SocketAddrV4::new(target, 0));
+    let destination = SocketAddrV4::new(target, 0);
     let started = Instant::now();
     socket.send_to(&packet, &destination)?;
     let deadline = started + timeout;
@@ -543,10 +544,10 @@ fn probe_icmp_target(
         socket.set_read_timeout(Some(remaining))?;
         match socket.recv_from(&mut buffer) {
             Ok((length, source)) => {
-                let source_address = source.as_socket().and_then(|address| match address {
+                let source_address = match source {
                     SocketAddr::V4(address) => Some(*address.ip()),
                     SocketAddr::V6(_) => None,
-                });
+                };
                 if source_address == Some(target)
                     && is_expected_icmp_echo_reply(
                         &buffer[..length],
