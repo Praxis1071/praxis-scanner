@@ -115,6 +115,14 @@ fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ProcNetPa
             return Err(ProcNetParseError);
         }
 
+        let hardware_type_text = fields[1].strip_prefix("0x").unwrap_or(fields[1]);
+        let hardware_type =
+            u16::from_str_radix(hardware_type_text, 16).map_err(|_| ProcNetParseError)?;
+        const ARPHRD_ETHER: u16 = 1;
+        if hardware_type != ARPHRD_ETHER {
+            continue;
+        }
+
         let flags_text = fields[2].strip_prefix("0x").unwrap_or(fields[2]);
         let flags = u32::from_str_radix(flags_text, 16).map_err(|_| ProcNetParseError)?;
         const ATF_COM: u32 = 0x02;
@@ -158,11 +166,23 @@ fn contiguous_prefix(mask: Ipv4Addr) -> Option<u8> {
 }
 
 fn is_valid_mac_address(value: &str) -> bool {
-    let octets: Vec<_> = value.split(':').collect();
+    let octets: Option<Vec<u8>> = value
+        .split(':')
+        .map(|octet| {
+            if octet.len() == 2 {
+                u8::from_str_radix(octet, 16).ok()
+            } else {
+                None
+            }
+        })
+        .collect();
+    let Some(octets) = octets else {
+        return false;
+    };
+
     octets.len() == 6
-        && octets
-            .iter()
-            .all(|octet| octet.len() == 2 && u8::from_str_radix(octet, 16).is_ok())
+        && octets[0] & 1 == 0
+        && octets.iter().any(|octet| *octet != 0)
 }
 
 #[cfg(test)]
@@ -203,12 +223,21 @@ mod tests {
     }
 
     #[test]
+    fn reads_kernel_procfs_network_tables_without_privileges() {
+        assert!(super::read_ipv4_routes().is_ok());
+        assert!(super::read_ipv4_neighbours().is_ok());
+    }
+
+    #[test]
     fn returns_only_complete_neighbour_entries_with_valid_mac() {
         let fixture = concat!(
             "IP address HW type Flags HW address Mask Device\\n",
             "192.168.1.10 0x1 0x2 aa:bb:cc:dd:ee:ff * wlan0\\n",
             "192.168.1.11 0x1 0x0 00:00:00:00:00:00 * wlan0\\n",
             "192.168.1.12 0x1 0x2 invalid * wlan0\\n",
+            "192.168.1.13 0x1 0x2 01:00:5e:00:00:01 * wlan0\\n",
+            "192.168.1.14 0x2 0x2 aa:bb:cc:dd:ee:01 * wlan0\\n",
+            "192.168.1.15 0x1 0x2 00:00:00:00:00:00 * wlan0\\n",
         );
         let neighbours = parse_ipv4_neighbours(fixture).expect("valid ARP fixture");
         assert_eq!(neighbours.len(), 1);
