@@ -1359,7 +1359,7 @@ fn refresh_device_list(
 
     if responsive_count > 0 {
         let heading = gtk::Label::new(Some(&format!(
-            "TCP-responsive devices ({responsive_count})"
+            "TCP/ICMP-responsive devices ({responsive_count})"
         )));
         heading.set_halign(gtk::Align::Start);
         heading.set_margin_top(8);
