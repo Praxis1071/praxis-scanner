@@ -499,7 +499,7 @@ pub fn build_ui(application: &adw::Application) {
                                         for (address, mac) in &mac_by_address {
                                             catalog_for_events.borrow_mut().set_mac_address(*address, mac.clone());
                                         }
-                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
+                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
                                         let mut enriched = 0usize;
                                         for (address, row, details) in &result_rows {
                                             if let Some(mac) = mac_by_address.get(address) {
@@ -640,7 +640,7 @@ pub fn build_ui(application: &adw::Application) {
                                         port: service.port,
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
                                 let details = format!(
                                     "{}  ·  {}:{}  ·  {}",
                                     service.hostname,
@@ -825,7 +825,7 @@ pub fn build_ui(application: &adw::Application) {
                                         location: device.location.clone(),
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
                                 let location = device.location.as_deref().unwrap_or("location not supplied");
                                 let details = format!(
