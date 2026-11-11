@@ -437,7 +437,7 @@ pub fn build_ui(application: &adw::Application) {
         match scanner::start_tcp_discovery_with_ports(
             hosts,
             ports,
-            scanner::DEFAULT_TCP_TIMEOUT,
+            scanner::DEFAULT_ICMP_TIMEOUT,
         ) {
             Ok((handle, events)) => {
                 *active_for_scan.borrow_mut() = Some(handle);
