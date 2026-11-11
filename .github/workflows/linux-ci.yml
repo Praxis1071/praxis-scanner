@@ -6,6 +6,7 @@ on:
       - linux/gtk4-port-planning
     paths:
       - "linux/**"
+      - "io.github.praxis1071.PraxisScanner.yml"
       - ".github/workflows/linux-ci.yml"
   pull_request:
     paths:
@@ -61,10 +62,19 @@ jobs:
       - name: Build release binary
         run: cargo build --manifest-path linux/Cargo.toml --release --locked
 
-      - name: Publish generated Cargo.lock for review
+      - name: Generate offline Flatpak Cargo sources
+        run: |
+          python3 -m venv /tmp/flatpak-cargo-generator
+          /tmp/flatpak-cargo-generator/bin/pip install --disable-pip-version-check "aiohttp>=3.9.5,<4.0.0" "tomlkit>=0.13.3,<1.0"
+          curl --fail --location --retry 3 --output /tmp/flatpak-cargo-generator.py https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/9d86d336a39b9af38b86f114b6ce5820fe260f91/cargo/flatpak-cargo-generator.py
+          /tmp/flatpak-cargo-generator/bin/python /tmp/flatpak-cargo-generator.py linux/Cargo.lock --output linux/cargo-sources.json
+
+      - name: Publish reproducible Flatpak build inputs
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: praxis-scanner-cargo-lock
-          path: linux/Cargo.lock
+          name: praxis-scanner-flatpak-sources
+          path: |
+            linux/Cargo.lock
+            linux/cargo-sources.json
           if-no-files-found: error
           retention-days: 7
