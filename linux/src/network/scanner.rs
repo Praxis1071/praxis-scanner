@@ -262,7 +262,7 @@ impl std::fmt::Display for ScanStartError {
                 "scan contains {requested} targets; the configured limit is {limit}"
             ),
             Self::InvalidTimeout => formatter.write_str(
-                "TCP timeout must be greater than zero and no longer than five seconds",
+                "network timeout must be greater than zero and no longer than five seconds",
             ),
             Self::EmptyPortList => formatter.write_str("at least one TCP port must be selected"),
             Self::TooManyPorts { requested, limit } => write!(
@@ -274,7 +274,7 @@ impl std::fmt::Display for ScanStartError {
                 "scan would perform {requested} TCP connection attempts; the configured limit is {limit}"
             ),
             Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
-            Self::InvalidSourceAddress => formatter.write_str("ICMP source address must be a configured local IPv4 address"),
+            Self::InvalidSourceAddress => formatter.write_str("ICMP source address must be a non-unspecified IPv4 address"),
         }
     }
 }
@@ -346,7 +346,7 @@ impl ScanHandle {
         Arc::ptr_eq(&self.cancelled, &other.cancelled)
     }
 
-    /// Request cancellation. In-flight connect calls finish within their timeout.
+    /// Request cancellation. In-flight network operations finish within their timeout.
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
