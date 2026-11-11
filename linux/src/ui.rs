@@ -1519,6 +1519,8 @@ fn refresh_device_list(
     list: &gtk::ListBox,
     catalog: &DeviceCatalog,
     navigation: &adw::NavigationView,
+    interface_list: &gtk::ListBox,
+    refresh_button: &gtk::Button,
     active_device_scan: &Rc<RefCell<Option<ScanHandle>>>,
     catalog_handle: &Rc<RefCell<DeviceCatalog>>,
     current_address: Option<Ipv4Addr>,
@@ -1555,6 +1557,8 @@ fn refresh_device_list(
         let navigation_for_row = navigation.clone();
         let active_scan_for_row = Rc::clone(active_device_scan);
         let devices_list_for_row = list.clone();
+        let interface_list_for_row = interface_list.clone();
+        let refresh_button_for_row = refresh_button.clone();
         let catalog_for_row = Rc::clone(catalog_handle);
         row.connect_activated(move |_| {
             let page = device_detail_page(
@@ -1564,6 +1568,10 @@ fn refresh_device_list(
                 devices_list_for_row.clone(),
                 Rc::clone(&catalog_for_row),
                 current_address,
+                interface_list_for_row.clone(),
+                refresh_button_for_row.clone(),
+                interface_list_for_row.clone(),
+                refresh_button_for_row.clone(),
             );
             navigation_for_row.push(&page);
         });
@@ -1713,6 +1721,8 @@ fn refresh_device_list(
         let active_scan_for_row = Rc::clone(active_device_scan);
         let selected_device = device.clone();
         let devices_list_for_row = list.clone();
+        let interface_list_for_row = interface_list.clone();
+        let refresh_button_for_row = refresh_button.clone();
         let catalog_for_row = Rc::clone(catalog_handle);
         row.connect_activated(move |_| {
             let page = device_detail_page(
@@ -1737,6 +1747,8 @@ fn device_detail_page(
     devices_list: gtk::ListBox,
     catalog: Rc<RefCell<DeviceCatalog>>,
     current_address: Option<Ipv4Addr>,
+    interface_list: gtk::ListBox,
+    refresh_button: gtk::Button,
 ) -> adw::NavigationPage {
     let preferences = Rc::new(RefCell::new(AppPreferences::load()));
     let customization = preferences
@@ -1882,6 +1894,8 @@ fn device_detail_page(
     let name_status_for_save = customization_status.clone();
     let title_for_name = title.clone();
     let devices_list_for_name = devices_list.clone();
+    let interface_list_for_name = interface_list.clone();
+    let refresh_button_for_name = refresh_button.clone();
     let catalog_for_name = Rc::clone(&catalog);
     let navigation_for_name = navigation.clone();
     let active_scan_for_name = Rc::clone(&active_device_scan);
@@ -1911,6 +1925,8 @@ fn device_detail_page(
                         &devices_list_for_name,
                         &catalog_for_name.borrow(),
                         &navigation_for_name,
+                        &interface_list_for_name,
+                        &refresh_button_for_name,
                         &active_scan_for_name,
                         &catalog_for_name,
                         current_address,
@@ -1937,6 +1953,8 @@ fn device_detail_page(
     let icon_status_for_save = customization_status.clone();
     let address_for_icon = device.address;
     let devices_list_for_icon = devices_list.clone();
+    let interface_list_for_icon = interface_list.clone();
+    let refresh_button_for_icon = refresh_button.clone();
     let catalog_for_icon = Rc::clone(&catalog);
     let navigation_for_icon = navigation.clone();
     let active_scan_for_icon = Rc::clone(&active_device_scan);
@@ -1966,6 +1984,8 @@ fn device_detail_page(
                         &devices_list_for_icon,
                         &catalog_for_icon.borrow(),
                         &navigation_for_icon,
+                        &interface_list_for_icon,
+                        &refresh_button_for_icon,
                         &active_scan_for_icon,
                         &catalog_for_icon,
                         current_address,
