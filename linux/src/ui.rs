@@ -1176,6 +1176,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let status_for_icmp = status.clone();
+    let progress_for_icmp = scan_progress.clone();
     let icmp_button_for_icmp = icmp_button.clone();
     let active_icmp_for_button = Rc::clone(&active_icmp);
     let active_tcp_for_icmp = Rc::clone(&active_scan);
@@ -1239,6 +1240,9 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
+        let total_targets = targets.len();
+        progress_for_icmp.set_fraction(0.0);
+        progress_for_icmp.set_text(Some(&format!("0/{total_targets} devices checked")));
         match scanner::start_icmp_discovery(
             interface.address,
             targets,
@@ -1260,6 +1264,7 @@ pub fn build_ui(application: &adw::Application) {
                 );
 
                 let status_for_events = status_for_icmp.clone();
+                let progress_for_events = progress_for_icmp.clone();
                 let icmp_button_for_events = icmp_button_for_icmp.clone();
                 let active_icmp_for_events = Rc::clone(&active_icmp_for_button);
                 let selected_for_events = Rc::clone(&selected_for_icmp);
@@ -1275,6 +1280,7 @@ pub fn build_ui(application: &adw::Application) {
                 let navigation_for_events = navigation_for_icmp.clone();
                 let active_device_scan_for_events = Rc::clone(&active_device_scan_for_icmp);
                 let mut replies = 0usize;
+                let mut completed_targets = 0usize;
                 let mut unavailable_message: Option<String> = None;
 
                 glib::timeout_add_local(Duration::from_millis(80), move || {
@@ -1284,6 +1290,13 @@ pub fn build_ui(application: &adw::Application) {
                                 address,
                                 round_trip_time,
                             } => {
+                                completed_targets += 1;
+                                progress_for_events.set_fraction(
+                                    completed_targets as f64 / total_targets.max(1) as f64,
+                                );
+                                progress_for_events.set_text(Some(&format!(
+                                    "{completed_targets}/{total_targets} devices checked"
+                                )));
                                 if let Some(rtt) = round_trip_time {
                                     replies += 1;
                                     status_for_events.set_text(&format!(
@@ -1338,11 +1351,20 @@ pub fn build_ui(application: &adw::Application) {
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
 
+                                progress_for_events.set_fraction(
+                                    completed as f64 / total.max(1) as f64,
+                                );
                                 if let Some(message) = unavailable_message.as_deref() {
+                                    progress_for_events.set_text(Some("Unavailable"));
                                     status_for_events.set_text(&format!(
                                         "ICMP datagram socket unavailable: {message}. TCP and service discovery remain usable; no raw-socket fallback or privilege changes were attempted."
                                     ));
                                 } else {
+                                    progress_for_events.set_text(Some(if cancelled {
+                                        "Cancelled"
+                                    } else {
+                                        "Complete"
+                                    }));
                                     let state = if cancelled { "cancelled" } else { "finished" };
                                     status_for_events.set_text(&format!(
                                         "ICMP check {state}: {completed}/{total} device(s) checked; {replies} echo reply/replies. Missing replies are inconclusive."
@@ -1356,6 +1378,7 @@ pub fn build_ui(application: &adw::Application) {
                 });
             }
             Err(error) => {
+                progress_for_icmp.set_text(Some("Could not start"));
                 status_for_icmp.set_text(&format!("Could not start ICMP checks: {error}"));
             }
         }
