@@ -11,7 +11,7 @@ use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use mdns_sd::{DaemonEvent, IfKind, ServiceDaemon, ServiceEvent};
+use mdns_sd::{DaemonEvent, DaemonStatus, IfKind, ServiceDaemon, ServiceEvent};
 
 pub const DEFAULT_MDNS_WINDOW: Duration = Duration::from_secs(5);
 pub const MAX_MDNS_WINDOW: Duration = Duration::from_secs(10);
@@ -169,14 +169,35 @@ fn run_discovery(
         cancelled,
         sender,
     );
+    let shutdown_result = shutdown_daemon(&daemon);
 
-    let _ = daemon.stop_browse(ENUMERATION_TYPE);
-    for service_type in COMMON_SERVICE_TYPES {
-        let _ = daemon.stop_browse(service_type);
+    match result {
+        Err(error) => Err(error),
+        Ok(()) => shutdown_result,
     }
-    let _ = daemon.shutdown();
+}
 
-    result
+fn shutdown_daemon(daemon: &ServiceDaemon) -> Result<(), String> {
+    let statuses = daemon
+        .shutdown()
+        .map_err(|error| format!("could not request mDNS daemon shutdown: {error}"))?;
+    let deadline = Instant::now() + Duration::from_secs(2);
+
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err("timed out waiting for the mDNS daemon to stop".to_owned());
+        }
+
+        match statuses.recv_timeout(remaining) {
+            Ok(DaemonStatus::Shutdown) => return Ok(()),
+            Ok(DaemonStatus::Running) => {}
+            Ok(_) => {}
+            Err(error) => {
+                return Err(format!("could not confirm mDNS daemon shutdown: {error}"));
+            }
+        }
+    }
 }
 
 fn browse_on_selected_interface(
