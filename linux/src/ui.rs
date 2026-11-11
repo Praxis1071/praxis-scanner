@@ -1128,14 +1128,45 @@ fn refresh_device_list(
         return;
     }
 
-    for device in records {
+    let responsive_count = records.iter().filter(|device| device.tcp_responded).count();
+    let observed_count = records.len().saturating_sub(responsive_count);
+
+    if responsive_count > 0 {
+        let heading = gtk::Label::new(Some(&format!(
+            "TCP-responsive devices ({responsive_count})"
+        )));
+        heading.set_halign(gtk::Align::Start);
+        heading.set_margin_top(8);
+        heading.set_margin_bottom(4);
+        heading.add_css_class("title-3");
+        list.append(&heading);
+    }
+    if observed_count > 0 {
+        let heading = gtk::Label::new(Some(&format!(
+            "Other observed devices — reachability unknown ({observed_count})"
+        )));
+        heading.set_halign(gtk::Align::Start);
+        heading.set_margin_top(8);
+        heading.set_margin_bottom(4);
+        heading.add_css_class("title-3");
+        list.append(&heading);
+    }
+
+    for device in records
+        .iter()
+        .copied()
+        .filter(|device| device.tcp_responded)
+        .chain(records.iter().copied().filter(|device| !device.tcp_responded))
+    {
         let mut details = Vec::new();
 
         if let Some(mac) = device.mac_address.as_deref() {
             details.push(format!("MAC {mac}"));
         }
         if device.tcp_responded {
-            details.push("TCP response".to_owned());
+            details.push("TCP responsive".to_owned());
+        } else {
+            details.push("Reachability unknown (no TCP response observed)".to_owned());
         }
         if !device.open_tcp_ports.is_empty() {
             let ports = device
