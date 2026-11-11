@@ -64,7 +64,7 @@ Android references: `NetworkScanner.kt`, `ArpReader.kt`, `DnsLookup.kt`, `Networ
 | Android capability | Linux branch status | Required parity work / constraints |
 |---|---|---|
 | Network/interface/subnet discovery | **Partial / implemented in source, runtime unverified** | Verify interface selection, prefix, route/gateway and subnet behavior on host and Flatpak |
-| ICMP host discovery, latency and TTL | **Partial / source implemented** — opt-in checks use SOCK_DGRAM/IPPROTO_ICMPv4 only, selected-source binding, 450 ms default timeout, 32 workers, cancellation and validated echo replies; no raw fallback, capability or sysctl changes | Verify on supported and denied ping_group_range systems and inside Flatpak; TTL remains missing |
+| ICMP host discovery, latency and TTL | **Partial / source implemented** — opt-in subnet discovery checks at most 1024 candidate hosts using SOCK_DGRAM/IPPROTO_ICMPv4 only, selected-source binding, 450 ms default timeout, 32 workers, cancellation and validated echo replies; no raw fallback, capability or sysctl changes | Verify on supported and denied ping_group_range systems and inside Flatpak; TTL remains missing |
 | TCP reachability fallback | **Implemented / unverified** | Keep inconclusive timeouts distinct from offline; test cancellation and bounds |
 | Read-only ARP/neighbour MAC enrichment | **Partial / unverified** | Verify permissions and correct interface-scoped lookup; do not add privileged fallback |
 | mDNS/DNS-SD service discovery | **Implemented / unverified** | Verify protocol coverage, host and Flatpak multicast behavior, parsing, bounds, and service presentation |
