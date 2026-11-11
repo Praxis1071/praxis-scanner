@@ -286,7 +286,7 @@ pub fn build_ui(application: &adw::Application) {
         netbios_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
-                "Selected {} ({}/{}). This is the local IPv4 address of this device. Press Scan selected network to begin; no scan starts automatically.",
+                "Selected {} ({}/{}). This is this device's local IPv4 address. Automatic scanning on launch is controlled in Settings.",
                 interface.name,
                 interface.address,
                 interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
