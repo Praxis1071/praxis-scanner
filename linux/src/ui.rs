@@ -937,7 +937,7 @@ fn refresh_device_list(
         let navigation_for_row = navigation.clone();
         let selected_device = device.clone();
         row.connect_activated(move |_| {
-            let page = device_detail_page(&selected_device);
+            let page = device_detail_page(&selected_device, &navigation_for_row);
             navigation_for_row.push(&page);
         });
         list.append(&row);
@@ -945,8 +945,23 @@ fn refresh_device_list(
 }
 
 
-fn device_detail_page(device: &DeviceRecord) -> adw::NavigationPage {
+fn device_detail_page(
+    device: &DeviceRecord,
+    navigation: &adw::NavigationView,
+) -> adw::NavigationPage {
     let header = adw::HeaderBar::new();
+    let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
+    back_button.set_tooltip_text(Some("Back to discovered devices"));
+    let navigation_for_back = navigation.clone();
+    back_button.connect_clicked(move |_| {
+        navigation_for_back.pop();
+    });
+    header.pack_start(&back_button);
+    let title = adw::WindowTitle::new(
+        &format!("Device {}", device.address),
+        "Network details",
+    );
+    header.set_title_widget(Some(&title));
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
     content.set_margin_top(18);
     content.set_margin_bottom(24);
