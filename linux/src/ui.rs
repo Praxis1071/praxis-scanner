@@ -216,6 +216,7 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&heading);
     content.append(&list);
     content.append(&system_info);
+    content.append(&scan_progress);
     content.append(&devices_heading);
     content.append(&devices_list);
     content.append(&ports_heading);
@@ -237,7 +238,6 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&ssdp_results_heading);
     content.append(&ssdp_results_list);
     content.append(&status);
-    content.append(&scan_progress);
 
     let scrolled = gtk::ScrolledWindow::builder()
         .vexpand(true)
