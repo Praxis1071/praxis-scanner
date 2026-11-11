@@ -1232,6 +1232,17 @@ fn device_detail_page(
     }
     content.append(&identity);
 
+    let preferences = AppPreferences::load();
+    let custom_service_names = preferences
+        .custom_ports
+        .iter()
+        .map(|item| (item.port, item.service_name.clone()))
+        .collect::<HashMap<_, _>>();
+    let mut deep_scan_ports = scanner::DEEP_SCAN_TCP_PORTS.to_vec();
+    deep_scan_ports.extend(preferences.enabled_custom_ports());
+    deep_scan_ports.sort_unstable();
+    deep_scan_ports.dedup();
+
     let ports_heading = gtk::Label::new(Some("Open TCP ports"));
     ports_heading.add_css_class("title-2");
     ports_heading.set_halign(gtk::Align::Start);
@@ -1243,7 +1254,10 @@ fn device_detail_page(
         append_detail_row(&ports, "No open ports recorded", "No configured TCP probe found an open port.");
     } else {
         for port in &device.open_tcp_ports {
-            let service = scanner::service_name(*port)
+            let service = custom_service_names
+                .get(port)
+                .map(String::as_str)
+                .or_else(|| scanner::service_name(*port))
                 .unwrap_or("Unknown service");
             append_detail_row(&ports, &format!("TCP {port}"), service);
         }
@@ -1256,7 +1270,7 @@ fn device_detail_page(
     content.append(&deep_scan_heading);
 
     let deep_scan_note = gtk::Label::new(Some(
-        "Automatically checks the Android app's standard common TCP ports. Timeouts are inconclusive; service names are port-based hints. A full 1–65535 scan is not available in this Linux build because scans are deliberately bounded.",
+        "Automatically checks the Android app's standard common TCP ports plus enabled custom ports. Timeouts are inconclusive; service names are port-based hints. A full 1–65535 scan is not available in this Linux build because scans are deliberately bounded.",
     ));
     deep_scan_note.add_css_class("dim-label");
     deep_scan_note.set_wrap(true);
@@ -1285,7 +1299,8 @@ fn device_detail_page(
 
     start_device_deep_scan(
         device.address,
-        scanner::DEEP_SCAN_TCP_PORTS.to_vec(),
+        deep_scan_ports,
+        custom_service_names,
         &deep_scan_progress,
         &deep_scan_status,
         &deep_scan_cancel,
@@ -1365,6 +1380,7 @@ fn device_detail_page(
 fn start_device_deep_scan(
     address: std::net::Ipv4Addr,
     ports: Vec<u16>,
+    service_names: HashMap<u16, String>,
     progress: &gtk::ProgressBar,
     status: &gtk::Label,
     cancel_button: &gtk::Button,
@@ -1377,7 +1393,7 @@ fn start_device_deep_scan(
     clear_list(results);
     progress.set_fraction(0.0);
     progress.set_text(Some("0 ports checked"));
-    status.set_text("Scanning the standard common TCP port list…");
+    status.set_text("Scanning standard and enabled custom TCP ports…");
     cancel_button.set_sensitive(true);
 
     let total_ports = ports.len();
@@ -1409,6 +1425,7 @@ fn start_device_deep_scan(
             let started = Instant::now();
             let mut completed_ports = 0usize;
             let mut open_ports = 0usize;
+            let service_names_for_events = service_names.clone();
 
             glib::timeout_add_local(Duration::from_millis(80), move || {
                 while let Ok(event) = events.try_recv() {
@@ -1422,7 +1439,10 @@ fn start_device_deep_scan(
                             completed_ports = completed_ports.saturating_add(1);
                             if open {
                                 open_ports = open_ports.saturating_add(1);
-                                let service = scanner::service_name(port)
+                                let service = service_names_for_events
+                                    .get(&port)
+                                    .map(String::as_str)
+                                    .or_else(|| scanner::service_name(port))
                                     .unwrap_or("Unknown service");
                                 append_detail_row(
                                     &results_for_events,
