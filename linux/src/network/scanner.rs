@@ -196,9 +196,8 @@ pub fn start_device_deep_scan(
                     continue;
                 }
 
-                let socket = SocketAddr::V4(SocketAddrV4::new(address, port));
                 let (open, tcp_responded, banner) =
-                    match TcpStream::connect_timeout(&socket, timeout) {
+                    match connect_tcp_from_source(source_address, address, port, timeout) {
                         Ok(mut stream) => {
                             let banner = collect_service_banner(address, port, &mut stream);
                             (true, true, banner)
@@ -708,7 +707,13 @@ pub fn start_tcp_discovery_with_ports(
                     continue;
                 }
 
-                let result = scan_host(address, timeout, &worker_ports, &worker_cancelled);
+                let result = scan_host(
+                    source_address,
+                    address,
+                    timeout,
+                    &worker_ports,
+                    &worker_cancelled,
+                );
                 worker_completed.fetch_add(1, Ordering::Relaxed);
                 if sender.send(ScanEvent::HostCompleted(result)).is_err() {
                     worker_cancelled.store(true, Ordering::Relaxed);
