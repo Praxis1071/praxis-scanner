@@ -1,0 +1,35 @@
+app-id: io.github.praxis1071.PraxisScanner
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: praxis-scanner
+
+finish-args:
+  # Required for explicit TCP scans and selected-interface UDP multicast discovery.
+  - --share=network
+  # Native GTK desktop integration.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+
+modules:
+  - name: praxis-scanner
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_NET_OFFLINE: "true"
+    build-commands:
+      - mkdir -p .cargo
+      - cp -vf cargo/config .cargo/config.toml
+      - cargo build --offline --release --locked --manifest-path linux/Cargo.toml
+      - install -Dm755 linux/target/release/praxis-scanner-linux /app/bin/praxis-scanner
+      - install -Dm644 linux/data/io.github.praxis1071.PraxisScanner.desktop /app/share/applications/io.github.praxis1071.PraxisScanner.desktop
+      - install -Dm644 linux/data/io.github.praxis1071.PraxisScanner.metainfo.xml /app/share/metainfo/io.github.praxis1071.PraxisScanner.metainfo.xml
+      - install -Dm644 linux/data/icons/hicolor/scalable/apps/io.github.praxis1071.PraxisScanner.svg /app/share/icons/hicolor/scalable/apps/io.github.praxis1071.PraxisScanner.svg
+    sources:
+      - linux/cargo-sources.json
+      - type: dir
+        path: .
