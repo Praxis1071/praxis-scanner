@@ -2074,6 +2074,8 @@ fn device_detail_page(
         &deep_scan_results,
         active_device_scan,
         devices_list.clone(),
+        interface_list.clone(),
+        refresh_button.clone(),
     );
 
     if !device.mdns_services.is_empty() {
@@ -2155,6 +2157,8 @@ fn start_device_deep_scan(
     results: &gtk::ListBox,
     active_scan: Rc<RefCell<Option<ScanHandle>>>,
     devices_list: gtk::ListBox,
+    interface_list: gtk::ListBox,
+    refresh_button: gtk::Button,
 ) {
     if let Some(previous) = active_scan.borrow_mut().take() {
         previous.cancel();
@@ -2165,6 +2169,8 @@ fn start_device_deep_scan(
     status.set_text("Scanning standard and enabled custom TCP ports…");
     cancel_button.set_sensitive(true);
     devices_list.set_sensitive(false);
+    interface_list.set_sensitive(false);
+    refresh_button.set_sensitive(false);
 
     let total_ports = ports.len();
     match scanner::start_device_deep_scan(
@@ -2191,6 +2197,8 @@ fn start_device_deep_scan(
             let cancel_for_events = cancel_button.clone();
             let results_for_events = results.clone();
             let devices_list_for_events = devices_list.clone();
+            let interface_list_for_events = interface_list.clone();
+            let refresh_button_for_events = refresh_button.clone();
             let active_for_events = Rc::clone(&active_scan);
             let scan_identity_for_events = scan_identity.clone();
             let started = Instant::now();
@@ -2242,6 +2250,8 @@ fn start_device_deep_scan(
                             if is_current_scan {
                                 active_for_events.borrow_mut().take();
                                 devices_list_for_events.set_sensitive(true);
+                                interface_list_for_events.set_sensitive(true);
+                                refresh_button_for_events.set_sensitive(true);
                             }
                             cancel_for_events.set_sensitive(false);
                             progress_for_events.set_fraction(1.0);
@@ -2272,6 +2282,8 @@ fn start_device_deep_scan(
         Err(error) => {
             cancel_button.set_sensitive(false);
             devices_list.set_sensitive(true);
+            interface_list.set_sensitive(true);
+            refresh_button.set_sensitive(true);
             progress.set_text(Some("Could not start"));
             status.set_text(&format!("Deep scan could not start: {error}"));
         }
