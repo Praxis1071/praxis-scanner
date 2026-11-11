@@ -1183,12 +1183,6 @@ pub fn build_ui(application: &adw::Application) {
                                 catalog_for_events
                                     .borrow_mut()
                                     .record_icmp(address, round_trip_time);
-                                refresh_device_list(
-                                    &devices_for_events,
-                                    &catalog_for_events.borrow(),
-                                    &navigation_for_events,
-                                    &active_device_scan_for_events,
-                                );
                             }
                             scanner::IcmpEvent::Unavailable { message } => {
                                 unavailable_message = Some(message.clone());
@@ -1201,6 +1195,12 @@ pub fn build_ui(application: &adw::Application) {
                                 completed,
                                 cancelled,
                             } => {
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                );
                                 active_icmp_for_events.borrow_mut().take();
                                 icmp_button_for_events.set_label("Check ICMP reachability");
                                 let can_scan = selected_for_events
