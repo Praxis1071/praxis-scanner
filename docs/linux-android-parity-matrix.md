@@ -135,4 +135,5 @@ Record each verification run with commit SHA, date, environment, command, result
 - Added a parallel, bounded single-device deep-scan engine using the Android standard common-port set; progress and cancellation are surfaced in the detail view.
 - Added capped, sanitized initial service banners for plain TCP services; TLS endpoints are not probed with plaintext.
 - Added bounded NetBIOS NBSTAT query/parser code and merged hostname/workgroup evidence into the device catalog and detail view.
-- Automated parser/engine and preference-store tests are present in source. A Linux-specific CI job now runs formatting, tests, strict Clippy and release build on the feature branch; its first successful result has not yet been observed. Host behavior, Flatpak behavior, and visual parity remain unverified.
+- Added native Settings and Custom TCP Ports pages, versioned local preferences for theme/auto-scan/custom ports, and enabled custom-port integration into device deep scans.
+- Added a Linux-specific CI/Flatpak pipeline covering format, tests, Clippy, release build, generated offline Cargo sources, AppStream/desktop validation, Flatpak build, and a headless launch smoke test. Its first successful result has not yet been observed. Host behavior, controlled-network behavior, and visual parity remain unverified.
