@@ -157,6 +157,7 @@ pub fn build_ui(application: &adw::Application) {
     let selected_for_scan = Rc::clone(&selected_interface);
     let active_for_scan = Rc::clone(&active_scan);
     let refresh_button_for_scan = refresh_button.clone();
+    let interface_list_for_scan = list.clone();
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -218,6 +219,7 @@ pub fn build_ui(application: &adw::Application) {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
                 refresh_button_for_scan.set_sensitive(false);
+                interface_list_for_scan.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
@@ -228,6 +230,7 @@ pub fn build_ui(application: &adw::Application) {
                 let results_for_events = results_for_scan.clone();
                 let button_for_events = button_for_scan.clone();
                 let refresh_for_events = refresh_button_for_scan.clone();
+                let interface_list_for_events = interface_list_for_scan.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
@@ -255,6 +258,7 @@ pub fn build_ui(application: &adw::Application) {
                                 *active_for_events.borrow_mut() = None;
                                 button_for_events.set_label("Scan selected network");
                                 refresh_for_events.set_sensitive(true);
+                                interface_list_for_events.set_sensitive(true);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
                                     "Scan {state}: {finished_count} of {total} checked; {responsive} TCP responders; {inconclusive} without a response (not proof they are offline)."
