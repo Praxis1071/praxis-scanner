@@ -136,7 +136,7 @@ impl DeviceRecord {
     pub fn has_discovery_evidence(&self) -> bool {
         self.tcp_responded
             || self.icmp_round_trip_time.is_some()
-            || !self.open_tcp_ports.is_empty
+            || !self.open_tcp_ports.is_empty()
             || !self.mdns_services.is_empty()
             || !self.ssdp_advertisements.is_empty()
             || self.netbios_info.is_some()
