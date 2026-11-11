@@ -286,7 +286,7 @@ pub fn build_ui(application: &adw::Application) {
         netbios_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
-                "Selected {} ({}/{}). Press Scan selected network to begin; no scan starts automatically.",
+                "Selected {} ({}/{}). This is the local IPv4 address of this device. Press Scan selected network to begin; no scan starts automatically.",
                 interface.name,
                 interface.address,
                 interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
@@ -1896,7 +1896,7 @@ fn custom_ports_page(
     content.set_margin_end(18);
 
     let note = gtk::Label::new(Some(
-        "Enabled custom ports are added to the standard per-device deep scan. Ports are checked with ordinary TCP connections and remain subject to the application's scan limits.",
+        "Up to 128 custom ports can be saved. Enabled ports are added to the standard per-device deep scan and remain subject to the application's scan limits.",
     ));
     note.set_wrap(true);
     note.set_halign(gtk::Align::Start);
