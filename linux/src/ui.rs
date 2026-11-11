@@ -1153,12 +1153,14 @@ fn start_device_deep_scan(
     status.set_text("Scanning the standard common TCP port list…");
     cancel_button.set_sensitive(true);
 
+    let total_ports = ports.len();
     match scanner::start_device_deep_scan(
         address,
         ports,
         scanner::DEFAULT_TCP_TIMEOUT,
     ) {
         Ok((handle, events)) => {
+            let scan_identity = handle.clone();
             *active_scan.borrow_mut() = Some(handle);
 
             let active_for_cancel = Rc::clone(&active_scan);
@@ -1214,7 +1216,13 @@ fn start_device_deep_scan(
                             completed,
                             cancelled,
                         } => {
-                            active_for_events.borrow_mut().take();
+                            let is_current_scan = active_for_events
+                                .borrow()
+                                .as_ref()
+                                .is_some_and(|active| active.refers_to_same_scan(&scan_identity_for_events));
+                            if is_current_scan {
+                                active_for_events.borrow_mut().take();
+                            }
                             cancel_for_events.set_sensitive(false);
                             progress_for_events.set_fraction(1.0);
                             progress_for_events.set_text(Some(if cancelled {
