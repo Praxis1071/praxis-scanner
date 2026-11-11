@@ -278,6 +278,8 @@ pub fn build_ui(application: &adw::Application) {
     let selected_for_selection = Rc::clone(&selected_interface);
     let catalog_for_selection = Rc::clone(&device_catalog);
     let devices_for_selection = devices_list.clone();
+    let navigation_for_selection = navigation_view.clone();
+    let active_device_scan_for_selection = Rc::clone(&active_device_scan);
     let scan_button_for_selection = scan_button.clone();
     let mdns_button_for_selection = mdns_button.clone();
     let ssdp_button_for_selection = ssdp_button.clone();
@@ -296,7 +298,6 @@ pub fn build_ui(application: &adw::Application) {
             != selected.as_ref().map(|item| (item.name.as_str(), item.address));
         if changed {
             catalog_for_selection.borrow_mut().clear();
-            clear_list(&devices_for_selection);
         }
         let can_scan = selected.as_ref().is_some_and(is_scannable_interface);
         scan_button_for_selection.set_sensitive(can_scan);
@@ -312,7 +313,15 @@ pub fn build_ui(application: &adw::Application) {
                 interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
             ));
         }
-        *selected_for_selection.borrow_mut() = selected;
+        *selected_for_selection.borrow_mut() = selected.clone();
+        refresh_device_list(
+            &devices_for_selection,
+            &catalog_for_selection.borrow(),
+            &navigation_for_selection,
+            &active_device_scan_for_selection,
+            &catalog_for_selection,
+            selected.as_ref().map(|interface| interface.address),
+        );
     });
 
     let list_for_refresh = list.clone();
@@ -325,6 +334,10 @@ pub fn build_ui(application: &adw::Application) {
     let ssdp_button_for_refresh = ssdp_button.clone();
     let netbios_button_for_refresh = netbios_button.clone();
     let icmp_button_for_refresh = icmp_button.clone();
+    let devices_for_refresh = devices_list.clone();
+    let catalog_for_refresh = Rc::clone(&device_catalog);
+    let navigation_for_refresh = navigation_view.clone();
+    let active_device_scan_for_refresh = Rc::clone(&active_device_scan);
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
             RefreshWidgets {
@@ -339,6 +352,17 @@ pub fn build_ui(application: &adw::Application) {
             },
             &interfaces_for_refresh,
             &selected_for_refresh,
+        );
+        refresh_device_list(
+            &devices_for_refresh,
+            &catalog_for_refresh.borrow(),
+            &navigation_for_refresh,
+            &active_device_scan_for_refresh,
+            &catalog_for_refresh,
+            selected_for_refresh
+                .borrow()
+                .as_ref()
+                .map(|interface| interface.address),
         );
     });
 
@@ -1330,6 +1354,17 @@ pub fn build_ui(application: &adw::Application) {
         },
         &interfaces,
         &selected_interface,
+    );
+    refresh_device_list(
+        &devices_list,
+        &device_catalog.borrow(),
+        &navigation_view,
+        &active_device_scan,
+        &device_catalog,
+        selected_interface
+            .borrow()
+            .as_ref()
+            .map(|interface| interface.address),
     );
     window.present();
 
