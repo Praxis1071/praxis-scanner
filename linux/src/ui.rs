@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -13,7 +14,7 @@ use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
 use crate::network::netbios::{self, NetbiosEvent, NetbiosHandle};
 use crate::network::ssdp::{self, SsdpEvent, SsdpHandle};
 use crate::network::scanner::{
-    self, HostScanResult, ScanEvent, ScanHandle, MAX_SCAN_TARGETS,
+    self, DeepScanEvent, HostScanResult, ScanEvent, ScanHandle, MAX_SCAN_TARGETS,
 };
 use crate::network::{self, NetworkInterface};
 
@@ -2494,7 +2495,9 @@ fn settings_page(
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
     back_button.set_tooltip_text(Some("Back"));
     let navigation_for_back = navigation.clone();
-    back_button.connect_clicked(move |_| navigation_for_back.pop());
+    back_button.connect_clicked(move |_| {
+        navigation_for_back.pop();
+    });
     header.pack_start(&back_button);
     let title = adw::WindowTitle::new("Settings", "Application preferences");
     header.set_title_widget(Some(&title));
@@ -2660,7 +2663,9 @@ fn custom_ports_page(
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
     back_button.set_tooltip_text(Some("Back to settings"));
     let navigation_for_back = navigation.clone();
-    back_button.connect_clicked(move |_| navigation_for_back.pop());
+    back_button.connect_clicked(move |_| {
+        navigation_for_back.pop();
+    });
     header.pack_start(&back_button);
     let title = adw::WindowTitle::new("Custom TCP ports", "Device deep-scan configuration");
     header.set_title_widget(Some(&title));
