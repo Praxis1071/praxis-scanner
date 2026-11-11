@@ -21,7 +21,7 @@ Do not move, rename, or delete Android source files as part of the Linux port. S
 4. **Platform information** — read-only interface, address, route and neighbor-table queries.
 5. **Persistence** — user preferences and device customizations, with explicit schema/version handling.
 
-The current implementation includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded IPv4 target generation, explicit user-triggered TCP-connect discovery, and opt-in mDNS/DNS-SD discovery. The full CI pipeline passed on commit `09320a1`; the latest mDNS result-deduplication refinement is awaiting CI. Controlled-network and Flatpak runtime verification remain outstanding.
+The current implementation includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded IPv4 target generation, explicit user-triggered TCP-connect discovery, opt-in mDNS/DNS-SD discovery, and bounded SSDP/UPnP discovery. The full CI pipeline passed on commit `09320a1`; the SSDP engine and UI integration are awaiting CI. Controlled-network and Flatpak runtime verification remain outstanding.
 
 ## Security invariants
 
@@ -34,6 +34,8 @@ The current implementation includes the GTK4/libadwaita shell, read-only IPv4 in
 - No telemetry or undisclosed network requests.
 - mDNS/DNS-SD queries are opt-in, use ordinary UDP multicast on the selected interface, and are filtered to the selected IPv4 subnet.
 - mDNS/DNS-SD responses are unauthenticated and may be spoofed. Do not present service names or hostnames as verified identities; do not expose TXT properties by default.
+- SSDP/UPnP discovery is opt-in, sends a single IPv4 M-SEARCH with multicast TTL 1 on the selected interface, and filters responses to the selected subnet.
+- SSDP responses are unauthenticated. Treat USN, SERVER and LOCATION headers as untrusted data; never fetch device-description URLs automatically.
 
 ## Concurrency model
 
@@ -45,8 +47,9 @@ GTK widgets are created and mutated only on the main thread. The current TCP dis
 2. Read-only route and neighbor information, once the chosen API passes host and Flatpak tests.
 3. TCP connect discovery with a conservative, explicit scope (source implementation present; CI passed on an earlier commit, controlled-network verification pending).
 4. mDNS/DNS-SD service discovery (source implementation present, bounded to the selected interface and IPv4 subnet; runtime and Flatpak multicast verification pending).
-5. ICMP datagram only if the exact datagram socket is proven to work without capabilities; never use raw ICMP.
-6. SSDP and optional NetBIOS only after bounded protocol, lifecycle and Flatpak multicast tests.
+5. SSDP/UPnP discovery (source implementation present, one TTL-1 M-SEARCH, selected-interface socket, source-subnet filter, no description download; runtime and Flatpak verification pending).
+6. ICMP datagram only if the exact datagram socket is proven to work without capabilities; never use raw ICMP.
+7. Optional NetBIOS only after bounded protocol, lifecycle and Flatpak broadcast tests.
 
 ## Dependency policy
 
