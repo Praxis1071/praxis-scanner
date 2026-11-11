@@ -139,8 +139,8 @@ impl DeviceCatalog {
             .set_mac_address(mac_address)
     }
 
-    pub fn get(&self, address: &Ipv4Addr) -> Option<&DeviceRecord> {
-        self.devices.get(address)
+    pub fn clear(&mut self) {
+        self.devices.clear();
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &DeviceRecord> {
@@ -203,7 +203,10 @@ mod tests {
         );
         assert!(catalog.set_mac_address(address(), "02:11:22:33:44:55".to_owned()));
 
-        let device = catalog.get(&address()).expect("device should be merged");
+        let device = catalog
+            .iter()
+            .find(|device| device.address == address())
+            .expect("device should be merged");
         assert!(device.tcp_responded);
         assert_eq!(device.open_tcp_ports.iter().copied().collect::<Vec<_>>(), vec![22, 80]);
         assert_eq!(device.mdns_services.len(), 1);
@@ -242,7 +245,10 @@ mod tests {
         assert!(!catalog.set_mac_address(address(), "01:11:22:33:44:55".to_owned()));
         assert!(!catalog.set_mac_address(address(), "00:00:00:00:00:00".to_owned()));
         assert!(!catalog.set_mac_address(address(), "not-a-mac".to_owned()));
-        let device = catalog.get(&address()).expect("record exists");
+        let device = catalog
+            .iter()
+            .find(|device| device.address == address())
+            .expect("record exists");
         assert!(device.open_tcp_ports.is_empty());
         assert!(device.mac_address.is_none());
         assert!(!device.has_discovery_evidence());
@@ -263,7 +269,12 @@ mod tests {
             );
         }
         assert_eq!(
-            catalog.get(&address()).expect("record exists").mdns_services.len(),
+            catalog
+                .iter()
+                .find(|device| device.address == address())
+                .expect("record exists")
+                .mdns_services
+                .len(),
             MAX_MDNS_EVIDENCE_PER_DEVICE
         );
     }
@@ -283,7 +294,12 @@ mod tests {
         catalog.record_ssdp(address(), first);
         catalog.record_ssdp(address(), second);
         assert_eq!(
-            catalog.get(&address()).expect("record exists").ssdp_advertisements.len(),
+            catalog
+                .iter()
+                .find(|device| device.address == address())
+                .expect("record exists")
+                .ssdp_advertisements
+                .len(),
             1
         );
     }
