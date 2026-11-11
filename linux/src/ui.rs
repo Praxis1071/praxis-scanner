@@ -1190,6 +1190,7 @@ fn start_device_deep_scan(
                             port,
                             open,
                             tcp_responded: _,
+                            banner,
                         } => {
                             completed_ports = completed_ports.saturating_add(1);
                             if open {
@@ -1198,8 +1199,8 @@ fn start_device_deep_scan(
                                     .unwrap_or("Unknown service");
                                 append_detail_row(
                                     &results_for_events,
-                                    &format!("TCP {port}"),
-                                    service,
+                                    &format!("TCP {port} · {service}"),
+                                    banner.as_deref().unwrap_or("Open; no readable service banner received"),
                                 );
                             }
                             let fraction = completed_ports as f64 / total_ports.max(1) as f64;
