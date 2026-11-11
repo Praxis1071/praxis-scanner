@@ -845,7 +845,10 @@ mod tests {
             Vec::new(),
             super::DEFAULT_ICMP_TIMEOUT,
         );
-        assert_eq!(result.unwrap_err(), super::ScanStartError::InvalidSourceAddress);
+        assert!(matches!(
+            result,
+            Err(super::ScanStartError::InvalidSourceAddress)
+        ));
     }
 
     #[test]
@@ -877,15 +880,14 @@ mod tests {
             ),
             Err(super::ScanStartError::TooManyTargets { .. })
         ));
-        assert_eq!(
+        assert!(matches!(
             super::start_icmp_discovery(
                 Ipv4Addr::new(192, 0, 2, 1),
                 Vec::new(),
                 Duration::ZERO
-            )
-            .unwrap_err(),
-            super::ScanStartError::InvalidTimeout
-        );
+            ),
+            Err(super::ScanStartError::InvalidTimeout)
+        ));
     }
 
     #[test]
