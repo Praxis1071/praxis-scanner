@@ -376,10 +376,12 @@ fn refresh_interfaces(
                     .iter()
                     .find(|route| route.is_default)
                     .map(|route| {
-                        format!(
-                            "Default gateway: {} via {} (metric {})",
-                            route.gateway, route.interface, route.metric
-                        )
+                        let route_label = if route.uses_gateway && !route.gateway.is_unspecified() {
+                            format!("Default gateway: {}", route.gateway)
+                        } else {
+                            "Default IPv4 route".to_owned()
+                        };
+                        format!("{route_label} via {} (metric {})", route.interface, route.metric)
                     })
                     .unwrap_or_else(|| "Default gateway: no active IPv4 default route".to_owned()),
                 Err(_) => "Default gateway: route information unavailable".to_owned(),
