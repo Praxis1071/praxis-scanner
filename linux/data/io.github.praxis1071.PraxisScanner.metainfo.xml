@@ -7,7 +7,8 @@
   <project_license>GPL-3.0-only</project_license>
   <description>
     <p>Praxis Scanner is a native Linux desktop application for discovering devices and advertised services on a local IPv4 network.</p>
-    <p>It provides explicit, bounded TCP connection scans, read-only local route and neighbour information, and optional mDNS/DNS-SD and SSDP/UPnP discovery.</p>
+    <p>It provides explicit, bounded TCP connection scans, read-only local route and neighbour information, and optional mDNS/DNS-SD, SSDP/UPnP, NetBIOS, and datagram-only ICMP echo checks.</p>
+    <p>ICMP round-trip time is reported only when the kernel permits unprivileged ping sockets. The application does not use raw sockets, request elevated privileges, or modify system settings.</p>
     <p>Network discovery is best-effort. Responses may be filtered or spoofed, and a missing response does not prove that a device is offline.</p>
   </description>
   <launchable type="desktop-id">io.github.praxis1071.PraxisScanner.desktop</launchable>
