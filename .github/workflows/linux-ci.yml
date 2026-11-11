@@ -17,18 +17,18 @@ permissions:
 
 concurrency:
   group: linux-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   linux:
-    timeout-minutes: 20
+    timeout-minutes: 35
     runs-on: ubuntu-26.04
     steps:
       - name: Check out source
         uses: actions/checkout@v4
       - name: Install GTK build dependencies
         run: |
-          sudo apt-get update -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+          sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 -o Acquire::ForceIPv4=true
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-4-dev libadwaita-1-dev
           pkg-config --modversion gtk4 libadwaita-1
       - name: Install Rust toolchain
