@@ -50,7 +50,7 @@ pub struct DeviceRecord {
 }
 
 impl DeviceRecord {
-    fn new(address: Ipv4Addr) -> Self {
+    pub fn new(address: Ipv4Addr) -> Self {
         Self {
             address,
             mac_address: None,
