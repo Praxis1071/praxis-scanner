@@ -145,6 +145,7 @@ pub fn build_ui(application: &adw::Application) {
     let button_for_scan = scan_button.clone();
     let selected_for_scan = Rc::clone(&selected_interface);
     let active_for_scan = Rc::clone(&active_scan);
+    let refresh_button_for_scan = refresh_button.clone();
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -203,6 +204,7 @@ pub fn build_ui(application: &adw::Application) {
             Ok((handle, events)) => {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
+                refresh_button_for_scan.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
@@ -212,28 +214,37 @@ pub fn build_ui(application: &adw::Application) {
                 let status_for_events = status_for_scan.clone();
                 let results_for_events = results_for_scan.clone();
                 let button_for_events = button_for_scan.clone();
+                let refresh_for_events = refresh_button_for_scan.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let mut completed = 0usize;
+                let mut responsive = 0usize;
+                let mut inconclusive = 0usize;
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
                         match event {
                             ScanEvent::HostCompleted(result) => {
                                 completed += 1;
-                                results_for_events.append(&result_row(&result));
+                                if result.tcp_responded {
+                                    responsive += 1;
+                                    results_for_events.append(&result_row(&result));
+                                } else {
+                                    inconclusive += 1;
+                                }
                                 status_for_events.set_text(&format!(
-                                    "Checked {completed} of {target_count} addresses. A missing response does not prove a device is offline."
+                                    "Checked {completed} of {target_count}: {responsive} TCP responders, {inconclusive} without a response (inconclusive)."
                                 ));
                             }
                             ScanEvent::Finished {
                                 total,
-                                completed,
+                                completed: finished_count,
                                 cancelled,
                             } => {
                                 *active_for_events.borrow_mut() = None;
                                 button_for_events.set_label("Scan selected network");
+                                refresh_for_events.set_sensitive(true);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
-                                    "Scan {state}: {completed} of {total} addresses checked. No-response results are inconclusive."
+                                    "Scan {state}: {finished_count} of {total} checked; {responsive} TCP responders; {inconclusive} without a response (not proof they are offline)."
                                 ));
                                 return glib::ControlFlow::Break;
                             }
