@@ -20,42 +20,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  format:
-    name: Rust formatting
-    timeout-minutes: 10
+  linux:
+    name: Format, build, tests and lint
+    timeout-minutes: 45
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
+
       - name: Format and verify Rust sources
         run: |
           cargo fmt --manifest-path linux/Cargo.toml --all
           cargo fmt --manifest-path linux/Cargo.toml --all -- --check
 
-  linux:
-    name: Linux build, tests and lint
-    needs: format
-    timeout-minutes: 35
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
       - name: Install GTK build dependencies
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 update
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 install -y --no-install-recommends build-essential pkg-config libgtk-4-dev libadwaita-1-dev
           pkg-config --modversion gtk4 libadwaita-1
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - name: Run unit tests
+
+      - name: Run unit and integration tests
         run: cargo test --manifest-path linux/Cargo.toml --all-targets
+
       - name: Run Clippy
         run: cargo clippy --manifest-path linux/Cargo.toml --all-targets -- -D warnings
+
       - name: Build release binary
         run: cargo build --manifest-path linux/Cargo.toml --release
