@@ -56,6 +56,7 @@ pub enum MdnsEvent {
 pub enum MdnsStartError {
     InvalidInterfaceName,
     EmptyAddressScope,
+    InvalidAddressScope,
     TooManyAddresses { requested: usize, limit: usize },
     InvalidDuration,
     ThreadSpawn(String),
@@ -66,6 +67,7 @@ impl std::fmt::Display for MdnsStartError {
         match self {
             Self::InvalidInterfaceName => formatter.write_str("the selected network interface name is invalid"),
             Self::EmptyAddressScope => formatter.write_str("mDNS discovery requires a non-empty selected subnet"),
+            Self::InvalidAddressScope => formatter.write_str("mDNS discovery is limited to private IPv4 and IPv4 link-local addresses"),
             Self::TooManyAddresses { requested, limit } => write!(
                 formatter,
                 "mDNS scope contains {requested} addresses; the configured limit is {limit}"
@@ -115,7 +117,7 @@ pub fn start_mdns_discovery(
                 || (!address.is_private() && !address.is_link_local())
         })
     {
-        return Err(MdnsStartError::EmptyAddressScope);
+        return Err(MdnsStartError::InvalidAddressScope);
     }
     if allowed_addresses.len() > 1024 {
         return Err(MdnsStartError::TooManyAddresses {
@@ -406,6 +408,14 @@ mod tests {
     }
 
     #[test]
+    fn rejects_control_characters_in_dns_metadata() {
+        assert!(super::is_safe_dns_text("printer.local."));
+        assert!(!super::is_safe_dns_text(""));
+        assert!(!super::is_safe_dns_text("bad\nname.local."));
+        assert!(!super::is_safe_dns_text(&"x".repeat(256)));
+    }
+
+    #[test]
     fn validates_linux_interface_names() {
         assert!(is_valid_interface_name("wlan0"));
         assert!(is_valid_interface_name("enp0s20f0u5"));
@@ -447,5 +457,38 @@ mod tests {
             .err(),
             Some(MdnsStartError::InvalidDuration)
         );
+        assert_eq!(
+            start_mdns_discovery(
+                "wlan0".to_owned(),
+                vec![Ipv4Addr::LOCALHOST],
+                DEFAULT_MDNS_WINDOW,
+            )
+            .err(),
+            Some(MdnsStartError::InvalidAddressScope)
+        );
+        assert_eq!(
+            start_mdns_discovery(
+                "wlan0".to_owned(),
+                vec![Ipv4Addr::new(8, 8, 8, 8)],
+                DEFAULT_MDNS_WINDOW,
+            )
+            .err(),
+            Some(MdnsStartError::InvalidAddressScope)
+        );
+        assert_eq!(
+            start_mdns_discovery(
+                "wlan0".to_owned(),
+                (1..=1025)
+                    .map(|last| Ipv4Addr::new(192, 168, 1, (last % 254 + 1) as u8))
+                    .collect(),
+                DEFAULT_MDNS_WINDOW,
+            )
+            .err(),
+            Some(MdnsStartError::TooManyAddresses {
+                requested: 1025,
+                limit: 1024,
+            })
+        );
+
     }
 }
