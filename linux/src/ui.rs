@@ -634,6 +634,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let status_for_mdns = status.clone();
+    let progress_for_mdns = scan_progress.clone();
     let mdns_button_for_scan = mdns_button.clone();
     let selected_for_mdns = Rc::clone(&selected_interface);
     let active_mdns_for_scan = Rc::clone(&active_mdns);
@@ -709,6 +710,8 @@ pub fn build_ui(application: &adw::Application) {
             Ok((handle, events)) => {
                 *active_mdns_for_scan.borrow_mut() = Some(handle);
                 mdns_button_for_scan.set_label("Cancel mDNS discovery");
+                progress_for_mdns.set_fraction(0.0);
+                progress_for_mdns.set_text(Some("mDNS discovery running…"));
                 tcp_button_for_mdns.set_sensitive(false);
                 ssdp_button_for_mdns.set_sensitive(false);
                 netbios_button_for_mdns.set_sensitive(false);
@@ -725,6 +728,7 @@ pub fn build_ui(application: &adw::Application) {
                 ));
 
                 let status_for_events = status_for_mdns.clone();
+                let progress_for_events = progress_for_mdns.clone();
                 let mdns_button_for_events = mdns_button_for_scan.clone();
                 let tcp_button_for_events = tcp_button_for_mdns.clone();
                 let ssdp_button_for_events = ssdp_button_for_mdns.clone();
@@ -781,6 +785,12 @@ pub fn build_ui(application: &adw::Application) {
                             }
                             MdnsEvent::Failed(error) => {
                                 active_for_events.borrow_mut().take();
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "mDNS cancelled"
+                                } else {
+                                    "mDNS complete"
+                                }));
                                 mdns_button_for_events.set_label("Discover advertised services (mDNS)");
                                 mdns_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
@@ -837,6 +847,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let status_for_ssdp = status.clone();
+    let progress_for_ssdp = scan_progress.clone();
     let ssdp_button_for_scan = ssdp_button.clone();
     let selected_for_ssdp = Rc::clone(&selected_interface);
     let active_ssdp_for_scan = Rc::clone(&active_ssdp);
@@ -912,6 +923,8 @@ pub fn build_ui(application: &adw::Application) {
             Ok((handle, events)) => {
                 *active_ssdp_for_scan.borrow_mut() = Some(handle);
                 ssdp_button_for_scan.set_label("Cancel SSDP discovery");
+                progress_for_ssdp.set_fraction(0.0);
+                progress_for_ssdp.set_text(Some("SSDP discovery running…"));
                 tcp_button_for_ssdp.set_sensitive(false);
                 mdns_button_for_ssdp.set_sensitive(false);
                 netbios_button_for_ssdp.set_sensitive(false);
@@ -928,6 +941,7 @@ pub fn build_ui(application: &adw::Application) {
                 ));
 
                 let status_for_events = status_for_ssdp.clone();
+                let progress_for_events = progress_for_ssdp.clone();
                 let ssdp_button_for_events = ssdp_button_for_scan.clone();
                 let tcp_button_for_events = tcp_button_for_ssdp.clone();
                 let mdns_button_for_events = mdns_button_for_ssdp.clone();
@@ -984,6 +998,12 @@ pub fn build_ui(application: &adw::Application) {
                             }
                             SsdpEvent::Failed(error) => {
                                 active_for_events.borrow_mut().take();
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "SSDP cancelled"
+                                } else {
+                                    "SSDP complete"
+                                }));
                                 ssdp_button_for_events.set_label("Discover UPnP devices (SSDP)");
                                 ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
@@ -1040,6 +1060,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let status_for_netbios = status.clone();
+    let progress_for_netbios = scan_progress.clone();
     let netbios_button_for_scan = netbios_button.clone();
     let selected_for_netbios = Rc::clone(&selected_interface);
     let catalog_for_netbios = Rc::clone(&device_catalog);
@@ -1096,6 +1117,8 @@ pub fn build_ui(application: &adw::Application) {
             Ok((handle, events)) => {
                 *active_netbios_for_scan.borrow_mut() = Some(handle);
                 netbios_button_for_scan.set_label("Cancel NetBIOS discovery");
+                progress_for_netbios.set_fraction(0.0);
+                progress_for_netbios.set_text(Some("NetBIOS discovery running…"));
                 interface_list_for_netbios.set_sensitive(false);
                 devices_for_netbios.set_sensitive(false);
                 refresh_for_netbios.set_sensitive(false);
@@ -1108,6 +1131,7 @@ pub fn build_ui(application: &adw::Application) {
                 ));
 
                 let status_for_events = status_for_netbios.clone();
+                let progress_for_events = progress_for_netbios.clone();
                 let button_for_events = netbios_button_for_scan.clone();
                 let selected_for_events = Rc::clone(&selected_for_netbios);
                 let interface_list_for_events = interface_list_for_netbios.clone();
@@ -1147,6 +1171,12 @@ pub fn build_ui(application: &adw::Application) {
                             }
                             NetbiosEvent::Finished { total, completed, cancelled } => {
                                 active_for_events.borrow_mut().take();
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "NetBIOS cancelled"
+                                } else {
+                                    "NetBIOS complete"
+                                }));
                                 button_for_events.set_label("Discover NetBIOS names");
                                 button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
