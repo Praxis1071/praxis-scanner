@@ -665,6 +665,9 @@ pub fn build_ui(application: &adw::Application) {
                                 ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
+                                netbios_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
@@ -843,6 +846,9 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 mdns_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                netbios_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 refresh_for_events.set_sensitive(true);
