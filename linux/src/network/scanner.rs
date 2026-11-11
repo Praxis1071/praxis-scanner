@@ -4,6 +4,8 @@
 
 use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
+use std::time::Instant;
+use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -89,6 +91,24 @@ pub struct HostScanResult {
 #[derive(Debug)]
 pub enum ScanEvent {
     HostCompleted(HostScanResult),
+    Finished {
+        total: usize,
+        completed: usize,
+        cancelled: bool,
+    },
+}
+
+/// Result events from an unprivileged datagram-only ICMP echo check.
+#[derive(Debug)]
+pub enum IcmpEvent {
+    HostCompleted {
+        address: Ipv4Addr,
+        round_trip_time: Option<Duration>,
+    },
+    /// The kernel denied datagram ICMP access; no raw-socket fallback is attempted.
+    Unavailable {
+        message: String,
+    },
     Finished {
         total: usize,
         completed: usize,
@@ -230,6 +250,7 @@ pub enum ScanStartError {
     TooManyPorts { requested: usize, limit: usize },
     TooManyProbes { requested: usize, limit: usize },
     InvalidPort(u16),
+    InvalidSourceAddress,
 }
 
 impl std::fmt::Display for ScanStartError {
@@ -252,6 +273,7 @@ impl std::fmt::Display for ScanStartError {
                 "scan would perform {requested} TCP connection attempts; the configured limit is {limit}"
             ),
             Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
+            Self::InvalidSourceAddress => formatter.write_str("ICMP source address must be a configured local IPv4 address"),
         }
     }
 }
@@ -327,6 +349,275 @@ impl ScanHandle {
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
+}
+
+/// Start a bounded ICMP echo check using Linux datagram ping sockets only.
+///
+/// This uses SOCK_DGRAM/IPPROTO_ICMP and therefore depends on the kernel's
+/// ping_group_range policy. It never opens a raw socket and never changes sysctls.
+pub fn start_icmp_discovery(
+    source_address: Ipv4Addr,
+    mut targets: Vec<Ipv4Addr>,
+    timeout: Duration,
+) -> Result<(ScanHandle, mpsc::Receiver<IcmpEvent>), ScanStartError> {
+    if source_address.is_unspecified() {
+        return Err(ScanStartError::InvalidSourceAddress);
+    }
+    if targets.len() > MAX_SCAN_TARGETS {
+        return Err(ScanStartError::TooManyTargets {
+            requested: targets.len(),
+            limit: MAX_SCAN_TARGETS,
+        });
+    }
+    if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
+        return Err(ScanStartError::InvalidTimeout);
+    }
+
+    targets.retain(|address| *address != source_address);
+    targets.sort_unstable();
+    targets.dedup();
+
+    let total = targets.len();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let handle = ScanHandle {
+        cancelled: Arc::clone(&cancelled),
+    };
+    let (event_sender, event_receiver) = mpsc::channel();
+
+    if total == 0 {
+        let _ = event_sender.send(IcmpEvent::Finished {
+            total: 0,
+            completed: 0,
+            cancelled: false,
+        });
+        return Ok((handle, event_receiver));
+    }
+
+    let (target_sender, target_receiver) = mpsc::channel();
+    for target in targets {
+        let _ = target_sender.send(target);
+    }
+    drop(target_sender);
+
+    let target_receiver = Arc::new(Mutex::new(target_receiver));
+    let completed = Arc::new(AtomicUsize::new(0));
+    let unavailable_reported = Arc::new(AtomicBool::new(false));
+    let worker_count = total.min(MAX_CONCURRENT_WORKERS);
+    let worker_timeout = timeout.min(DEFAULT_TCP_TIMEOUT);
+
+    thread::spawn(move || {
+        let workers = (0..worker_count)
+            .map(|_| {
+                let target_receiver = Arc::clone(&target_receiver);
+                let event_sender = event_sender.clone();
+                let cancelled = Arc::clone(&cancelled);
+                let completed = Arc::clone(&completed);
+                let unavailable_reported = Arc::clone(&unavailable_reported);
+
+                thread::spawn(move || {
+                    let (socket, identifier) = match create_datagram_icmp_socket(
+                        source_address,
+                        worker_timeout,
+                    ) {
+                        Ok(socket) => socket,
+                        Err(error) => {
+                            if !unavailable_reported.swap(true, Ordering::Relaxed) {
+                                let _ = event_sender.send(IcmpEvent::Unavailable {
+                                    message: error.to_string(),
+                                });
+                            }
+                            cancelled.store(true, Ordering::Relaxed);
+                            return;
+                        }
+                    };
+
+                    let mut sequence = 1u16;
+                    loop {
+                        if cancelled.load(Ordering::Relaxed) {
+                            break;
+                        }
+                        let target = match target_receiver
+                            .lock()
+                            .expect("ICMP target receiver mutex poisoned")
+                            .recv()
+                        {
+                            Ok(target) => target,
+                            Err(_) => break,
+                        };
+                        if cancelled.load(Ordering::Relaxed) {
+                            break;
+                        }
+
+                        let result = probe_icmp_target(
+                            &socket,
+                            target,
+                            identifier,
+                            sequence,
+                            worker_timeout,
+                        );
+                        sequence = sequence.wrapping_add(1);
+                        let round_trip_time = match result {
+                            Ok(round_trip_time) => round_trip_time,
+                            Err(error)
+                                if matches!(
+                                    error.kind(),
+                                    io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+                                ) =>
+                            {
+                                if !unavailable_reported.swap(true, Ordering::Relaxed) {
+                                    let _ = event_sender.send(IcmpEvent::Unavailable {
+                                        message: error.to_string(),
+                                    });
+                                }
+                                cancelled.store(true, Ordering::Relaxed);
+                                break;
+                            }
+                            Err(_) => None,
+                        };
+
+                        completed.fetch_add(1, Ordering::Relaxed);
+                        let _ = event_sender.send(IcmpEvent::HostCompleted {
+                            address: target,
+                            round_trip_time,
+                        });
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+
+        for worker in workers {
+            let _ = worker.join();
+        }
+
+        let _ = event_sender.send(IcmpEvent::Finished {
+            total,
+            completed: completed.load(Ordering::Relaxed),
+            cancelled: cancelled.load(Ordering::Relaxed),
+        });
+    });
+
+    Ok((handle, event_receiver))
+}
+
+fn create_datagram_icmp_socket(
+    source_address: Ipv4Addr,
+    timeout: Duration,
+) -> io::Result<(Socket, u16)> {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMP))?;
+    let source = SockAddr::from(SocketAddrV4::new(source_address, 0));
+    socket.bind(&source)?;
+    socket.set_read_timeout(Some(timeout))?;
+
+    let identifier = socket
+        .local_addr()?
+        .as_socket()
+        .map(|address| address.port())
+        .filter(|port| *port != 0)
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::AddrNotAvailable,
+                "kernel did not assign an ICMP ping identifier",
+            )
+        })?;
+
+    Ok((socket, identifier))
+}
+
+fn probe_icmp_target(
+    socket: &Socket,
+    target: Ipv4Addr,
+    identifier: u16,
+    sequence: u16,
+    timeout: Duration,
+) -> io::Result<Option<Duration>> {
+    let packet = build_icmp_echo_request(target, identifier, sequence);
+    let destination = SockAddr::from(SocketAddrV4::new(target, 0));
+    let started = Instant::now();
+    socket.send_to(&packet, &destination)?;
+    let deadline = started + timeout;
+    let mut buffer = [0u8; 128];
+
+    while Instant::now() < deadline {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        socket.set_read_timeout(Some(remaining))?;
+        match socket.recv_from(&mut buffer) {
+            Ok((length, source)) => {
+                let source_address = source.as_socket().and_then(|address| match address {
+                    SocketAddr::V4(address) => Some(*address.ip()),
+                    SocketAddr::V6(_) => None,
+                });
+                if source_address == Some(target)
+                    && is_expected_icmp_echo_reply(
+                        &buffer[..length],
+                        target,
+                        identifier,
+                        sequence,
+                    )
+                {
+                    return Ok(Some(started.elapsed()));
+                }
+            }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
+                ) =>
+            {
+                return Ok(None);
+            }
+            Err(error) => return Err(error),
+        }
+    }
+
+    Ok(None)
+}
+
+fn build_icmp_echo_request(
+    target: Ipv4Addr,
+    identifier: u16,
+    sequence: u16,
+) -> Vec<u8> {
+    let mut packet = vec![0u8; 16];
+    packet[0] = 8; // ICMP Echo Request
+    packet[1] = 0;
+    packet[4..6].copy_from_slice(&identifier.to_be_bytes());
+    packet[6..8].copy_from_slice(&sequence.to_be_bytes());
+    packet[8..12].copy_from_slice(b"PRXS");
+    packet[12..16].copy_from_slice(&target.octets());
+    let checksum = icmp_checksum(&packet);
+    packet[2..4].copy_from_slice(&checksum.to_be_bytes());
+    packet
+}
+
+fn is_expected_icmp_echo_reply(
+    packet: &[u8],
+    target: Ipv4Addr,
+    identifier: u16,
+    sequence: u16,
+) -> bool {
+    packet.len() == 16
+        && packet[0] == 0
+        && packet[1] == 0
+        && icmp_checksum(packet) == 0
+        && u16::from_be_bytes([packet[4], packet[5]]) == identifier
+        && u16::from_be_bytes([packet[6], packet[7]]) == sequence
+        && &packet[8..12] == b"PRXS"
+        && packet[12..16] == target.octets()
+}
+
+fn icmp_checksum(packet: &[u8]) -> u16 {
+    let mut sum = 0u32;
+    let mut chunks = packet.chunks_exact(2);
+    for chunk in &mut chunks {
+        sum += u16::from_be_bytes([chunk[0], chunk[1]]) as u32;
+    }
+    if let Some(byte) = chunks.remainder().first() {
+        sum += u32::from(*byte) << 8;
+    }
+    while sum >> 16 != 0 {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+    !(sum as u16)
 }
 
 /// Start a bounded TCP-connect scan using a caller-supplied port list.
@@ -545,6 +836,43 @@ mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::AtomicBool;
     use std::time::Duration;
+
+    #[test]
+    fn datagram_icmp_echo_packet_has_valid_checksum_and_expected_fields() {
+        let target = Ipv4Addr::new(192, 0, 2, 10);
+        let request = super::build_icmp_echo_request(target, 0x1234, 7);
+        assert_eq!(super::icmp_checksum(&request), 0);
+
+        let mut reply = request;
+        reply[0] = 0;
+        reply[2..4].fill(0);
+        let checksum = super::icmp_checksum(&reply);
+        reply[2..4].copy_from_slice(&checksum.to_be_bytes());
+
+        assert!(super::is_expected_icmp_echo_reply(
+            &reply, target, 0x1234, 7
+        ));
+        assert!(!super::is_expected_icmp_echo_reply(
+            &reply, target, 0x1234, 8
+        ));
+    }
+
+    #[test]
+    fn datagram_icmp_parser_rejects_malformed_and_wrong_target_replies() {
+        let target = Ipv4Addr::new(192, 0, 2, 11);
+        let mut reply = super::build_icmp_echo_request(target, 0x4321, 3);
+        reply[0] = 0;
+        reply[2..4].fill(0);
+        let checksum = super::icmp_checksum(&reply);
+        reply[2..4].copy_from_slice(&checksum.to_be_bytes());
+
+        assert!(!super::is_expected_icmp_echo_reply(
+            &reply[..8], target, 0x4321, 3
+        ));
+        assert!(!super::is_expected_icmp_echo_reply(
+            &reply, Ipv4Addr::new(192, 0, 2, 12), 0x4321, 3
+        ));
+    }
 
     #[test]
     fn single_device_deep_scan_reports_open_ports_and_progress() {
