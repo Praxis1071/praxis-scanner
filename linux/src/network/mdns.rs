@@ -58,6 +58,7 @@ pub enum MdnsStartError {
     EmptyAddressScope,
     TooManyAddresses { requested: usize, limit: usize },
     InvalidDuration,
+    ThreadSpawn(String),
 }
 
 impl std::fmt::Display for MdnsStartError {
@@ -70,6 +71,7 @@ impl std::fmt::Display for MdnsStartError {
                 "mDNS scope contains {requested} addresses; the configured limit is {limit}"
             ),
             Self::InvalidDuration => formatter.write_str("mDNS discovery duration must be greater than zero and no longer than ten seconds"),
+            Self::ThreadSpawn(error) => write!(formatter, "could not start the mDNS worker thread: {error}"),
         }
     }
 }
@@ -104,6 +106,17 @@ pub fn start_mdns_discovery(
     if allowed_addresses.is_empty() {
         return Err(MdnsStartError::EmptyAddressScope);
     }
+    if allowed_addresses
+        .iter()
+        .any(|address| {
+            address.is_unspecified()
+                || address.is_loopback()
+                || address.is_multicast()
+                || (!address.is_private() && !address.is_link_local())
+        })
+    {
+        return Err(MdnsStartError::EmptyAddressScope);
+    }
     if allowed_addresses.len() > 1024 {
         return Err(MdnsStartError::TooManyAddresses {
             requested: allowed_addresses.len(),
@@ -119,18 +132,21 @@ pub fn start_mdns_discovery(
     let worker_cancelled = Arc::clone(&cancelled);
     let (sender, receiver) = mpsc::channel();
 
-    thread::spawn(move || {
-        let result = run_discovery(
-            &interface_name,
-            &allowed_addresses,
-            duration,
-            &worker_cancelled,
-            &sender,
-        );
-        if let Err(error) = result {
-            let _ = sender.send(MdnsEvent::Failed(error));
-        }
-    });
+    thread::Builder::new()
+        .name("praxis-mdns-discovery".to_owned())
+        .spawn(move || {
+            let result = run_discovery(
+                &interface_name,
+                &allowed_addresses,
+                duration,
+                &worker_cancelled,
+                &sender,
+            );
+            if let Err(error) = result {
+                let _ = sender.send(MdnsEvent::Failed(error));
+            }
+        })
+        .map_err(|error| MdnsStartError::ThreadSpawn(error.to_string()))?;
 
     Ok((MdnsHandle { cancelled }, receiver))
 }
@@ -250,13 +266,13 @@ fn browse_on_selected_interface(
                                 service_type: resolved.ty_domain.clone(),
                                 port: resolved.port,
                             };
-                            if results.insert(service.clone()) {
-                                if results.len() > MAX_MDNS_RESULTS {
-                                    break;
-                                }
-                                if sender.send(MdnsEvent::ServiceFound(service)).is_err() {
-                                    return Ok(());
-                                }
+                            if results.len() >= MAX_MDNS_RESULTS {
+                                break;
+                            }
+                            if results.insert(service.clone())
+                                && sender.send(MdnsEvent::ServiceFound(service)).is_err()
+                            {
+                                return Ok(());
                             }
                         }
                     }
@@ -390,7 +406,7 @@ mod tests {
         assert_eq!(
             start_mdns_discovery(
                 "interface-name-too-long".to_owned(),
-                vec![Ipv4Addr::LOCALHOST],
+                vec![Ipv4Addr::new(192, 168, 1, 20)],
                 DEFAULT_MDNS_WINDOW,
             )
             .err(),
@@ -399,7 +415,7 @@ mod tests {
         assert_eq!(
             start_mdns_discovery(
                 "wlan0".to_owned(),
-                vec![Ipv4Addr::LOCALHOST],
+                vec![Ipv4Addr::new(192, 168, 1, 20)],
                 Duration::ZERO,
             )
             .err(),
@@ -408,7 +424,7 @@ mod tests {
         assert_eq!(
             start_mdns_discovery(
                 "wlan0".to_owned(),
-                vec![Ipv4Addr::LOCALHOST],
+                vec![Ipv4Addr::new(192, 168, 1, 20)],
                 MAX_MDNS_WINDOW + Duration::from_millis(1),
             )
             .err(),
