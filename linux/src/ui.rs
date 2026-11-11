@@ -7,6 +7,7 @@ use adw::prelude::*;
 use gtk::glib;
 
 use crate::network::cidr::Ipv4Network;
+use crate::network::device::{DeviceCatalog, MdnsEvidence, SsdpEvidence};
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
 use crate::network::ssdp::{self, SsdpEvent, SsdpHandle};
 use crate::network::scanner::{
@@ -40,6 +41,19 @@ pub fn build_ui(application: &adw::Application) {
     system_info.set_margin_end(18);
     system_info.set_margin_top(8);
     system_info.add_css_class("dim-label");
+
+    let devices_heading = gtk::Label::new(Some("Discovered devices"));
+    devices_heading.add_css_class("title-2");
+    devices_heading.set_halign(gtk::Align::Start);
+    devices_heading.set_margin_start(18);
+    devices_heading.set_margin_top(18);
+    devices_heading.set_margin_bottom(8);
+
+    let devices_list = gtk::ListBox::new();
+    devices_list.set_selection_mode(gtk::SelectionMode::None);
+    devices_list.add_css_class("boxed-list");
+    devices_list.set_margin_start(18);
+    devices_list.set_margin_end(18);
 
     let ports_heading = gtk::Label::new(Some("TCP ports (comma-separated)"));
     ports_heading.set_halign(gtk::Align::Start);
@@ -158,6 +172,8 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&heading);
     content.append(&list);
     content.append(&system_info);
+    content.append(&devices_heading);
+    content.append(&devices_list);
     content.append(&ports_heading);
     content.append(&port_entry);
     content.append(&scan_button);
@@ -192,9 +208,12 @@ pub fn build_ui(application: &adw::Application) {
     let active_scan = Rc::new(RefCell::new(None::<ScanHandle>));
     let active_mdns = Rc::new(RefCell::new(None::<MdnsHandle>));
     let active_ssdp = Rc::new(RefCell::new(None::<SsdpHandle>));
+    let device_catalog = Rc::new(RefCell::new(DeviceCatalog::default()));
 
     let interfaces_for_selection = Rc::clone(&interfaces);
     let selected_for_selection = Rc::clone(&selected_interface);
+    let catalog_for_selection = Rc::clone(&device_catalog);
+    let devices_for_selection = devices_list.clone();
     let scan_button_for_selection = scan_button.clone();
     let mdns_button_for_selection = mdns_button.clone();
     let ssdp_button_for_selection = ssdp_button.clone();
@@ -206,6 +225,13 @@ pub fn build_ui(application: &adw::Application) {
                 .get(row.index() as usize)
                 .cloned()
         });
+        let previous = selected_for_selection.borrow().clone();
+        let changed = previous.as_ref().map(|item| (item.name.as_str(), item.address))
+            != selected.as_ref().map(|item| (item.name.as_str(), item.address));
+        if changed {
+            catalog_for_selection.borrow_mut().clear();
+            clear_list(&devices_for_selection);
+        }
         let can_scan = selected.as_ref().is_some_and(is_scannable_interface);
         scan_button_for_selection.set_sensitive(can_scan);
         mdns_button_for_selection.set_sensitive(can_scan);
@@ -249,6 +275,8 @@ pub fn build_ui(application: &adw::Application) {
     let button_for_scan = scan_button.clone();
     let selected_for_scan = Rc::clone(&selected_interface);
     let active_for_scan = Rc::clone(&active_scan);
+    let catalog_for_scan = Rc::clone(&device_catalog);
+    let devices_for_scan = devices_list.clone();
     let refresh_button_for_scan = refresh_button.clone();
     let port_entry_for_scan = port_entry.clone();
     let interface_list_for_scan = list.clone();
@@ -355,6 +383,8 @@ pub fn build_ui(application: &adw::Application) {
                 let ssdp_button_for_events = ssdp_button_for_tcp.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let selected_for_events = Rc::clone(&selected_for_scan);
+                let catalog_for_events = Rc::clone(&catalog_for_scan);
+                let devices_for_events = devices_for_scan.clone();
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
                 let mut inconclusive = 0usize;
@@ -363,6 +393,12 @@ pub fn build_ui(application: &adw::Application) {
                     while let Ok(event) = events.try_recv() {
                         match event {
                             ScanEvent::HostCompleted(result) => {
+                                catalog_for_events.borrow_mut().record_tcp(
+                                    result.address,
+                                    result.tcp_responded,
+                                    result.open_ports.iter().copied(),
+                                );
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
@@ -400,6 +436,10 @@ pub fn build_ui(application: &adw::Application) {
                                             .filter(|neighbour| neighbour.interface == selected_interface_name)
                                             .map(|neighbour| (neighbour.address, neighbour.hardware_address))
                                             .collect();
+                                        for (address, mac) in &mac_by_address {
+                                            catalog_for_events.borrow_mut().set_mac_address(*address, mac.clone());
+                                        }
+                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
                                         let mut enriched = 0usize;
                                         for (address, row, details) in &result_rows {
                                             if let Some(mac) = mac_by_address.get(address) {
@@ -438,6 +478,8 @@ pub fn build_ui(application: &adw::Application) {
     let port_entry_for_mdns = port_entry.clone();
     let tcp_button_for_mdns = scan_button.clone();
     let mdns_results_for_scan = mdns_results_list.clone();
+    let catalog_for_mdns = Rc::clone(&device_catalog);
+    let devices_for_mdns = devices_list.clone();
     mdns_button.connect_clicked(move |_| {
         if let Some(handle) = active_mdns_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -515,11 +557,23 @@ pub fn build_ui(application: &adw::Application) {
                 let results_for_events = mdns_results_for_scan.clone();
                 let active_for_events = Rc::clone(&active_mdns_for_scan);
                 let selected_for_events = Rc::clone(&selected_for_mdns);
+                let catalog_for_events = Rc::clone(&catalog_for_mdns);
+                let devices_for_events = devices_for_mdns.clone();
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
                         match event {
                             MdnsEvent::ServiceFound(service) => {
+                                catalog_for_events.borrow_mut().record_mdns(
+                                    service.address,
+                                    MdnsEvidence {
+                                        fullname: service.fullname.clone(),
+                                        hostname: service.hostname.clone(),
+                                        service_type: service.service_type.clone(),
+                                        port: service.port,
+                                    },
+                                );
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
                                 let details = format!(
                                     "{}  ·  {}:{}  ·  {}",
                                     service.hostname,
@@ -596,6 +650,8 @@ pub fn build_ui(application: &adw::Application) {
     let tcp_button_for_ssdp = scan_button.clone();
     let mdns_button_for_ssdp = mdns_button.clone();
     let ssdp_results_for_scan = ssdp_results_list.clone();
+    let catalog_for_ssdp = Rc::clone(&device_catalog);
+    let devices_for_ssdp = devices_list.clone();
     ssdp_button.connect_clicked(move |_| {
         if let Some(handle) = active_ssdp_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -673,11 +729,23 @@ pub fn build_ui(application: &adw::Application) {
                 let results_for_events = ssdp_results_for_scan.clone();
                 let active_for_events = Rc::clone(&active_ssdp_for_scan);
                 let selected_for_events = Rc::clone(&selected_for_ssdp);
+                let catalog_for_events = Rc::clone(&catalog_for_ssdp);
+                let devices_for_events = devices_for_ssdp.clone();
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
                         match event {
                             SsdpEvent::DeviceFound(device) => {
+                                catalog_for_events.borrow_mut().record_ssdp(
+                                    device.address,
+                                    SsdpEvidence {
+                                        search_target: device.search_target.clone(),
+                                        unique_service_name: device.unique_service_name.clone(),
+                                        server: device.server.clone(),
+                                        location: device.location.clone(),
+                                    },
+                                );
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
                                 let location = device.location.as_deref().unwrap_or("location not supplied");
                                 let details = format!(
@@ -771,6 +839,89 @@ pub fn build_ui(application: &adw::Application) {
         &selected_interface,
     );
     window.present();
+}
+
+fn clear_list(list: &gtk::ListBox) {
+    while let Some(child) = list.first_child() {
+        list.remove(&child);
+    }
+}
+
+fn refresh_device_list(list: &gtk::ListBox, catalog: &DeviceCatalog) {
+    clear_list(list);
+
+    let records = catalog
+        .iter()
+        .filter(|device| device.has_discovery_evidence())
+        .collect::<Vec<_>>();
+
+    if records.is_empty() {
+        let subtitle = if catalog.is_empty() {
+            "Run TCP, mDNS, or SSDP discovery to populate this list.".to_owned()
+        } else {
+            format!(
+                "{} candidate address(es) have no confirmed discovery evidence yet.",
+                catalog.len()
+            )
+        };
+        let row = adw::ActionRow::builder()
+            .title("No discovered devices yet")
+            .subtitle(&subtitle)
+            .activatable(false)
+            .build();
+        list.append(&row);
+        return;
+    }
+
+    for device in records {
+        let mut details = Vec::new();
+
+        if let Some(mac) = device.mac_address.as_deref() {
+            details.push(format!("MAC {mac}"));
+        }
+        if device.tcp_responded {
+            details.push("TCP response".to_owned());
+        }
+        if !device.open_tcp_ports.is_empty() {
+            let ports = device
+                .open_tcp_ports
+                .iter()
+                .map(|port| match scanner::service_name(*port) {
+                    Some(service) => format!("{port}/{service}"),
+                    None => port.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            details.push(format!("Open ports: {ports}"));
+        }
+        if !device.mdns_services.is_empty() {
+            let service_types = device
+                .mdns_services
+                .iter()
+                .map(|service| service.service_type.as_str())
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ");
+            details.push(format!(
+                "mDNS: {} service(s) ({service_types})",
+                device.mdns_services.len()
+            ));
+        }
+        if !device.ssdp_advertisements.is_empty() {
+            details.push(format!(
+                "SSDP: {} advertisement(s)",
+                device.ssdp_advertisements.len()
+            ));
+        }
+
+        let row = adw::ActionRow::builder()
+            .title(device.address.to_string())
+            .subtitle(&details.join("  ·  "))
+            .activatable(false)
+            .build();
+        list.append(&row);
+    }
 }
 
 fn is_scannable_interface(interface: &NetworkInterface) -> bool {
