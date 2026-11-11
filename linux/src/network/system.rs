@@ -193,9 +193,9 @@ mod tests {
     #[test]
     fn parses_and_prioritizes_default_route() {
         let fixture = concat!(
-            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\\n",
-            "eth0 0001A8C0 00000000 0001 0 0 100 00FFFFFF 0 0 0\\n",
-            "wlan0 00000000 0101A8C0 0003 0 0 600 00000000 0 0 0\\n",
+            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\n",
+            "eth0 0001A8C0 00000000 0001 0 0 100 00FFFFFF 0 0 0\n",
+            "wlan0 00000000 0101A8C0 0003 0 0 600 00000000 0 0 0\n",
         );
         let routes = parse_ipv4_routes(fixture).expect("valid route fixture");
         assert_eq!(routes.len(), 2);
@@ -210,14 +210,14 @@ mod tests {
     #[test]
     fn ignores_down_routes_and_rejects_non_contiguous_masks() {
         let down = concat!(
-            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\\n",
-            "eth0 00000000 0100000A 0000 0 0 10 00000000 0 0 0\\n",
+            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\n",
+            "eth0 00000000 0100000A 0000 0 0 10 00000000 0 0 0\n",
         );
         assert!(parse_ipv4_routes(down).expect("valid but down route").is_empty());
 
         let invalid_mask = concat!(
-            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\\n",
-            "eth0 00000000 0100000A 0001 0 0 10 00FF00FF 0 0 0\\n",
+            "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\n",
+            "eth0 00000000 0100000A 0001 0 0 10 00FF00FF 0 0 0\n",
         );
         assert!(parse_ipv4_routes(invalid_mask).is_err());
     }
@@ -231,13 +231,13 @@ mod tests {
     #[test]
     fn returns_only_complete_neighbour_entries_with_valid_mac() {
         let fixture = concat!(
-            "IP address HW type Flags HW address Mask Device\\n",
-            "192.168.1.10 0x1 0x2 aa:bb:cc:dd:ee:ff * wlan0\\n",
-            "192.168.1.11 0x1 0x0 00:00:00:00:00:00 * wlan0\\n",
-            "192.168.1.12 0x1 0x2 invalid * wlan0\\n",
-            "192.168.1.13 0x1 0x2 01:00:5e:00:00:01 * wlan0\\n",
-            "192.168.1.14 0x2 0x2 aa:bb:cc:dd:ee:01 * wlan0\\n",
-            "192.168.1.15 0x1 0x2 00:00:00:00:00:00 * wlan0\\n",
+            "IP address HW type Flags HW address Mask Device\n",
+            "192.168.1.10 0x1 0x2 aa:bb:cc:dd:ee:ff * wlan0\n",
+            "192.168.1.11 0x1 0x0 00:00:00:00:00:00 * wlan0\n",
+            "192.168.1.12 0x1 0x2 invalid * wlan0\n",
+            "192.168.1.13 0x1 0x2 01:00:5e:00:00:01 * wlan0\n",
+            "192.168.1.14 0x2 0x2 aa:bb:cc:dd:ee:01 * wlan0\n",
+            "192.168.1.15 0x1 0x2 00:00:00:00:00:00 * wlan0\n",
         );
         let neighbours = parse_ipv4_neighbours(fixture).expect("valid ARP fixture");
         assert_eq!(neighbours.len(), 1);
