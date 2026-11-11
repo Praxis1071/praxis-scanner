@@ -5,24 +5,55 @@
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
-This roadmap is the source of truth for the Linux edition. Its final objective is a stable, secure, documented, tested, and distributable Linux desktop network scanner that delivers the feasible core experience of the Android application while respecting the strict unprivileged-operation policy below. Every phase contributes to that final objective; the roadmap is not considered complete merely because the application compiles.
+This roadmap is the source of truth for the Linux edition and the governing execution plan. The primary objective is to reproduce the Android Praxis Scanner application's appearance, information hierarchy, screen flows, interactions, and user-visible functionality as completely and faithfully as Linux desktop conventions allow. This is a port/clone of the product experience, not merely a new scanner with similar features. Kotlin source may remain in the repository unchanged; Linux is an additional native implementation. The roadmap is not complete merely because the application compiles, launches, or passes a small subset of tests.
 
 Update checkboxes only after the corresponding work has been completed and verified. Planning and research are not implementation. The maintainer explicitly authorized implementation on 2026-11-08; continue only within the documented security and scope constraints.
+
+## Governing objective and execution method (maintainer clarification — 2026-11-11)
+
+The maintainer has explicitly clarified that **full Android-to-Linux product parity is the central goal**. Keep the Android implementation and Kotlin files; do not treat their presence or GitHub's language statistics as a problem. Build the Linux implementation alongside them.
+
+### What “clone the Android application” means
+
+- Reproduce every user-visible Android screen, major component, information hierarchy, interaction, workflow, and setting in a native GTK4/libadwaita desktop experience.
+- Reproduce the application's advertised and actually implemented functionality, not just the easiest subset. Map every Android feature to its Linux equivalent and track it in a feature-parity matrix.
+- Preserve familiar terminology, result semantics, scan behavior, defaults, and user expectations wherever the underlying platform permits.
+- Adapt Android-specific patterns to desktop conventions without losing the underlying capability: keyboard/mouse operation, resizable layouts, desktop navigation, dialogs, tables/lists, and native preferences.
+- Keep Android-only APIs and mechanisms out of Linux code. For every platform-specific dependency, identify the user-visible behavior it provides and implement the closest safe Linux-native equivalent.
+- Do not silently drop, hide, or downgrade a feature because it is difficult. Investigate it, document the blocker, test alternatives, and continue repair work. Any genuinely impossible or security-incompatible exception must be explained with evidence and brought back to the maintainer rather than quietly treated as parity.
+- Maintain visual references and a screen-by-screen comparison record. “Looks similar” is not enough: compare layout, hierarchy, states, labels, icons, feedback, and interaction behavior against the Android reference.
+- Preserve the original Android project. Linux work remains isolated on `linux/gtk4-port-planning` until explicit approval.
+
+### Required work loop: control → error detection → repair → re-control
+
+Every work session and every meaningful milestone follows this loop:
+
+1. **Control / inspect:** compare the Android source, behavior, screenshots, existing Linux implementation, roadmap, and current CI state. Identify what exists, what is missing, and what is only partially implemented.
+2. **Error detection:** inspect code paths and UI behavior; run formatting, static analysis, unit/integration tests, packaging checks, and controlled runtime checks appropriate to the change. Record concrete failures and parity gaps.
+3. **Repair:** fix the root cause, not just the visible symptom. Implement missing behavior and UI, strengthen tests, update packaging/docs, and preserve the project's security constraints.
+4. **Re-control:** repeat the relevant checks after repair, inspect regressions, and compare the result against the Android reference again. Do not mark an item complete until the evidence supports it.
+5. **Continue:** select the next highest-impact parity gap or defect and repeat. A passing build is a checkpoint, never the definition of completion.
+
+For each feature, record its Android reference, expected behavior, Linux implementation, verification method, observed result, remaining difference, and status. Keep separate statuses for **implemented**, **automated-test verified**, **host verified**, **Flatpak verified**, and **Android parity reviewed**. Never collapse these into one “done” checkbox.
+
+### Completion commitment
+
+The Linux clone remains an active project until the feature-parity review, visual review, functionality checks, security checks, host validation, Flatpak validation, regression suite, and maintainer acceptance criteria in this roadmap are satisfied. Do not stop at a prototype, MVP, successful compile, or the first working Flatpak. Do not ask the maintainer to perform acceptance testing while known major parity gaps or blocking defects remain. Once the work is genuinely ready, provide a clear release-candidate handoff and request the maintainer's final review. Do not merge to `main` without explicit approval.
 
 ## Ultimate project objective
 
 Deliver **Praxis Scanner for Linux** as a polished native desktop application that:
 
-- Discovers devices on the user's local network and presents useful, understandable results.
+- Reproduces the Android app's device discovery and result experience as closely as possible, including the full supported feature set and clear, understandable results.
 - Provides reliable TCP reachability checks, configurable port inspection, and best-effort service/device identification.
 - Uses additional discovery protocols (ICMP datagram ping, neighbor-table data, mDNS, SSDP/UPnP, NetBIOS, and reverse DNS) only where their behavior is proven safe and available without elevated privileges.
-- Offers a modern GTK4/libadwaita interface with scan progress and cancellation, device details, port/service details, device naming and icon customization, and clear settings.
+- Recreates the Android app's complete screen set and interaction flows in a modern GTK4/libadwaita desktop interface, including scan progress/cancellation, device and port/service details, naming/icons, and settings.
 - Runs as an ordinary user and is distributed as a Flatpak with the minimum justified permissions.
 - Is modular, maintainable, tested, reproducible, accessible, and documented.
 - Preserves GPL-3.0 obligations and all applicable upstream copyright/license notices.
 - Makes no unsupported claims: unavailable data and heuristic guesses are clearly identified.
 
-The Linux edition is a separate platform implementation, not a Kotlin-to-Rust line-by-line translation. Android-only functionality (including Shizuku, root-based access, Android permissions, and Android lifecycle/UI APIs) is not part of the Linux target.
+The Linux edition is a separate native platform implementation, not a Kotlin-to-Rust line-by-line translation. Android-only APIs (including Shizuku, Android permissions, and Android lifecycle/UI APIs) are not copied literally; their user-visible purpose must be assessed and, where possible, reproduced through safe Linux-native equivalents.
 
 ## 0. Project constraints and decisions
 
@@ -132,7 +163,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, opt-in interface-scoped IPv4 mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The SSDP engine and its UI integration are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
-**Current milestone:** finish the unified device experience (details, sorting/filtering, rename/icon preferences), close the CI lint failure, validate reproducible Flatpak inputs and build, then perform controlled host and sandboxed network checks. No user-side testing is requested until the application is feature-complete.
+**Current milestone:** establish a complete screen/feature parity inventory against Android, then use the mandatory control → error detection → repair → re-control loop to close implementation and verification gaps. Continue through the full clone objective; do not stop after the current device-list milestone. No user-side acceptance testing is requested until the application is feature-complete and the major parity/quality gates are closed.
 
 ### 5.1 Foundation and application shell
 
@@ -223,6 +254,16 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 - [ ] Merge the Linux work into `main` only after explicit approval.
 - [ ] Tag the first stable Linux release and publish the corresponding source and release artifacts.
 
+### Full-clone parity gate (required in addition to the quality gates below)
+
+- [ ] Complete a source-backed inventory of every Android screen, user action, setting, scan/discovery feature, result field, and error/empty/loading state.
+- [ ] Maintain a traceable Android → Linux parity matrix; every row has a reference and a verification procedure.
+- [ ] Recreate all applicable screens and workflows in GTK4/libadwaita and complete a visual comparison against Android references.
+- [ ] Reproduce all applicable user-visible behavior and scan semantics; document and resolve every known discrepancy.
+- [ ] Verify normal, boundary, failure, cancellation, partial-result, and unavailable-feature states for every major workflow.
+- [ ] Review every difference that cannot be reproduced literally on Linux and implement the closest safe native equivalent or obtain an explicit maintainer decision.
+- [ ] Complete the repeated control → error detection → repair → re-control cycle with no known blocking defects or unexplained parity gaps.
+
 ## Definition of done — the final objective
 
 The roadmap reaches its final objective only when all applicable requirements below are satisfied:
@@ -240,4 +281,4 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the branch is 137 commits ahead of `main` and 0 behind at the latest comparison. The Android project remains present; the branch diff adds Linux source/docs and adjusts root documentation, not Android implementation files. Linux source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, progress, mDNS, SSDP, and a basic unified device summary list. TCP scan bounds are 1024 target addresses, 256 unique ports, 8192 connection attempts, and 32 workers; UI TCP timeout is 450 ms. Latest CI passed formatting and tests but failed Clippy on one needless borrow; commit `141e45c` fixes that lint and a new CI run is queued. The Flatpak manifest exists, but its build job has not succeeded. Host and Flatpak runtime tests, device detail screens, sorting/filtering, rename/icon customization, NetBIOS, reverse DNS, banners, and persistent preferences remain incomplete. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the latest branch comparison reports 141 commits ahead of `main` and 0 behind. The Android project remains present; the branch diff adds Linux source/docs and adjusts root documentation, not Android implementation files. Linux source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, progress, mDNS, SSDP, and a basic unified device summary list. TCP scan bounds are 1024 target addresses, 256 unique ports, 8192 connection attempts, and 32 workers; UI TCP timeout is 450 ms. Latest CI passed formatting and tests but failed Clippy on one needless borrow; commit `141e45c` fixes that lint and a new CI run is queued. The Flatpak manifest exists, but its build job has not succeeded. Host and Flatpak runtime tests, device detail screens, sorting/filtering, rename/icon customization, NetBIOS, reverse DNS, banners, and persistent preferences remain incomplete. The application is not ready for maintainer testing.
