@@ -1527,6 +1527,7 @@ fn refresh_device_list(
                 Rc::clone(&active_scan_for_row),
                 devices_list_for_row.clone(),
                 Rc::clone(&catalog_for_row),
+                current_address,
             );
             navigation_for_row.push(&page);
         });
