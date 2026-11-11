@@ -13,19 +13,65 @@ pub const MAX_SCAN_TARGETS: usize = 1024;
 pub const MAX_CONCURRENT_WORKERS: usize = 32;
 pub const DEFAULT_TCP_TIMEOUT: Duration = Duration::from_millis(450);
 pub const DEFAULT_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
+/// The Android app's standard per-device deep-scan port set, kept in sync for parity.
+pub const DEEP_SCAN_TCP_PORTS: &[u16] = &[
+    21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 465, 587, 993, 995,
+    1080, 1433, 1434, 1521, 1723, 2049, 2082, 2083, 2086, 2087, 2121, 3306, 3389,
+    3690, 4443, 5000, 5060, 5432, 5631, 5632, 5900, 5901, 5902, 6000, 6379, 6443,
+    6666, 6667, 7001, 7002, 8000, 8008, 8080, 8081, 8443, 8888, 9000, 9090, 9200,
+    9418, 10000, 11211, 27017, 27018, 28017, 49152, 49153, 49154, 49155, 49156,
+    49157,
+];
 pub const MAX_TCP_PORTS: usize = 256;
 pub const MAX_SCAN_PROBES: usize = 8_192;
 
 /// Return a conventional service label for a TCP port, not a verified service identity.
 pub fn service_name(port: u16) -> Option<&'static str> {
     match port {
+        20 | 21 | 2121 => Some("FTP"),
         22 => Some("SSH"),
+        23 => Some("Telnet"),
+        25 | 465 | 587 => Some("SMTP"),
         53 => Some("DNS"),
-        80 => Some("HTTP"),
+        80 | 8000 | 8008 | 8080 | 8081 | 8888 => Some("HTTP"),
+        110 => Some("POP3"),
+        111 => Some("RPC"),
+        135 => Some("MSRPC"),
         139 => Some("NetBIOS"),
-        443 => Some("HTTPS"),
+        143 => Some("IMAP"),
+        443 | 8443 => Some("HTTPS"),
         445 => Some("SMB"),
+        993 => Some("IMAPS"),
+        995 => Some("POP3S"),
+        1080 => Some("SOCKS"),
+        1433 | 1434 => Some("MSSQL"),
+        1521 => Some("Oracle"),
+        1723 => Some("PPTP"),
+        2049 => Some("NFS"),
+        2082 | 2086 => Some("cPanel/WHM"),
+        2083 | 2087 => Some("cPanel/WHM TLS"),
+        3306 => Some("MySQL"),
         3389 => Some("RDP"),
+        3690 => Some("SVN"),
+        4443 => Some("HTTPS Alt"),
+        5000 => Some("UPnP / HTTP Alt"),
+        5060 => Some("SIP"),
+        5432 => Some("PostgreSQL"),
+        5631 | 5632 => Some("pcAnywhere"),
+        5900..=5902 => Some("VNC"),
+        6000 => Some("X11"),
+        6379 => Some("Redis"),
+        6443 => Some("Kubernetes API"),
+        6666 | 6667 => Some("IRC"),
+        7001 | 7002 => Some("WebLogic"),
+        9000 => Some("HTTP Alt"),
+        9090 => Some("HTTP Alt"),
+        9200 => Some("Elasticsearch"),
+        9418 => Some("Git"),
+        10000 => Some("Webmin"),
+        11211 => Some("Memcached"),
+        27017 | 27018 => Some("MongoDB"),
+        28017 => Some("MongoDB HTTP"),
         _ => None,
     }
 }
@@ -324,6 +370,16 @@ mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::AtomicBool;
     use std::time::Duration;
+
+    #[test]
+    fn android_deep_scan_port_set_is_unique_and_within_linux_safety_limits() {
+        let ports = super::DEEP_SCAN_TCP_PORTS;
+        let unique = ports.iter().copied().collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(unique.len(), ports.len());
+        assert!(ports.len() <= MAX_TCP_PORTS);
+        assert!(ports.iter().all(|port| *port != 0));
+        assert!(ports.contains(&49157));
+    }
 
     #[test]
     fn service_names_are_conservative_port_number_hints() {
