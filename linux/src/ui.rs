@@ -314,6 +314,7 @@ pub fn build_ui(application: &adw::Application) {
     let port_entry_for_sensitivity = port_entry.clone();
     let mdns_button_for_tcp = mdns_button.clone();
     let ssdp_button_for_tcp = ssdp_button.clone();
+    let netbios_button_for_tcp = netbios_button.clone();
     let active_mdns_for_tcp = Rc::clone(&active_mdns);
     let active_ssdp_for_tcp = Rc::clone(&active_ssdp);
     let active_netbios_for_tcp = Rc::clone(&active_netbios);
@@ -399,6 +400,7 @@ pub fn build_ui(application: &adw::Application) {
                 port_entry_for_sensitivity.set_sensitive(false);
                 mdns_button_for_tcp.set_sensitive(false);
                 ssdp_button_for_tcp.set_sensitive(false);
+                netbios_button_for_tcp.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) across {port_count} TCP port(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
@@ -413,6 +415,7 @@ pub fn build_ui(application: &adw::Application) {
                 let port_entry_for_events = port_entry_for_sensitivity.clone();
                 let mdns_button_for_events = mdns_button_for_tcp.clone();
                 let ssdp_button_for_events = ssdp_button_for_tcp.clone();
+                let netbios_button_for_events = netbios_button_for_tcp.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let selected_for_events = Rc::clone(&selected_for_scan);
                 let catalog_for_events = Rc::clone(&catalog_for_scan);
@@ -462,6 +465,9 @@ pub fn build_ui(application: &adw::Application) {
                                 ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
+                                netbios_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
                                 let mac_summary = match network::system::read_ipv4_neighbours() {
                                     Ok(neighbours) => {
                                         let mac_by_address: HashMap<_, _> = neighbours
@@ -507,6 +513,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_ssdp_for_mdns = Rc::clone(&active_ssdp);
     let active_netbios_for_mdns = Rc::clone(&active_netbios);
     let ssdp_button_for_mdns = ssdp_button.clone();
+    let netbios_button_for_mdns = netbios_button.clone();
     let refresh_for_mdns = refresh_button.clone();
     let interface_list_for_mdns = list.clone();
     let port_entry_for_mdns = port_entry.clone();
@@ -570,6 +577,7 @@ pub fn build_ui(application: &adw::Application) {
                 mdns_button_for_scan.set_label("Cancel mDNS discovery");
                 tcp_button_for_mdns.set_sensitive(false);
                 ssdp_button_for_mdns.set_sensitive(false);
+                netbios_button_for_mdns.set_sensitive(false);
                 refresh_for_mdns.set_sensitive(false);
                 interface_list_for_mdns.set_sensitive(false);
                 port_entry_for_mdns.set_sensitive(false);
@@ -585,6 +593,7 @@ pub fn build_ui(application: &adw::Application) {
                 let mdns_button_for_events = mdns_button_for_scan.clone();
                 let tcp_button_for_events = tcp_button_for_mdns.clone();
                 let ssdp_button_for_events = ssdp_button_for_mdns.clone();
+                let netbios_button_for_events = netbios_button_for_mdns.clone();
                 let refresh_for_events = refresh_for_mdns.clone();
                 let interface_list_for_events = interface_list_for_mdns.clone();
                 let port_entry_for_events = port_entry_for_mdns.clone();
@@ -633,6 +642,9 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 ssdp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                netbios_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 refresh_for_events.set_sensitive(true);
@@ -685,6 +697,7 @@ pub fn build_ui(application: &adw::Application) {
     let port_entry_for_ssdp = port_entry.clone();
     let tcp_button_for_ssdp = scan_button.clone();
     let mdns_button_for_ssdp = mdns_button.clone();
+    let netbios_button_for_ssdp = netbios_button.clone();
     let ssdp_results_for_scan = ssdp_results_list.clone();
     let catalog_for_ssdp = Rc::clone(&device_catalog);
     let devices_for_ssdp = devices_list.clone();
@@ -744,6 +757,7 @@ pub fn build_ui(application: &adw::Application) {
                 ssdp_button_for_scan.set_label("Cancel SSDP discovery");
                 tcp_button_for_ssdp.set_sensitive(false);
                 mdns_button_for_ssdp.set_sensitive(false);
+                netbios_button_for_ssdp.set_sensitive(false);
                 refresh_for_ssdp.set_sensitive(false);
                 interface_list_for_ssdp.set_sensitive(false);
                 port_entry_for_ssdp.set_sensitive(false);
@@ -759,6 +773,7 @@ pub fn build_ui(application: &adw::Application) {
                 let ssdp_button_for_events = ssdp_button_for_scan.clone();
                 let tcp_button_for_events = tcp_button_for_ssdp.clone();
                 let mdns_button_for_events = mdns_button_for_ssdp.clone();
+                let netbios_button_for_events = netbios_button_for_ssdp.clone();
                 let refresh_for_events = refresh_for_ssdp.clone();
                 let interface_list_for_events = interface_list_for_ssdp.clone();
                 let port_entry_for_events = port_entry_for_ssdp.clone();
@@ -807,6 +822,9 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 mdns_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                netbios_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 refresh_for_events.set_sensitive(true);
@@ -858,6 +876,10 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns_for_netbios = Rc::clone(&active_mdns);
     let active_ssdp_for_netbios = Rc::clone(&active_ssdp);
     let interface_list_for_netbios = list.clone();
+    let refresh_for_netbios = refresh_button.clone();
+    let tcp_button_for_netbios = scan_button.clone();
+    let mdns_button_for_netbios = mdns_button.clone();
+    let ssdp_button_for_netbios = ssdp_button.clone();
     netbios_button.connect_clicked(move |_| {
         if let Some(handle) = active_netbios_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -898,6 +920,10 @@ pub fn build_ui(application: &adw::Application) {
                 *active_netbios_for_scan.borrow_mut() = Some(handle);
                 netbios_button_for_scan.set_label("Cancel NetBIOS discovery");
                 interface_list_for_netbios.set_sensitive(false);
+                refresh_for_netbios.set_sensitive(false);
+                tcp_button_for_netbios.set_sensitive(false);
+                mdns_button_for_netbios.set_sensitive(false);
+                ssdp_button_for_netbios.set_sensitive(false);
                 status_for_netbios.set_text(&format!(
                     "Querying NetBIOS NBSTAT names for {} previously discovered device(s)…",
                     targets.len()
@@ -907,6 +933,10 @@ pub fn build_ui(application: &adw::Application) {
                 let button_for_events = netbios_button_for_scan.clone();
                 let selected_for_events = Rc::clone(&selected_for_netbios);
                 let interface_list_for_events = interface_list_for_netbios.clone();
+                let refresh_for_events = refresh_for_netbios.clone();
+                let tcp_button_for_events = tcp_button_for_netbios.clone();
+                let mdns_button_for_events = mdns_button_for_netbios.clone();
+                let ssdp_button_for_events = ssdp_button_for_netbios.clone();
                 let active_for_events = Rc::clone(&active_netbios_for_scan);
                 let catalog_for_events = Rc::clone(&catalog_for_netbios);
                 let devices_for_events = devices_for_netbios.clone();
@@ -936,6 +966,11 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 interface_list_for_events.set_sensitive(true);
+                                refresh_for_events.set_sensitive(true);
+                                let can_scan = selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface);
+                                tcp_button_for_events.set_sensitive(can_scan);
+                                mdns_button_for_events.set_sensitive(can_scan);
+                                ssdp_button_for_events.set_sensitive(can_scan);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
                                     "NetBIOS discovery {state}: queried {completed}/{total} device(s). Names are unverified."
@@ -1453,6 +1488,7 @@ fn refresh_interfaces(
     scan_button.set_sensitive(false);
     mdns_button.set_sensitive(false);
     ssdp_button.set_sensitive(false);
+    netbios_button.set_sensitive(false);
 
     match network::ipv4_interfaces() {
         Ok(interfaces) => {
