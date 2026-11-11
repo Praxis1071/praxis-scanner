@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, opt-in interface-scoped mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`; the latest SSDP implementation and related UI changes are awaiting their own CI run. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, opt-in interface-scoped mDNS/DNS-SD and SSDP/UPnP, plus an initial unified device list combining TCP, mDNS, SSDP, and MAC evidence. The latest CI run passed formatting and tests but failed strict Clippy on one needless borrow; that lint has been corrected and a fresh CI run is queued. No Flatpak build or controlled-network validation has passed yet. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -28,10 +28,12 @@ The current branch contains these source-level features:
 - User-selected private/link-local IPv4 subnet discovery.
 - TCP connect checks with editable comma-separated ports and conservative port-number service hints.
 - Opt-in mDNS/DNS-SD service discovery, restricted to the selected interface and IPv4 subnet, with a five-second default window, cancellation, and bounded results.
+- Opt-in SSDP/UPnP M-SEARCH discovery with selected-interface binding, bounded response parsing, and no automatic fetching of advertised URLs.
+- An initial unified device list that merges TCP, mDNS, SSDP, and read-only MAC evidence by IPv4 address; device detail pages, renaming, and persistence are not implemented.
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
-The CI pipeline passed on commit `09320a1` (formatting, unit/integration tests, Clippy, release build). A subsequent mDNS result-deduplication refinement is awaiting CI. This does not establish correct behavior on a real network or inside Flatpak. mDNS responses are unauthenticated and can be spoofed; no TXT records are exposed by the UI.
+The last CI run for the unified device-list change passed formatting and tests but failed Clippy due to a single needless borrow in `ui.rs`; the source fix is committed and a fresh run is queued. This does not establish correct behavior on a real network or inside Flatpak. mDNS responses are unauthenticated and can be spoofed; no TXT records are exposed by the UI.
 
 ## Planned features
 
