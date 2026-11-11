@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Praxis Scanner
+Comment=Discover devices on your local network
+Exec=praxis-scanner
+Icon=io.github.praxis1071.PraxisScanner
+Terminal=false
+Type=Application
+Categories=Network;System;Utility;
+Keywords=network;scanner;discovery;LAN;TCP;mDNS;SSDP;
+StartupNotify=true
+DBusActivatable=false
