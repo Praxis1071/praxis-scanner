@@ -305,6 +305,7 @@ pub fn build_ui(application: &adw::Application) {
                 let port_entry_for_events = port_entry_for_sensitivity.clone();
                 let mdns_button_for_events = mdns_button_for_tcp.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
+                let selected_for_events = Rc::clone(&selected_for_scan);
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
                 let mut inconclusive = 0usize;
@@ -338,7 +339,7 @@ pub fn build_ui(application: &adw::Application) {
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
                                 mdns_button_for_events.set_sensitive(
-                                    selected_for_scan.borrow().as_ref().is_some_and(is_scannable_interface),
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 let mac_summary = match network::system::read_ipv4_neighbours() {
                                     Ok(neighbours) => {
