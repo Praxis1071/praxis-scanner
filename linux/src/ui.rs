@@ -1210,7 +1210,7 @@ fn refresh_device_list(
             .activatable(true)
             .build();
         let navigation_for_row = navigation.clone();
-        let active_scan_for_row = Rc::clone(&active_device_scan);
+        let active_scan_for_row = Rc::clone(active_device_scan);
         let selected_device = device.clone();
         row.connect_activated(move |_| {
             let page = device_detail_page(
