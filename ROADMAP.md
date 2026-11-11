@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** The Linux source now includes GTK4/libadwaita navigation, a partial device-detail page, bounded TCP/mDNS/SSDP/NetBIOS discovery, a per-device deep scan with conservative banners, native Settings and Custom TCP Ports pages, and persistent theme/auto-scan/custom-port preferences. These are source-level implementations only. A Linux-specific CI job has been added to run formatting, unit tests, strict Clippy and a release build, but no passing result has yet been verified. Host and Flatpak runtime verification remain pending.  
+> **Implementation status:** The Linux source now includes GTK4/libadwaita navigation, a partial device-detail page, bounded TCP/mDNS/SSDP/NetBIOS discovery, a per-device deep scan with conservative banners, native Settings and Custom TCP Ports pages, and persistent theme/auto-scan/custom-port preferences and per-device custom names/icons. These are source-level implementations only. A Linux-specific CI job has been added to run formatting, unit tests, strict Clippy and a release build, but no passing result has yet been verified. Host and Flatpak runtime verification remain pending.  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
