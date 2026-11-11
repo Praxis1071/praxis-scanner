@@ -1327,26 +1327,81 @@ fn refresh_device_list(
     navigation: &adw::NavigationView,
     active_device_scan: &Rc<RefCell<Option<ScanHandle>>>,
     catalog_handle: &Rc<RefCell<DeviceCatalog>>,
+    current_address: Option<Ipv4Addr>,
 ) {
     clear_list(list);
 
     let preferences = AppPreferences::load();
-    let records = catalog
+
+    if let Some(address) = current_address {
+        let current_device = catalog
+            .iter()
+            .find(|device| device.address == address)
+            .cloned()
+            .unwrap_or_else(|| DeviceRecord::new(address));
+        let customization = preferences.customization_for(address);
+        let display_name = customization
+            .and_then(|item| item.custom_name.as_deref())
+            .unwrap_or("This device");
+        let icon_name = customization
+            .and_then(|item| item.icon_key.as_deref())
+            .map(icon_name_for_key)
+            .unwrap_or("computer-symbolic");
+        let icon = gtk::Image::from_icon_name(icon_name);
+        let row = adw::ActionRow::builder()
+            .title(display_name)
+            .subtitle(format!("Local IPv4 address · {address}"))
+            .activatable(true)
+            .build();
+        row.add_prefix(&icon);
+        let badge = gtk::Label::new(Some("This device"));
+        badge.add_css_class("dim-label");
+        row.add_suffix(&badge);
+
+        let navigation_for_row = navigation.clone();
+        let active_scan_for_row = Rc::clone(active_device_scan);
+        let devices_list_for_row = list.clone();
+        let catalog_for_row = Rc::clone(catalog_handle);
+        row.connect_activated(move |_| {
+            let page = device_detail_page(
+                &current_device,
+                &navigation_for_row,
+                Rc::clone(&active_scan_for_row),
+                devices_list_for_row.clone(),
+                Rc::clone(&catalog_for_row),
+                current_address,
+            );
+            navigation_for_row.push(&page);
+        });
+        list.append(&row);
+    }
+
+    let mut records = catalog
         .iter()
-        .filter(|device| device.has_discovery_evidence())
+        .filter(|device| {
+            device.has_discovery_evidence() && Some(device.address) != current_address
+        })
         .collect::<Vec<_>>();
+    records.sort_by_key(|device| {
+        (
+            !(device.tcp_responded || device.icmp_round_trip_time.is_some()),
+            u32::from(device.address),
+        )
+    });
 
     if records.is_empty() {
+        let title = if current_address.is_some() {
+            "No other devices discovered yet"
+        } else {
+            "No discovered devices yet"
+        };
         let subtitle = if catalog.is_empty() {
             "Run TCP, mDNS, or SSDP discovery to populate this list.".to_owned()
         } else {
-            format!(
-                "{} candidate address(es) have no confirmed discovery evidence yet.",
-                catalog.len()
-            )
+            "The selected interface has no other confirmed discovery observations yet.".to_owned()
         };
         let row = adw::ActionRow::builder()
-            .title("No discovered devices yet")
+            .title(title)
             .subtitle(&subtitle)
             .activatable(false)
             .build();
@@ -1486,6 +1541,7 @@ fn device_detail_page(
     active_device_scan: Rc<RefCell<Option<ScanHandle>>>,
     devices_list: gtk::ListBox,
     catalog: Rc<RefCell<DeviceCatalog>>,
+    current_address: Option<Ipv4Addr>,
 ) -> adw::NavigationPage {
     let preferences = Rc::new(RefCell::new(AppPreferences::load()));
     let customization = preferences
@@ -1497,7 +1553,11 @@ fn device_detail_page(
         .and_then(|item| item.custom_name.as_deref())
         .unwrap_or("");
     let display_name = if display_name.is_empty() {
-        device.address.to_string()
+        if Some(device.address) == current_address {
+            "This device".to_owned()
+        } else {
+            device.address.to_string()
+        }
     } else {
         display_name.to_owned()
     };
@@ -1658,6 +1718,7 @@ fn device_detail_page(
                         &navigation_for_name,
                         &active_scan_for_name,
                         &catalog_for_name,
+                        current_address,
                     );
                     name_status_for_save.set_text("Device name saved locally.");
                 }
@@ -1712,6 +1773,7 @@ fn device_detail_page(
                         &navigation_for_icon,
                         &active_scan_for_icon,
                         &catalog_for_icon,
+                        current_address,
                     );
                     icon_status_for_save.set_text("Device icon preference saved locally.");
                 }
