@@ -314,6 +314,11 @@ pub struct ScanHandle {
 }
 
 impl ScanHandle {
+    /// Whether two handles refer to the same underlying scan operation.
+    pub fn refers_to_same_scan(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.cancelled, &other.cancelled)
+    }
+
     /// Request cancellation. In-flight connect calls finish within their timeout.
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
