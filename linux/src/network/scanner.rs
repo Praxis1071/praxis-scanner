@@ -603,7 +603,7 @@ fn is_expected_icmp_echo_reply(
         && u16::from_be_bytes([packet[4], packet[5]]) == identifier
         && u16::from_be_bytes([packet[6], packet[7]]) == sequence
         && &packet[8..12] == b"PRXS"
-        && packet[12..16] == target.octets()
+        && packet[12..16] == target.octets()[..]
 }
 
 fn icmp_checksum(packet: &[u8]) -> u16 {
