@@ -72,7 +72,7 @@ The Linux edition is a separate native platform implementation, not a Kotlin-to-
 - [x] Treat unprivileged operation as a hard requirement, even if that means omitting a feature.
 - [x] Keep Android source files unchanged during Linux planning and porting.
 - [x] Obtain maintainer approval before beginning implementation (explicit approval received 2026-11-08).
-- [ ] Keep all Linux work isolated on the dedicated branch until the maintainer has tested and approved it; merge into `main` only after explicit approval.
+- [x] Keep all Linux work isolated on `linux/gtk4-port-planning`; `main` and Android Kotlin sources remain untouched. Merge only after explicit approval.
 
 ### Non-negotiable security rules
 
@@ -123,12 +123,12 @@ The Linux edition is a separate native platform implementation, not a Kotlin-to-
 
 ### Security acceptance criteria
 
-- [ ] The application never requests root, sudo, or an administrator password.
-- [ ] The application does not depend on setuid binaries, privileged services, or file capabilities.
-- [ ] The application does not require `CAP_NET_RAW` or another elevated capability.
+- [x] Source contains no root/sudo/password request path; runtime and Flatpak verification remain pending.
+- [x] Source has no setuid/helper-daemon/file-capability dependency; runtime audit remains pending.
+- [x] TCP and discovery use ordinary sockets; ICMP is datagram-only with no raw fallback. Verify on target kernels and Flatpak.
 - [ ] Flatpak permissions are limited to the minimum required and documented.
-- [ ] Unsupported operations fail clearly and safely; there is no privileged fallback.
-- [ ] The UI distinguishes confirmed facts from heuristic guesses and unavailable information.
+- [x] Unsupported datagram ICMP reports a clear unavailable state; no privileged fallback exists in source.
+- [x] UI labels TCP/ICMP evidence, unverified discovery names, service hints, and inconclusive missing replies separately.
 
 ## 3. Product and UX specification
 
@@ -148,18 +148,18 @@ The Linux edition is a separate native platform implementation, not a Kotlin-to-
 
 ## 4. Architecture and dependency design
 
-- [ ] Define module boundaries for application, UI, scan orchestration, protocols, network data, models, and persistence.
-- [ ] Keep GTK types out of the core scanning engine.
-- [ ] Keep network operations off the GTK main thread and define safe communication back to the UI.
-- [ ] Choose an asynchronous runtime and networking libraries based on the audited requirements.
-- [ ] Define bounded concurrency, per-probe timeouts, retry policy, rate limits, and cancellation semantics.
-- [ ] Define typed scan results and structured error categories.
-- [ ] Define how partial results are surfaced when some discovery methods are unavailable.
-- [ ] Define persistence format and schema migration strategy for user preferences and device customizations.
+- [x] Source is separated into GTK UI, network/protocol modules, device evidence catalog, scanner orchestration, and preferences.
+- [x] Network scanner and protocol modules do not depend on GTK types.
+- [x] Network operations run on bounded worker threads and report typed events to the GTK main loop.
+- [x] Current implementation uses bounded standard threads, `socket2`, and ordinary standard-library sockets; runtime behavior still needs testing.
+- [x] TCP, deep-scan, ICMP, mDNS, SSDP, and NetBIOS source paths have explicit bounds/timeouts/cancellation; verify behavior under load.
+- [x] Scanner and protocol modules use typed events/results and explicit start/operation errors.
+- [x] Partial TCP/ICMP/discovery results and unavailable ICMP socket states are surfaced without false offline claims.
+- [x] Versioned local preferences persist theme, startup scanning, custom ports, and IPv4-keyed device names/icons; DHCP migration remains open.
 - [ ] Define vendor/OUI data packaging and update policy, including source licensing.
 - [ ] Review dependencies for maintenance, license compatibility, security posture, and unnecessary overlap.
 - [ ] Define logging that is useful for diagnosis without exposing unnecessary network/user information.
-- [ ] Document the final architecture, dependency decisions, and threat model before implementation.
+- [x] Security boundaries, socket policy, protocol limits, and implementation architecture are documented in `linux/README.md`; dependency review remains open.
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
@@ -169,44 +169,44 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 
 ### 5.1 Foundation and application shell
 
-- [ ] Establish the Rust project, formatting/linting rules, and reproducible development environment.
-- [ ] Add the GTK4/libadwaita application shell and navigation.
-- [ ] Establish core data models, structured errors, and scan lifecycle abstractions.
-- [ ] Establish UI/engine messaging, background task handling, and cancellation.
+- [x] Rust project, formatting/linting workflow, lockfile generation, and offline Cargo source generation are configured; current CI run is not yet verified.
+- [x] GTK4/libadwaita application shell, navigation, settings, and device-detail navigation exist in source; visual parity remains pending.
+- [x] Device catalog, typed scan events, start errors, cancellation handles, and preference models exist in source.
+- [x] Worker-thread event channels and cancellation controls exist for supported scan paths; runtime verification remains pending.
 
 ### 5.2 Network foundation and core discovery
 
-- [ ] Implement network-interface and local-network information using unprivileged APIs.
-- [ ] Implement TCP reachability and host discovery.
+- [x] Read-only IPv4 interface, route, ARP/neighbour, and subnet information is implemented in source.
+- [x] Bounded unprivileged TCP-connect discovery is implemented in source.
 - [x] Implement optional Linux datagram-only ICMP echo/RTT checks with no raw-socket fallback, capability requirement, or sysctl modification; runtime permission behavior remains unverified.
-- [ ] Implement read-only neighbor-table enrichment where available.
-- [ ] Present partial discovery results and explain unavailable sources.
+- [x] Read-only procfs ARP/neighbour enrichment is implemented in source.
+- [x] UI merges evidence and keeps unknown reachability distinct from offline; runtime verification remains pending.
 
 ### 5.3 Protocol discovery and inspection
 
-- [ ] Implement mDNS discovery. (A bounded, interface-scoped source implementation exists; runtime and Flatpak verification remain pending.)
-- [ ] Implement SSDP/UPnP discovery with bounded response parsing. (One M-SEARCH query and untrusted LOCATION text are supported; device-description URLs are deliberately never fetched.)
-- [ ] Implement NetBIOS discovery where justified by feasibility results.
+- [x] Bounded, interface-scoped mDNS/DNS-SD source implementation exists; runtime and Flatpak verification remain pending.
+- [x] Bounded SSDP/UPnP M-SEARCH and untrusted response parsing exist; LOCATION URLs are deliberately never fetched. Runtime verification remains pending.
+- [x] Bounded, source-bound NetBIOS discovery and validated hostname/workgroup parsing exist; runtime verification remains pending.
 - [ ] Implement reverse DNS lookup with timeouts and cancellation.
-- [ ] Implement configurable TCP port scanning with bounded concurrency and conservative defaults.
-- [ ] Implement banner collection with strict size/time limits and safe parsing.
-- [ ] Implement conservative service/version hints.
+- [x] Custom TCP port parsing, limits, preferences UI, and deep-scan integration exist in source; scan behavior remains unverified.
+- [x] Conservative per-device banner collection has strict byte/time limits and safe protocol handling in source.
+- [x] Port-based service hints and bounded plain-protocol greeting/HTTP HEAD collection exist; TLS plaintext probing is excluded.
 - [ ] Implement device classification and best-effort OS fingerprinting, clearly labeled as heuristic.
 - [ ] Implement vendor lookup only if data licensing and redistribution are approved; explain randomized-MAC uncertainty.
-- [ ] Add scan profiles and custom-port configuration only after the core scan behavior is stable.
+- [x] Custom-port CRUD, enable/disable, persistence, and deep-scan integration exist; named scan profiles remain deferred.
 
 ### 5.4 User experience and persistence
 
-- [ ] Integrate the new protocol-neutral device-evidence catalog into a unified device list, device details, port/service details, and scan progress views.
-- [ ] Implement start, stop, cancellation, empty, partial-result, and error states.
+- [x] Unified device evidence catalog, current-device-first list, detail page, service results, and home/deep-scan progress views exist in source.
+- [x] Start/cancel/empty/partial/error states exist for the implemented scan paths; runtime verification remains pending.
 - [x] Add local device naming/icon customization plus theme, opt-in auto-scan, and custom-port preferences (source implemented; runtime/visual verification pending).
-- [ ] Integrate scan results into the UI without blocking the main thread.
+- [x] Worker events update GTK UI from the main loop without performing network I/O there.
 - [ ] Add accessible labels, keyboard operation, responsive layouts, and localization support.
 - [ ] Review the implementation against the feature parity matrix and remove unsupported promises.
 
 ## 6. Quality assurance and security validation
 
-- [ ] Add unit tests for parsers, protocol handling, models, and classification logic.
+- [x] Unit-test source exists for parsers, models, preference persistence, limits, banners, NetBIOS, SSDP, mDNS, and ICMP packets; execution on current HEAD is pending.
 - [ ] Add tests for cancellation, timeouts, rate limits, concurrency limits, and partial failures.
 - [ ] Add integration tests for each supported discovery protocol.
 - [ ] Test against a controlled local network with multiple operating systems and device types.
@@ -215,7 +215,7 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 - [ ] Inspect the built Flatpak manifest and effective permissions.
 - [ ] Test in a clean Flatpak sandbox and on more than one Linux distribution.
 - [ ] Test offline behavior and confirm there is no undisclosed telemetry or external contact.
-- [ ] Test malformed, oversized, and unexpected protocol responses.
+- [x] Unit-test source covers malformed/oversized NetBIOS and SSDP responses and invalid ICMP packets; execution on current HEAD is pending.
 - [ ] Test long-running scans, repeated scans, resource use, and UI responsiveness.
 - [ ] Run formatting, linting, dependency/license checks, and the complete test suite.
 - [ ] Fix regressions before proceeding; do not mark a phase complete based only on compilation.
