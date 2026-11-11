@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -265,6 +266,7 @@ pub fn build_ui(application: &adw::Application) {
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
                 let mut inconclusive = 0usize;
+                let mut result_rows = Vec::<(std::net::Ipv4Addr, adw::ActionRow, String)>::new();
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
                         match event {
@@ -272,7 +274,10 @@ pub fn build_ui(application: &adw::Application) {
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
-                                    results_for_events.append(&result_row(&result));
+                                    let details = result_details(&result);
+                                    let row = result_row(&result, &details);
+                                    results_for_events.append(&row);
+                                    result_rows.push((result.address, row, details));
                                 } else {
                                     inconclusive += 1;
                                 }
@@ -290,9 +295,26 @@ pub fn build_ui(application: &adw::Application) {
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
+                                let mac_summary = match network::system::read_ipv4_neighbours() {
+                                    Ok(neighbours) => {
+                                        let mac_by_address: HashMap<_, _> = neighbours
+                                            .into_iter()
+                                            .map(|neighbour| (neighbour.address, neighbour.hardware_address))
+                                            .collect();
+                                        let mut enriched = 0usize;
+                                        for (address, row, details) in &result_rows {
+                                            if let Some(mac) = mac_by_address.get(address) {
+                                                row.set_subtitle(&format!("{details}\nMAC address: {mac}"));
+                                                enriched += 1;
+                                            }
+                                        }
+                                        format!("{enriched} MAC address(es) available from the neighbour table")
+                                    }
+                                    Err(_) => "MAC information unavailable".to_owned(),
+                                };
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
-                                    "Scan {state}: {finished_count} of {total} checked; {responsive} TCP responders; {inconclusive} without a response (not proof they are offline)."
+                                    "Scan {state}: {finished_count} of {total} checked; {responsive} TCP responders; {inconclusive} without a response (not proof they are offline); {mac_summary}."
                                 ));
                                 return glib::ControlFlow::Break;
                             }
@@ -399,8 +421,8 @@ fn interface_row(interface: &NetworkInterface) -> adw::ActionRow {
         .build()
 }
 
-fn result_row(result: &HostScanResult) -> adw::ActionRow {
-    let details = if result.open_ports.is_empty() {
+fn result_details(result: &HostScanResult) -> String {
+    if result.open_ports.is_empty() {
         if result.tcp_responded {
             "TCP response received; none of the configured ports was open".to_owned()
         } else {
@@ -419,11 +441,13 @@ fn result_row(result: &HostScanResult) -> adw::ActionRow {
         format!(
             "Open TCP ports: {ports}. Service names are port-based hints, not verified identities."
         )
-    };
+    }
+}
 
+fn result_row(result: &HostScanResult, details: &str) -> adw::ActionRow {
     adw::ActionRow::builder()
         .title(result.address.to_string())
-        .subtitle(&details)
+        .subtitle(details)
         .activatable(false)
         .build()
 }
