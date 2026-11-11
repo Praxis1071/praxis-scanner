@@ -963,6 +963,7 @@ mod tests {
         let open_port = listener.local_addr().expect("read listener address").port();
         let (_handle, events) = super::start_device_deep_scan(
             Ipv4Addr::LOCALHOST,
+            Ipv4Addr::LOCALHOST,
             vec![open_port, open_port],
             Duration::from_millis(500),
         )
@@ -1093,6 +1094,7 @@ mod tests {
 
         let (open_ports, responded) = probe_ports(
             Ipv4Addr::LOCALHOST,
+            Ipv4Addr::LOCALHOST,
             Duration::from_millis(500),
             &[port],
             &cancelled,
@@ -1106,6 +1108,7 @@ mod tests {
     fn cancelled_probe_does_not_open_connections() {
         let cancelled = AtomicBool::new(true);
         let (open_ports, responded) = probe_ports(
+            Ipv4Addr::LOCALHOST,
             Ipv4Addr::LOCALHOST,
             Duration::from_millis(100),
             &[80],
@@ -1123,7 +1126,7 @@ mod tests {
             .map(|port| port as u16)
             .collect::<Vec<_>>();
         assert!(matches!(
-            super::start_tcp_discovery_with_ports(hosts, ports, Duration::from_millis(100)),
+            super::start_tcp_discovery_with_ports(Ipv4Addr::LOCALHOST, hosts, ports, Duration::from_millis(100)),
             Err(ScanStartError::TooManyProbes { .. })
         ));
     }
@@ -1132,7 +1135,7 @@ mod tests {
     fn rejects_target_lists_above_the_safety_limit() {
         let hosts = vec![Ipv4Addr::LOCALHOST; MAX_SCAN_TARGETS + 1];
         assert_eq!(
-            start_tcp_discovery_with_ports(hosts, DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100)).err(),
+            start_tcp_discovery_with_ports(Ipv4Addr::LOCALHOST, hosts, DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100)).err(),
             Some(ScanStartError::TooManyTargets {
                 requested: MAX_SCAN_TARGETS + 1,
                 limit: MAX_SCAN_TARGETS,
@@ -1150,6 +1153,7 @@ mod tests {
             .port();
 
         let (_handle, events) = start_tcp_discovery_with_ports(
+            Ipv4Addr::LOCALHOST,
             vec![Ipv4Addr::LOCALHOST],
             vec![port],
             Duration::from_millis(500),
@@ -1179,6 +1183,7 @@ mod tests {
     fn rejects_empty_and_zero_port_lists() {
         assert_eq!(
             start_tcp_discovery_with_ports(
+                Ipv4Addr::LOCALHOST,
                 vec![Ipv4Addr::LOCALHOST],
                 Vec::new(),
                 Duration::from_millis(100),
@@ -1222,7 +1227,7 @@ mod tests {
 
     #[test]
     fn empty_scan_finishes_without_network_activity() {
-        let (_handle, events) = start_tcp_discovery_with_ports(Vec::new(), DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100))
+        let (_handle, events) = start_tcp_discovery_with_ports(Ipv4Addr::LOCALHOST, Vec::new(), DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100))
             .expect("an empty scan is valid");
         assert!(matches!(
             events.recv_timeout(Duration::from_secs(1)),
