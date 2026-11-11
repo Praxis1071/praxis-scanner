@@ -88,7 +88,6 @@ pub fn build_ui(application: &adw::Application) {
 
     let ssdp_button = gtk::Button::with_label("Discover UPnP devices (SSDP)");
     ssdp_button.set_sensitive(false);
-    netbios_button.set_sensitive(false);
     ssdp_button.set_halign(gtk::Align::Start);
     ssdp_button.set_margin_start(18);
     ssdp_button.set_margin_top(8);
