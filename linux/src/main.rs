@@ -341,6 +341,11 @@ mod preferences {
                 options.mode(0o600);
             }
             let mut file = options.open(&temporary)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                file.set_permissions(fs::Permissions::from_mode(0o600))?;
+            }
             file.write_all(contents.as_bytes())?;
             file.sync_all()?;
             fs::rename(&temporary, path)?;
@@ -372,6 +377,7 @@ mod preferences {
     fn preferences_path() -> PathBuf {
         let base = std::env::var_os("XDG_CONFIG_HOME")
             .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
             .or_else(|| {
                 std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".config"))
             })
