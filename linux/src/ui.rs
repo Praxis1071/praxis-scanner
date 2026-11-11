@@ -71,7 +71,7 @@ pub fn build_ui(application: &adw::Application) {
     mdns_button.set_margin_top(8);
 
     let mdns_note = gtk::Label::new(Some(
-        "mDNS/DNS-SD listens on the selected interface only. Responses are unauthenticated and may be spoofed; use on trusted local networks. It does not identify every device.",
+        "mDNS/DNS-SD sends multicast queries on the selected interface only. Responses are unauthenticated and may be spoofed; use on trusted local networks. It does not identify every device.",
     ));
     mdns_note.set_halign(gtk::Align::Start);
     mdns_note.set_wrap(true);
@@ -443,7 +443,7 @@ pub fn build_ui(application: &adw::Application) {
                 interface_list_for_mdns.set_sensitive(false);
                 port_entry_for_mdns.set_sensitive(false);
                 status_for_mdns.set_text(&format!(
-                    "Listening for DNS-SD services on {} ({}/{}) for up to {} seconds…",
+                    "Querying DNS-SD services on {} ({}/{}) for up to {} seconds…",
                     interface.name,
                     network.address(),
                     network.prefix(),
