@@ -1057,14 +1057,22 @@ pub fn build_ui(application: &adw::Application) {
             .ok()
             .and_then(|routes| routes.into_iter().find(|route| route.is_default))
             .map(|route| route.interface);
-        let selected_index = interfaces
-            .borrow()
-            .iter()
-            .position(|interface| {
-                is_scannable_interface(interface)
-                    && default_interface.as_deref().is_some_and(|name| name == interface.name)
-            })
-            .or_else(|| interfaces.borrow().iter().position(is_scannable_interface));
+        let selected_index = {
+            let available_interfaces = interfaces.borrow();
+            available_interfaces
+                .iter()
+                .position(|interface| {
+                    is_scannable_interface(interface)
+                        && default_interface
+                            .as_deref()
+                            .is_some_and(|name| name == interface.name.as_str())
+                })
+                .or_else(|| {
+                    available_interfaces
+                        .iter()
+                        .position(is_scannable_interface)
+                })
+        };
         if let Some(index) = selected_index {
             if let Some(row) = list.row_at_index(index as i32) {
                 list.select_row(Some(&row));
