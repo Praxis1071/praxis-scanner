@@ -482,6 +482,7 @@ pub fn build_ui(application: &adw::Application) {
         progress_for_scan.set_fraction(0.0);
         progress_for_scan.set_text(Some(&format!("0/{target_count} hosts checked")));
         match scanner::start_tcp_discovery_with_ports(
+            interface.address,
             hosts,
             ports,
             scanner::DEFAULT_TCP_TIMEOUT,
@@ -2098,6 +2099,7 @@ fn device_detail_page(
     content.append(&deep_scan_results);
 
     start_device_deep_scan(
+        current_address.unwrap_or(device.address),
         device.address,
         deep_scan_ports,
         custom_service_names,
@@ -2181,6 +2183,7 @@ fn device_detail_page(
 }
 
 fn start_device_deep_scan(
+    source_address: std::net::Ipv4Addr,
     address: std::net::Ipv4Addr,
     ports: Vec<u16>,
     service_names: HashMap<u16, String>,
@@ -2207,6 +2210,7 @@ fn start_device_deep_scan(
 
     let total_ports = ports.len();
     match scanner::start_device_deep_scan(
+        source_address,
         address,
         ports,
         scanner::DEFAULT_TCP_TIMEOUT,
