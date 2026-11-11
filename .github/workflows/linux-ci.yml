@@ -11,10 +11,11 @@ on:
   pull_request:
     paths:
       - "linux/**"
+      - "io.github.praxis1071.PraxisScanner.yml"
       - ".github/workflows/linux-ci.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: linux-ci-${{ github.ref }}
@@ -23,6 +24,8 @@ concurrency:
 jobs:
   linux:
     name: Format, build, tests and lint
+    permissions:
+      contents: write
     timeout-minutes: 45
     runs-on: ubuntu-24.04
     steps:
@@ -34,8 +37,13 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Generate dependency lockfile
-        run: cargo generate-lockfile --manifest-path linux/Cargo.toml
+      - name: Generate dependency lockfile when missing
+        run: |
+          if [ ! -f linux/Cargo.lock ]; then
+            cargo generate-lockfile --manifest-path linux/Cargo.toml
+          else
+            echo "Using the committed Cargo.lock."
+          fi
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -91,3 +99,39 @@ jobs:
             git commit -m "build(linux): pin Rust dependencies for Flatpak"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+
+  flatpak:
+    name: Validate metadata and build Flatpak
+    needs: linux
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Download reproducible Cargo sources
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: praxis-scanner-flatpak-sources
+          path: linux
+
+      - name: Install Flatpak build tools
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 install -y --no-install-recommends flatpak flatpak-builder appstream desktop-file-utils
+
+      - name: Validate desktop integration metadata
+        run: |
+          appstreamcli validate --no-net linux/data/io.github.praxis1071.PraxisScanner.metainfo.xml
+          desktop-file-validate linux/data/io.github.praxis1071.PraxisScanner.desktop
+
+      - name: Install GNOME 50 runtime and Rust SDK extension
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive --assumeyes flathub org.gnome.Platform//50 org.gnome.Sdk//50 org.freedesktop.Sdk.Extension.rust-stable//25.08
+
+      - name: Build sandboxed application
+        run: |
+          flatpak-builder --user --force-clean --disable-rofiles-fuse --install-deps-from=flathub --repo=repo build-dir io.github.praxis1071.PraxisScanner.yml
