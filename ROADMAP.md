@@ -130,7 +130,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, and opt-in interface-scoped IPv4 mDNS/DNS-SD service discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `b6d808a`. Newer mDNS validation and UI wording changes are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
+Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, and opt-in interface-scoped IPv4 mDNS/DNS-SD service discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The latest mDNS result-deduplication refinement is awaiting its own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
 **Current milestone:** validate the latest mDNS changes in CI; then exercise TCP and mDNS behavior on a controlled local network, refine the device/results experience, and continue protocol discovery without weakening the unprivileged security policy.
 
