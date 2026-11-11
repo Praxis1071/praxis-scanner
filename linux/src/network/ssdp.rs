@@ -339,7 +339,18 @@ fn set_header(
 
 fn is_safe_location(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
-    (lower.starts_with("http://") || lower.starts_with("https://"))
+    let Some(authority_and_path) = lower
+        .strip_prefix("http://")
+        .or_else(|| lower.strip_prefix("https://"))
+    else {
+        return false;
+    };
+    let authority = authority_and_path.split('/').next().unwrap_or_default();
+
+    !authority.is_empty()
+        && !authority.starts_with(':')
+        && !authority.ends_with(':')
+        && !authority.contains(['?', '#'])
         && !value.chars().any(char::is_whitespace)
         && !value.contains('@')
         && value.len() <= 512
@@ -413,7 +424,7 @@ mod tests {
     #[test]
     fn rejects_oversized_and_non_utf8_ssdp_packets() {
         assert_eq!(
-            parse_ssdp_response(&vec![b'A'; 8193]),
+            parse_ssdp_response(&[b'A'; 8193]),
             Err(SsdpParseError::PacketTooLarge)
         );
         assert_eq!(
