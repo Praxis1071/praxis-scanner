@@ -267,7 +267,7 @@ fn parse_nbstat_rdata(data: &[u8]) -> Option<NetbiosInfo> {
     for _ in 0..count {
         let entry = &data[offset..offset + 18];
         let name = String::from_utf8_lossy(&entry[..15])
-            .trim_end_matches([' ', '\0'])
+            .trim_end_matches(|character| character == ' ' || character == '\0')
             .chars()
             .filter(|character| character.is_ascii_graphic() || *character == ' ')
             .collect::<String>();
@@ -390,6 +390,10 @@ mod tests {
     #[test]
     fn rejects_invalid_timeout_and_oversized_target_lists() {
         assert!(start_discovery(Ipv4Addr::LOCALHOST, vec![Ipv4Addr::LOCALHOST], Duration::ZERO).is_err());
+        assert!(matches!(
+            start_discovery(Ipv4Addr::UNSPECIFIED, Vec::new(), Duration::from_millis(100)),
+            Err(super::NetbiosStartError::InvalidSourceAddress)
+        ));
         assert!(start_discovery(
             Ipv4Addr::LOCALHOST,
             vec![Ipv4Addr::LOCALHOST; super::MAX_TARGETS + 1],
