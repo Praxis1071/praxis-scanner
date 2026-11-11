@@ -378,6 +378,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let status_for_scan = status.clone();
+    let progress_for_scan = scan_progress.clone();
     let results_for_scan = results_list.clone();
     let button_for_scan = scan_button.clone();
     let selected_for_scan = Rc::clone(&selected_interface);
@@ -469,6 +470,8 @@ pub fn build_ui(application: &adw::Application) {
         let target_count = hosts.len();
         let port_count = ports.len();
         let selected_interface_name = interface.name.clone();
+        progress_for_scan.set_fraction(0.0);
+        progress_for_scan.set_text(Some(&format!("0/{target_count} hosts checked")));
         match scanner::start_tcp_discovery_with_ports(
             hosts,
             ports,
@@ -491,6 +494,7 @@ pub fn build_ui(application: &adw::Application) {
                 ));
 
                 let status_for_events = status_for_scan.clone();
+                let progress_for_events = progress_for_scan.clone();
                 let results_for_events = results_for_scan.clone();
                 let button_for_events = button_for_scan.clone();
                 let refresh_for_events = refresh_button_for_scan.clone();
@@ -531,6 +535,12 @@ pub fn build_ui(application: &adw::Application) {
                                         .map(|interface| interface.address),
                                 );
                                 completed += 1;
+                                progress_for_events.set_fraction(
+                                    completed as f64 / target_count.max(1) as f64,
+                                );
+                                progress_for_events.set_text(Some(&format!(
+                                    "{completed}/{target_count} hosts checked"
+                                )));
                                 if result.tcp_responded {
                                     responsive += 1;
                                     let details = result_details(&result);
@@ -550,6 +560,12 @@ pub fn build_ui(application: &adw::Application) {
                                 cancelled,
                             } => {
                                 *active_for_events.borrow_mut() = None;
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "Cancelled"
+                                } else {
+                                    "Complete"
+                                }));
                                 button_for_events.set_label("Scan selected network");
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
