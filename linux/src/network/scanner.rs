@@ -1138,6 +1138,28 @@ mod tests {
     }
 
     #[test]
+    fn tcp_discovery_rejects_unspecified_source_address() {
+        assert!(matches!(
+            start_tcp_discovery_with_ports(
+                Ipv4Addr::UNSPECIFIED,
+                Vec::new(),
+                DEFAULT_TCP_PORTS.to_vec(),
+                Duration::from_millis(100)
+            ),
+            Err(ScanStartError::InvalidSourceAddress)
+        ));
+        assert!(matches!(
+            super::start_device_deep_scan(
+                Ipv4Addr::UNSPECIFIED,
+                Ipv4Addr::LOCALHOST,
+                vec![80],
+                Duration::from_millis(100)
+            ),
+            Err(ScanStartError::InvalidSourceAddress)
+        ));
+    }
+
+    #[test]
     fn rejects_target_lists_above_the_safety_limit() {
         let hosts = vec![Ipv4Addr::LOCALHOST; MAX_SCAN_TARGETS + 1];
         assert_eq!(
