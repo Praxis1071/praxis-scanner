@@ -231,14 +231,16 @@ pub fn build_ui(application: &adw::Application) {
     let ssdp_button_for_refresh = ssdp_button.clone();
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
-            &list_for_refresh,
-            &status_for_refresh,
-            &system_info_for_refresh,
+            RefreshWidgets {
+                list: &list_for_refresh,
+                status: &status_for_refresh,
+                system_info: &system_info_for_refresh,
+                scan_button: &scan_button_for_refresh,
+                mdns_button: &mdns_button_for_refresh,
+                ssdp_button: &ssdp_button_for_refresh,
+            },
             &interfaces_for_refresh,
             &selected_for_refresh,
-            &scan_button_for_refresh,
-            &mdns_button_for_refresh,
-            &ssdp_button_for_refresh,
         );
     });
 
@@ -757,14 +759,16 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     refresh_interfaces(
-        &list,
-        &status,
-        &system_info,
+        RefreshWidgets {
+            list: &list,
+            status: &status,
+            system_info: &system_info,
+            scan_button: &scan_button,
+            mdns_button: &mdns_button,
+            ssdp_button: &ssdp_button,
+        },
         &interfaces,
         &selected_interface,
-        &scan_button,
-        &mdns_button,
-        &ssdp_button,
     );
     window.present();
 }
@@ -777,16 +781,29 @@ fn is_scannable_interface(interface: &NetworkInterface) -> bool {
         && (interface.address.is_private() || interface.address.is_link_local())
 }
 
+struct RefreshWidgets<'a> {
+    list: &'a gtk::ListBox,
+    status: &'a gtk::Label,
+    system_info: &'a gtk::Label,
+    scan_button: &'a gtk::Button,
+    mdns_button: &'a gtk::Button,
+    ssdp_button: &'a gtk::Button,
+}
+
 fn refresh_interfaces(
-    list: &gtk::ListBox,
-    status: &gtk::Label,
-    system_info: &gtk::Label,
+    widgets: RefreshWidgets<'_>,
     interfaces_state: &Rc<RefCell<Vec<NetworkInterface>>>,
     selected_state: &Rc<RefCell<Option<NetworkInterface>>>,
-    scan_button: &gtk::Button,
-    mdns_button: &gtk::Button,
-    ssdp_button: &gtk::Button,
 ) {
+    let RefreshWidgets {
+        list,
+        status,
+        system_info,
+        scan_button,
+        mdns_button,
+        ssdp_button,
+    } = widgets;
+
     while let Some(child) = list.first_child() {
         list.remove(&child);
     }
