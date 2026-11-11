@@ -292,7 +292,7 @@ fn parse_ssdp_response(packet: &[u8]) -> Result<SsdpResponse, SsdpParseError> {
             return Err(SsdpParseError::InvalidHeader);
         }
         let value = value.trim();
-        if value.is_empty() || value.chars().any(char::is_control) {
+        if value.chars().any(char::is_control) {
             return Err(SsdpParseError::InvalidValue);
         }
 
@@ -324,7 +324,10 @@ fn set_header(
     value: &str,
     maximum_length: usize,
 ) -> Result<(), SsdpParseError> {
-    if value.len() > maximum_length {
+    if value.is_empty()
+        || value.len() > maximum_length
+        || value.chars().any(char::is_control)
+    {
         return Err(SsdpParseError::InvalidValue);
     }
     if target.is_some() {
@@ -376,6 +379,11 @@ mod tests {
             response.location.as_deref(),
             Some("http://192.168.1.1:1900/rootDesc.xml")
         );
+    }
+
+    #[test]
+    fn accepts_the_required_empty_ext_header() {
+        assert!(parse_ssdp_response(VALID_RESPONSE).is_ok());
     }
 
     #[test]
