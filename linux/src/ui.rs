@@ -469,6 +469,7 @@ pub fn build_ui(application: &adw::Application) {
                 button_for_scan.set_label("Cancel scan");
                 refresh_button_for_scan.set_sensitive(false);
                 interface_list_for_scan.set_sensitive(false);
+                devices_for_scan.set_sensitive(false);
                 port_entry_for_sensitivity.set_sensitive(false);
                 mdns_button_for_tcp.set_sensitive(false);
                 ssdp_button_for_tcp.set_sensitive(false);
@@ -543,6 +544,7 @@ pub fn build_ui(application: &adw::Application) {
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 mdns_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
@@ -681,6 +683,7 @@ pub fn build_ui(application: &adw::Application) {
                 netbios_button_for_mdns.set_sensitive(false);
                 refresh_for_mdns.set_sensitive(false);
                 interface_list_for_mdns.set_sensitive(false);
+                devices_for_mdns.set_sensitive(false);
                 port_entry_for_mdns.set_sensitive(false);
                 status_for_mdns.set_text(&format!(
                     "Querying DNS-SD services on {} ({}/{}) for up to {} seconds…",
@@ -784,6 +787,7 @@ pub fn build_ui(application: &adw::Application) {
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
                                     "mDNS discovery {state}: {services} advertised service instance(s) found. Results are limited to the selected IPv4 subnet."
@@ -882,6 +886,7 @@ pub fn build_ui(application: &adw::Application) {
                 netbios_button_for_ssdp.set_sensitive(false);
                 refresh_for_ssdp.set_sensitive(false);
                 interface_list_for_ssdp.set_sensitive(false);
+                devices_for_ssdp.set_sensitive(false);
                 port_entry_for_ssdp.set_sensitive(false);
                 status_for_ssdp.set_text(&format!(
                     "Sending one SSDP M-SEARCH query on {} ({}/{}) for up to {} seconds…",
@@ -985,6 +990,7 @@ pub fn build_ui(application: &adw::Application) {
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
                                     "SSDP discovery {state}: {responses} response(s) received from the selected IPv4 subnet. Responses are unverified."
@@ -1060,6 +1066,7 @@ pub fn build_ui(application: &adw::Application) {
                 *active_netbios_for_scan.borrow_mut() = Some(handle);
                 netbios_button_for_scan.set_label("Cancel NetBIOS discovery");
                 interface_list_for_netbios.set_sensitive(false);
+                devices_for_netbios.set_sensitive(false);
                 refresh_for_netbios.set_sensitive(false);
                 tcp_button_for_netbios.set_sensitive(false);
                 mdns_button_for_netbios.set_sensitive(false);
@@ -1114,6 +1121,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 interface_list_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 refresh_for_events.set_sensitive(true);
                                 let can_scan = selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface);
                                 tcp_button_for_events.set_sensitive(can_scan);
@@ -1214,6 +1222,7 @@ pub fn build_ui(application: &adw::Application) {
                 netbios_button_for_icmp.set_sensitive(false);
                 refresh_button_for_icmp.set_sensitive(false);
                 interface_list_for_icmp.set_sensitive(false);
+                devices_for_icmp.set_sensitive(false);
                 port_entry_for_icmp.set_sensitive(false);
                 status_for_icmp.set_text(
                     "Checking previously discovered devices with datagram-only ICMP echo requests…",
@@ -1270,6 +1279,7 @@ pub fn build_ui(application: &adw::Application) {
                                 completed,
                                 cancelled,
                             } => {
+                                active_icmp_for_events.borrow_mut().take();
                                 refresh_device_list(
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
@@ -1282,7 +1292,7 @@ pub fn build_ui(application: &adw::Application) {
                                         .filter(|interface| is_scannable_interface(interface))
                                         .map(|interface| interface.address),
                                 );
-                                active_icmp_for_events.borrow_mut().take();
+                                devices_for_events.set_sensitive(true);
                                 icmp_button_for_events.set_label("Check ICMP reachability");
                                 let can_scan = selected_for_events
                                     .borrow()
