@@ -173,7 +173,9 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
         let Some(prefix) = interface.prefix else {
-            status_for_scan.set_text("The selected interface has no valid contiguous IPv4 netmask.");
+            status_for_scan.set_text(
+                "The selected interface has no valid contiguous IPv4 netmask.",
+            );
             return;
         };
 
@@ -204,7 +206,6 @@ pub fn build_ui(application: &adw::Application) {
             Ok((handle, events)) => {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
-                refresh_button_for_scan.set_sensitive(false);
                 refresh_button_for_scan.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
