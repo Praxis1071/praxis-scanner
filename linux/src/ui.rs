@@ -1178,7 +1178,7 @@ fn start_device_deep_scan(
             let cancel_for_events = cancel_button.clone();
             let results_for_events = results.clone();
             let active_for_events = Rc::clone(&active_scan);
-            let total_ports = scanner::DEEP_SCAN_TCP_PORTS.len();
+            let scan_identity_for_events = scan_identity.clone();
             let started = Instant::now();
             let mut completed_ports = 0usize;
             let mut open_ports = 0usize;
