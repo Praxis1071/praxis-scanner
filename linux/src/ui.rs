@@ -1629,3 +1629,370 @@ fn result_row(result: &HostScanResult, details: &str) -> adw::ActionRow {
         .activatable(false)
         .build()
 }
+
+
+fn apply_theme(theme: ThemeMode) {
+    let color_scheme = match theme {
+        ThemeMode::System => adw::ColorScheme::Default,
+        ThemeMode::Light => adw::ColorScheme::ForceLight,
+        ThemeMode::Dark => adw::ColorScheme::ForceDark,
+    };
+    adw::StyleManager::default().set_color_scheme(color_scheme);
+}
+
+fn settings_page(
+    navigation: &adw::NavigationView,
+    window: &adw::ApplicationWindow,
+    preferences: Rc<RefCell<AppPreferences>>,
+) -> adw::NavigationPage {
+    let header = adw::HeaderBar::new();
+    let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
+    back_button.set_tooltip_text(Some("Back"));
+    let navigation_for_back = navigation.clone();
+    back_button.connect_clicked(move |_| navigation_for_back.pop());
+    header.pack_start(&back_button);
+    let title = adw::WindowTitle::new("Settings", "Application preferences");
+    header.set_title_widget(Some(&title));
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_margin_top(18);
+    content.set_margin_bottom(24);
+    content.set_margin_start(18);
+    content.set_margin_end(18);
+
+    let appearance_heading = gtk::Label::new(Some("Appearance"));
+    appearance_heading.add_css_class("title-2");
+    appearance_heading.set_halign(gtk::Align::Start);
+    content.append(&appearance_heading);
+
+    let theme_row = adw::ActionRow::builder()
+        .title("Theme")
+        .subtitle("Follow the desktop theme or choose a fixed appearance")
+        .build();
+    let theme_dropdown = gtk::DropDown::from_strings(&["System", "Light", "Dark"]);
+    theme_dropdown.set_selected(match preferences.borrow().theme {
+        ThemeMode::System => 0,
+        ThemeMode::Light => 1,
+        ThemeMode::Dark => 2,
+    });
+    theme_row.add_suffix(&theme_dropdown);
+    let preferences_for_theme = Rc::clone(&preferences);
+    let theme_status = gtk::Label::new(None);
+    theme_status.set_halign(gtk::Align::Start);
+    theme_status.add_css_class("dim-label");
+    theme_dropdown.connect_selected_notify(move |dropdown| {
+        let theme = match dropdown.selected() {
+            1 => ThemeMode::Light,
+            2 => ThemeMode::Dark,
+            _ => ThemeMode::System,
+        };
+        let mut updated = preferences_for_theme.borrow().clone();
+        updated.theme = theme;
+        match updated.save() {
+            Ok(()) => {
+                *preferences_for_theme.borrow_mut() = updated;
+                apply_theme(theme);
+            }
+            Err(error) => theme_status.set_text(&format!("Could not save theme preference: {error}")),
+        }
+    });
+    let appearance_list = gtk::ListBox::new();
+    appearance_list.add_css_class("boxed-list");
+    appearance_list.append(&theme_row);
+    content.append(&appearance_list);
+
+    let scanning_heading = gtk::Label::new(Some("Scanning"));
+    scanning_heading.add_css_class("title-2");
+    scanning_heading.set_halign(gtk::Align::Start);
+    content.append(&scanning_heading);
+
+    let auto_scan_row = adw::ActionRow::builder()
+        .title("Scan automatically on launch")
+        .subtitle("When enabled, the app selects the default-route interface and starts a bounded scan")
+        .build();
+    let auto_scan_switch = gtk::Switch::new();
+    auto_scan_switch.set_valign(gtk::Align::Center);
+    auto_scan_switch.set_active(preferences.borrow().auto_scan_on_start);
+    auto_scan_row.add_suffix(&auto_scan_switch);
+    let preferences_for_auto_scan = Rc::clone(&preferences);
+    let auto_scan_status = gtk::Label::new(None);
+    auto_scan_status.set_halign(gtk::Align::Start);
+    auto_scan_status.add_css_class("dim-label");
+    auto_scan_switch.connect_active_notify(move |switch| {
+        let mut updated = preferences_for_auto_scan.borrow().clone();
+        updated.auto_scan_on_start = switch.is_active();
+        match updated.save() {
+            Ok(()) => *preferences_for_auto_scan.borrow_mut() = updated,
+            Err(error) => auto_scan_status.set_text(&format!("Could not save startup preference: {error}")),
+        }
+    });
+    let scanning_list = gtk::ListBox::new();
+    scanning_list.add_css_class("boxed-list");
+    scanning_list.append(&auto_scan_row);
+    content.append(&scanning_list);
+
+    let custom_ports_heading = gtk::Label::new(Some("Custom TCP ports"));
+    custom_ports_heading.add_css_class("title-2");
+    custom_ports_heading.set_halign(gtk::Align::Start);
+    content.append(&custom_ports_heading);
+
+    let custom_ports_row = adw::ActionRow::builder()
+        .title("Manage custom ports")
+        .subtitle("Add, enable, disable, and remove ports used by device deep scans")
+        .activatable(true)
+        .build();
+    let custom_ports_button = gtk::Button::from_icon_name("go-next-symbolic");
+    custom_ports_button.set_tooltip_text(Some("Manage custom ports"));
+    custom_ports_row.add_suffix(&custom_ports_button);
+    let navigation_for_ports = navigation.clone();
+    let preferences_for_ports = Rc::clone(&preferences);
+    custom_ports_button.connect_clicked(move |_| {
+        let page = custom_ports_page(
+            &navigation_for_ports,
+            Rc::clone(&preferences_for_ports),
+        );
+        navigation_for_ports.push(&page);
+    });
+    let custom_ports_list = gtk::ListBox::new();
+    custom_ports_list.add_css_class("boxed-list");
+    custom_ports_list.append(&custom_ports_row);
+    content.append(&custom_ports_list);
+
+    let about_heading = gtk::Label::new(Some("About"));
+    about_heading.add_css_class("title-2");
+    about_heading.set_halign(gtk::Align::Start);
+    content.append(&about_heading);
+
+    let about_button = gtk::Button::with_label("About Praxis Scanner");
+    let window_for_about = window.clone();
+    about_button.connect_clicked(move |_| {
+        show_information_dialog(
+            &window_for_about,
+            "Praxis Scanner",
+            "A native Linux network discovery application. Licensed under GPL-3.0-only.",
+        );
+    });
+    content.append(&about_button);
+
+    let privacy_button = gtk::Button::with_label("Privacy and network behavior");
+    let window_for_privacy = window.clone();
+    privacy_button.connect_clicked(move |_| {
+        show_information_dialog(
+            &window_for_privacy,
+            "Privacy",
+            "Praxis Scanner runs locally. Network probes begin only after you select an eligible interface and start a scan, unless automatic scanning is explicitly enabled. It does not upload scan results, use raw sockets, require root privileges, or automatically fetch SSDP device-description URLs. Network advertisements are unverified.",
+        );
+    });
+    content.append(&privacy_button);
+
+    let github_link = gtk::LinkButton::with_label(
+        "https://github.com/Praxis1071/praxis-scanner",
+        "Praxis Scanner on GitHub",
+    );
+    content.append(&github_link);
+
+    let scrolled = gtk::ScrolledWindow::builder()
+        .vexpand(true)
+        .child(&content)
+        .build();
+    let page_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page_content.append(&header);
+    page_content.append(&scrolled);
+
+    adw::NavigationPage::builder()
+        .title("Settings")
+        .child(&page_content)
+        .build()
+}
+
+fn custom_ports_page(
+    navigation: &adw::NavigationView,
+    preferences: Rc<RefCell<AppPreferences>>,
+) -> adw::NavigationPage {
+    let header = adw::HeaderBar::new();
+    let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
+    back_button.set_tooltip_text(Some("Back to settings"));
+    let navigation_for_back = navigation.clone();
+    back_button.connect_clicked(move |_| navigation_for_back.pop());
+    header.pack_start(&back_button);
+    let title = adw::WindowTitle::new("Custom TCP ports", "Device deep-scan configuration");
+    header.set_title_widget(Some(&title));
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_margin_top(18);
+    content.set_margin_bottom(24);
+    content.set_margin_start(18);
+    content.set_margin_end(18);
+
+    let note = gtk::Label::new(Some(
+        "Enabled custom ports are added to the standard per-device deep scan. Ports are checked with ordinary TCP connections and remain subject to the application's scan limits.",
+    ));
+    note.set_wrap(true);
+    note.set_halign(gtk::Align::Start);
+    note.add_css_class("dim-label");
+    content.append(&note);
+
+    let form_heading = gtk::Label::new(Some("Add a port"));
+    form_heading.add_css_class("title-2");
+    form_heading.set_halign(gtk::Align::Start);
+    content.append(&form_heading);
+
+    let form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let port_entry = gtk::Entry::new();
+    port_entry.set_placeholder_text(Some("Port"));
+    port_entry.set_max_length(5);
+    port_entry.set_input_purpose(gtk::InputPurpose::Digits);
+    port_entry.set_width_chars(7);
+    let service_entry = gtk::Entry::new();
+    service_entry.set_placeholder_text(Some("Service name"));
+    service_entry.set_hexpand(true);
+    let add_button = gtk::Button::with_label("Add");
+    add_button.add_css_class("suggested-action");
+    form.append(&port_entry);
+    form.append(&service_entry);
+    form.append(&add_button);
+    content.append(&form);
+
+    let status = gtk::Label::new(Some("Port numbers must be between 1 and 65535. Service names are local labels."));
+    status.set_wrap(true);
+    status.set_halign(gtk::Align::Start);
+    status.add_css_class("dim-label");
+    content.append(&status);
+
+    let ports_heading = gtk::Label::new(Some("Saved custom ports"));
+    ports_heading.add_css_class("title-2");
+    ports_heading.set_halign(gtk::Align::Start);
+    content.append(&ports_heading);
+
+    let ports_list = gtk::ListBox::new();
+    ports_list.set_selection_mode(gtk::SelectionMode::None);
+    ports_list.add_css_class("boxed-list");
+    content.append(&ports_list);
+    refresh_custom_ports_list(&ports_list, Rc::clone(&preferences), &status);
+
+    let preferences_for_add = Rc::clone(&preferences);
+    let list_for_add = ports_list.clone();
+    let status_for_add = status.clone();
+    let port_entry_for_add = port_entry.clone();
+    let service_entry_for_add = service_entry.clone();
+    add_button.connect_clicked(move |_| {
+        let port = match port_entry_for_add.text().parse::<u16>() {
+            Ok(port) if port != 0 => port,
+            _ => {
+                status_for_add.set_text("Enter a valid TCP port between 1 and 65535.");
+                return;
+            }
+        };
+        let mut updated = preferences_for_add.borrow().clone();
+        match updated.add_custom_port(port, &service_entry_for_add.text()) {
+            Ok(()) => match updated.save() {
+                Ok(()) => {
+                    *preferences_for_add.borrow_mut() = updated;
+                    port_entry_for_add.set_text("");
+                    service_entry_for_add.set_text("");
+                    status_for_add.set_text("Custom TCP port saved.");
+                    refresh_custom_ports_list(
+                        &list_for_add,
+                        Rc::clone(&preferences_for_add),
+                        &status_for_add,
+                    );
+                }
+                Err(error) => status_for_add.set_text(&format!("Could not save custom port: {error}")),
+            },
+            Err(error) => status_for_add.set_text(error),
+        }
+    });
+
+    let scrolled = gtk::ScrolledWindow::builder()
+        .vexpand(true)
+        .child(&content)
+        .build();
+    let page_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page_content.append(&header);
+    page_content.append(&scrolled);
+
+    adw::NavigationPage::builder()
+        .title("Custom TCP ports")
+        .child(&page_content)
+        .build()
+}
+
+fn refresh_custom_ports_list(
+    list: &gtk::ListBox,
+    preferences: Rc<RefCell<AppPreferences>>,
+    status: &gtk::Label,
+) {
+    clear_list(list);
+    let ports = preferences.borrow().custom_ports.clone();
+    if ports.is_empty() {
+        let row = adw::ActionRow::builder()
+            .title("No custom ports")
+            .subtitle("Add a TCP port above to include it in device deep scans")
+            .build();
+        list.append(&row);
+        return;
+    }
+
+    for item in ports {
+        let row = adw::ActionRow::builder()
+            .title(format!("TCP {}", item.port))
+            .subtitle(&item.service_name)
+            .build();
+
+        let enabled_switch = gtk::Switch::new();
+        enabled_switch.set_valign(gtk::Align::Center);
+        enabled_switch.set_active(item.enabled);
+        let preferences_for_switch = Rc::clone(&preferences);
+        let status_for_switch = status.clone();
+        enabled_switch.connect_active_notify(move |switch| {
+            let mut updated = preferences_for_switch.borrow().clone();
+            updated.set_custom_port_enabled(item.port, switch.is_active());
+            match updated.save() {
+                Ok(()) => *preferences_for_switch.borrow_mut() = updated,
+                Err(error) => status_for_switch.set_text(&format!("Could not save port setting: {error}")),
+            }
+        });
+        row.add_suffix(&enabled_switch);
+
+        let delete_button = gtk::Button::from_icon_name("user-trash-symbolic");
+        delete_button.set_tooltip_text(Some("Remove custom port"));
+        let preferences_for_delete = Rc::clone(&preferences);
+        let list_for_delete = list.clone();
+        let status_for_delete = status.clone();
+        delete_button.connect_clicked(move |_| {
+            let mut updated = preferences_for_delete.borrow().clone();
+            updated.remove_custom_port(item.port);
+            match updated.save() {
+                Ok(()) => {
+                    *preferences_for_delete.borrow_mut() = updated;
+                    status_for_delete.set_text("Custom port removed.");
+                    refresh_custom_ports_list(
+                        &list_for_delete,
+                        Rc::clone(&preferences_for_delete),
+                        &status_for_delete,
+                    );
+                }
+                Err(error) => status_for_delete.set_text(&format!("Could not remove custom port: {error}")),
+            }
+        });
+        row.add_suffix(&delete_button);
+        list.append(&row);
+    }
+}
+
+fn show_information_dialog(
+    window: &adw::ApplicationWindow,
+    title: &str,
+    message: &str,
+) {
+    let dialog = gtk::MessageDialog::builder()
+        .transient_for(window)
+        .modal(true)
+        .message_type(gtk::MessageType::Info)
+        .buttons(gtk::ButtonsType::Close)
+        .text(title)
+        .secondary_text(message)
+        .build();
+    dialog.connect_response(|dialog, _| dialog.close());
+    dialog.present();
+}
