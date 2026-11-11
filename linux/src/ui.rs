@@ -1746,7 +1746,7 @@ fn refresh_device_list(
         let row = adw::ActionRow::builder()
             .title(&display_name)
             .subtitle(details.join("  ·  "))
-            .activatable(true)
+            .activatable(current_address.is_some())
             .build();
         row.add_prefix(&device_icon);
         let navigation_for_row = navigation.clone();
