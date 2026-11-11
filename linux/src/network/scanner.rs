@@ -141,9 +141,7 @@ pub fn start_device_deep_scan(
     mut ports: Vec<u16>,
     timeout: Duration,
 ) -> Result<(ScanHandle, mpsc::Receiver<DeepScanEvent>), ScanStartError> {
-    if source_address.is_unspecified() {
-        return Err(ScanStartError::InvalidSourceAddress);
-    }
+    validate_tcp_source_address(source_address)?;
     if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
         return Err(ScanStartError::InvalidTimeout);
     }
@@ -278,7 +276,7 @@ impl std::fmt::Display for ScanStartError {
                 "scan would perform {requested} TCP connection attempts; the configured limit is {limit}"
             ),
             Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
-            Self::InvalidSourceAddress => formatter.write_str("source address must be a non-unspecified IPv4 address"),
+            Self::InvalidSourceAddress => formatter.write_str("selected IPv4 source address cannot be bound"),
         }
     }
 }
@@ -764,6 +762,18 @@ fn scan_host(
         open_ports,
         tcp_responded,
     }
+}
+
+fn validate_tcp_source_address(source_address: Ipv4Addr) -> Result<(), ScanStartError> {
+    if source_address.is_unspecified() {
+        return Err(ScanStartError::InvalidSourceAddress);
+    }
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+        .map_err(|_| ScanStartError::InvalidSourceAddress)?;
+    let source = SockAddr::from(SocketAddrV4::new(source_address, 0));
+    socket
+        .bind(&source)
+        .map_err(|_| ScanStartError::InvalidSourceAddress)
 }
 
 fn connect_tcp_from_source(
