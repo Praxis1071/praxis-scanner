@@ -33,7 +33,7 @@ The current branch contains these source-level features:
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
-The last CI run for the unified device-list change passed formatting and tests but failed Clippy due to a single needless borrow in `ui.rs`; the source fix is committed and a fresh run is queued. This does not establish correct behavior on a real network or inside Flatpak. mDNS responses are unauthenticated and can be spoofed; no TXT records are exposed by the UI.
+The previous CI workflow only built the Android Gradle project; it did not compile or test the Linux Rust application. A Linux-specific job has now been added, but its first successful run is not yet confirmed. This does not establish correct behavior on a real network or inside Flatpak. mDNS, SSDP and NetBIOS responses are unauthenticated and can be spoofed; advertised URLs and names are treated as untrusted data.
 
 ## Planned features
 
