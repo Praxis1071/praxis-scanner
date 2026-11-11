@@ -1960,6 +1960,7 @@ fn device_detail_page(
         &deep_scan_cancel,
         &deep_scan_results,
         active_device_scan,
+        devices_list.clone(),
     );
 
     if !device.mdns_services.is_empty() {
@@ -2040,6 +2041,7 @@ fn start_device_deep_scan(
     cancel_button: &gtk::Button,
     results: &gtk::ListBox,
     active_scan: Rc<RefCell<Option<ScanHandle>>>,
+    devices_list: gtk::ListBox,
 ) {
     if let Some(previous) = active_scan.borrow_mut().take() {
         previous.cancel();
@@ -2049,6 +2051,7 @@ fn start_device_deep_scan(
     progress.set_text(Some("0 ports checked"));
     status.set_text("Scanning standard and enabled custom TCP ports…");
     cancel_button.set_sensitive(true);
+    devices_list.set_sensitive(false);
 
     let total_ports = ports.len();
     match scanner::start_device_deep_scan(
@@ -2074,6 +2077,7 @@ fn start_device_deep_scan(
             let status_for_events = status.clone();
             let cancel_for_events = cancel_button.clone();
             let results_for_events = results.clone();
+            let devices_list_for_events = devices_list.clone();
             let active_for_events = Rc::clone(&active_scan);
             let scan_identity_for_events = scan_identity.clone();
             let started = Instant::now();
@@ -2126,6 +2130,7 @@ fn start_device_deep_scan(
                                 active_for_events.borrow_mut().take();
                             }
                             cancel_for_events.set_sensitive(false);
+                            devices_list_for_events.set_sensitive(true);
                             progress_for_events.set_fraction(1.0);
                             progress_for_events.set_text(Some(if cancelled {
                                 "Cancelled"
@@ -2153,6 +2158,7 @@ fn start_device_deep_scan(
         }
         Err(error) => {
             cancel_button.set_sensitive(false);
+            devices_list.set_sensitive(true);
             progress.set_text(Some("Could not start"));
             status.set_text(&format!("Deep scan could not start: {error}"));
         }
