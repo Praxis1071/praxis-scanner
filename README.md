@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita application with bounded TCP, mDNS, SSDP and NetBIOS discovery, a partial device-detail page, per-device deep scans with capped service banners, and initial Settings and Custom TCP Ports screens. Theme, opt-in auto-scan, custom ports, and per-device custom names/icons are persisted locally. A dedicated Linux CI workflow runs formatting, tests, strict Clippy, release build, offline Cargo-source generation, metadata validation and Flatpak build. The root Flatpak manifest exists, but no passing Linux CI/Flatpak build or controlled-network validation has yet been verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita application with bounded TCP, mDNS, SSDP and NetBIOS discovery, optional datagram-only ICMP reachability/RTT checks, a partial device-detail page, per-device deep scans with capped service banners, and initial Settings and Custom TCP Ports screens. Theme, opt-in auto-scan, custom ports, and per-device custom names/icons are persisted locally. A dedicated Linux CI workflow runs formatting, tests, strict Clippy, release build, offline Cargo-source generation, metadata validation and Flatpak build. The root Flatpak manifest exists, but no passing Linux CI/Flatpak build or controlled-network validation has yet been verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
