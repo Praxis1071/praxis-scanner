@@ -64,7 +64,7 @@ fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ProcNetParseError
     for line in lines {
         let fields: Vec<_> = line.split_whitespace().collect();
         if fields.len() < 11 {
-            return Err(());
+            return Err(ProcNetParseError);
         }
 
         let flags = u32::from_str_radix(fields[3], 16).map_err(|_| ProcNetParseError)?;
@@ -77,8 +77,8 @@ fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ProcNetParseError
         let destination = parse_proc_ipv4(fields[1])?;
         let gateway = parse_proc_ipv4(fields[2])?;
         let mask = parse_proc_ipv4(fields[7])?;
-        let prefix = contiguous_prefix(mask).ok_or(())?;
-        let metric = fields[6].parse::<u32>().map_err(|_| ())?;
+        let prefix = contiguous_prefix(mask).ok_or(ProcNetParseError)?;
+        let metric = fields[6].parse::<u32>().map_err(|_| ProcNetParseError)?;
 
         routes.push(Ipv4Route {
             interface: fields[0].to_owned(),
@@ -103,25 +103,25 @@ fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ProcNetParseError
 
 fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ProcNetParseError> {
     let mut lines = contents.lines();
-    let header = lines.next().ok_or(())?;
+    let header = lines.next().ok_or(ProcNetParseError)?;
     if !header.starts_with("IP address") {
-        return Err(());
+        return Err(ProcNetParseError);
     }
 
     let mut neighbours = Vec::new();
     for line in lines {
         let fields: Vec<_> = line.split_whitespace().collect();
         if fields.len() < 6 {
-            return Err(());
+            return Err(ProcNetParseError);
         }
 
-        let flags = u32::from_str_radix(fields[2], 16).map_err(|_| ())?;
+        let flags = u32::from_str_radix(fields[2], 16).map_err(|_| ProcNetParseError)?;
         const ATF_COM: u32 = 0x02;
         if flags & ATF_COM == 0 {
             continue;
         }
 
-        let address = fields[0].parse::<Ipv4Addr>().map_err(|_| ())?;
+        let address = fields[0].parse::<Ipv4Addr>().map_err(|_| ProcNetParseError)?;
         let hardware_address = fields[3];
         if !is_valid_mac_address(hardware_address) {
             continue;
@@ -143,7 +143,7 @@ fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ProcNetPa
 }
 
 fn parse_proc_ipv4(value: &str) -> Result<Ipv4Addr, ProcNetParseError> {
-    let raw = u32::from_str_radix(value, 16).map_err(|_| ())?;
+    let raw = u32::from_str_radix(value, 16).map_err(|_| ProcNetParseError)?;
     Ok(Ipv4Addr::from(raw.to_ne_bytes()))
 }
 
