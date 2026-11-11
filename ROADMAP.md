@@ -240,4 +240,4 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. The Rust/GTK4/libadwaita shell, read-only IPv4 interface enumeration, and a bounded IPv4 subnet-range calculation module are present. The subnet module only computes candidate addresses and does not send packets. CI has not yet completed successfully; host and Flatpak feasibility tests have not yet been run. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. The Rust/GTK4/libadwaita shell, read-only IPv4 interface enumeration, bounded IPv4 subnet calculation, and an explicit local TCP-connect discovery path are present. The scanner probes seven common TCP ports, uses at most 32 workers, limits the subnet to 1024 candidate addresses, supports cancellation, and treats timeouts as inconclusive. CI has not yet completed successfully; host and Flatpak feasibility tests have not yet been run. The application is not ready for maintainer testing.
