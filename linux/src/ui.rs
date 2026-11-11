@@ -38,6 +38,18 @@ pub fn build_ui(application: &adw::Application) {
     system_info.set_margin_top(8);
     system_info.add_css_class("dim-label");
 
+    let ports_heading = gtk::Label::new(Some("TCP ports (comma-separated)"));
+    ports_heading.set_halign(gtk::Align::Start);
+    ports_heading.set_margin_start(18);
+    ports_heading.set_margin_top(12);
+
+    let port_entry = gtk::Entry::new();
+    port_entry.set_text("22,53,80,139,443,445,3389");
+    port_entry.set_placeholder_text(Some("22, 53, 80, 443"));
+    port_entry.set_max_length(1024);
+    port_entry.set_margin_start(18);
+    port_entry.set_margin_end(18);
+
     let scan_button = gtk::Button::with_label("Scan selected network");
     scan_button.add_css_class("suggested-action");
     scan_button.set_sensitive(false);
@@ -46,7 +58,7 @@ pub fn build_ui(application: &adw::Application) {
     scan_button.set_margin_top(12);
 
     let scope_note = gtk::Label::new(Some(
-        "A scan checks TCP ports 22, 53, 80, 139, 443, 445 and 3389 on the selected private or link-local subnet (maximum 1024 addresses).",
+        "Scans use ordinary TCP connections on the selected private or link-local subnet. Up to 256 unique ports and 1024 addresses are allowed; timeouts do not prove a device is offline.",
     ));
     scope_note.set_halign(gtk::Align::Start);
     scope_note.set_wrap(true);
@@ -82,6 +94,8 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&heading);
     content.append(&list);
     content.append(&system_info);
+    content.append(&ports_heading);
+    content.append(&port_entry);
     content.append(&scan_button);
     content.append(&scope_note);
     content.append(&results_heading);
@@ -157,6 +171,7 @@ pub fn build_ui(application: &adw::Application) {
     let selected_for_scan = Rc::clone(&selected_interface);
     let active_for_scan = Rc::clone(&active_scan);
     let refresh_button_for_scan = refresh_button.clone();
+    let port_entry_for_scan = port_entry.clone();
     let interface_list_for_scan = list.clone();
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
@@ -213,15 +228,27 @@ pub fn build_ui(application: &adw::Application) {
             results_for_scan.remove(&child);
         }
 
+        let ports = match scanner::parse_tcp_ports(&port_entry_for_scan.text()) {
+            Ok(ports) => ports,
+            Err(error) => {
+                status_for_scan.set_text(&format!("Invalid TCP port list: {error}"));
+                return;
+            }
+        };
         let target_count = hosts.len();
-        match scanner::start_tcp_discovery(hosts, scanner::DEFAULT_TCP_TIMEOUT) {
+        let port_count = ports.len();
+        match scanner::start_tcp_discovery_with_ports(
+            hosts,
+            ports,
+            scanner::DEFAULT_TCP_TIMEOUT,
+        ) {
             Ok((handle, events)) => {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
                 refresh_button_for_scan.set_sensitive(false);
                 interface_list_for_scan.set_sensitive(false);
                 status_for_scan.set_text(&format!(
-                    "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
+                    "Scanning {target_count} target(s) across {port_count} TCP port(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
                     network.prefix()
                 ));
