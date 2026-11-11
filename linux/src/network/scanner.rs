@@ -15,6 +15,7 @@ pub const MAX_SCAN_TARGETS: usize = 1024;
 pub const MAX_CONCURRENT_WORKERS: usize = 32;
 pub const DEFAULT_TCP_TIMEOUT: Duration = Duration::from_millis(450);
 pub const DEFAULT_ICMP_TIMEOUT: Duration = Duration::from_millis(450);
+pub const MAX_ICMP_TIMEOUT: Duration = Duration::from_secs(5);
 pub const DEFAULT_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
 /// The Android app's standard per-device deep-scan port set, kept in sync for parity.
 pub const DEEP_SCAN_TCP_PORTS: &[u16] = &[
@@ -370,7 +371,7 @@ pub fn start_icmp_discovery(
             limit: MAX_SCAN_TARGETS,
         });
     }
-    if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
+    if timeout.is_zero() || timeout > MAX_ICMP_TIMEOUT {
         return Err(ScanStartError::InvalidTimeout);
     }
 
