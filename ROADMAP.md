@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, opt-in interface-scoped mDNS/DNS-SD, bounded SSDP/UPnP discovery, and an initial unified device summary list are present in source. The latest CI run passed formatting and tests but failed strict Clippy on one needless borrow; commit `141e45c` fixes it and a fresh run is queued. Host and Flatpak runtime verification remain pending  
+> **Implementation status:** The Linux source now includes GTK4/libadwaita navigation, a unified device catalog, a partial device-detail page, an automatic bounded parallel per-device scan using the Android common-port set, conservative plain-protocol banner collection, and bounded UDP NetBIOS NBSTAT discovery with selected-interface binding. These are source-level implementations only; the latest CI run for commit `ac250a2` is queued and has not produced jobs/results yet. Host and Flatpak runtime verification remain pending.  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -283,7 +283,7 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the latest branch comparison reports 141 commits ahead of `main` and 0 behind. The Android project remains present; the branch diff adds Linux source/docs and adjusts root documentation, not Android implementation files. Linux source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, progress, mDNS, SSDP, and a basic unified device summary list with an initial navigable device-detail page (IP, MAC, TCP evidence/open ports, mDNS and SSDP evidence only). This is an early partial implementation, not Android detail-screen parity. TCP scan bounds are 1024 target addresses, 256 unique ports, 8192 connection attempts, and 32 workers; UI TCP timeout is 450 ms. The latest UI/navigation change is commit `6bcf9fa`; CI run `43092906677` is pending, so compilation, tests, Clippy, and Flatpak status for this change are not yet verified. The Flatpak manifest exists, but its build job has not succeeded. Host and Flatpak runtime tests, device detail screens, sorting/filtering, rename/icon customization, NetBIOS, reverse DNS, banners, and persistent preferences remain incomplete. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the latest comparison reports 163 commits ahead of `main` and 0 behind. The Android project remains present and unchanged; no Kotlin implementation files were modified. Linux source includes GTK4/libadwaita navigation, read-only IPv4 interface/route/ARP summaries, bounded TCP subnet discovery, opt-in mDNS and SSDP, a unified device catalog, a partial navigable detail page, automatic bounded parallel deep scans against the Android standard common-port set, capped plain-protocol banners, and selected-interface-bound NetBIOS NBSTAT discovery. The detail page currently shows IP/MAC, TCP evidence/open ports, mDNS/SSDP advertisements, NetBIOS hostname/workgroup, and deep-scan progress/results. This is still far from full Android parity: Home visual/state parity, settings and custom-port screens, persistent preferences, rename/icon customization, current-device/type/vendor identity, ICMP latency/TTL, reverse DNS, complete OS detection, TLS banner/version detection, and the Android 1–65535 full scan remain incomplete or constrained. Linux scan limits remain 1024 targets, 256 unique ports per operation, 8192 connection attempts, and 32 workers; do not claim parity for Android full-scan behavior. Latest code commit is `ac250a2`; CI run `43095218990` is queued, and earlier runs are pending without jobs. No build/test/Clippy/Flatpak success is claimed for the new implementation. Host and Flatpak runtime checks remain pending. The application is not ready for maintainer testing.
 
 
 ## Latest parity implementation update (2026-11-11)
@@ -292,3 +292,10 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 - Added safe service-banner collection for plain TCP services: one bounded 512-byte read, a short read timeout, no plaintext probing of TLS ports, and only an HTTP HEAD request for plain HTTP endpoints.
 - Added a bounded UDP NetBIOS NBSTAT implementation with strict response parsing, selected-interface source binding, response-source validation, cancellation, and hostname/workgroup evidence integration.
 - These changes are **source implemented, not yet CI/host/Flatpak verified**. The Android app's full 1–65535 scan, ICMP latency/TTL, OS detection, persistent settings/customizations, and remaining screens are still open parity work.
+
+
+### Verification queue update (2026-11-11)
+
+- Latest source commit: `ac250a207de1767fce91c8da9686248c477825ac`.
+- GitHub Actions run: [43095218990](https://github.com/Praxis1071/praxis-scanner/actions/runs/43095218990) is queued; earlier runs `43094718973` and `43095095524` remain pending without jobs. No successful verification is asserted.
+- Do not ask for manual acceptance testing until CI is unblocked, the code passes the full automated pipeline, and the remaining major Android parity gaps have been implemented and reviewed.
