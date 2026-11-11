@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, and opt-in, interface-scoped mDNS/DNS-SD service discovery. The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `b6d808a`; later mDNS validation and UI wording changes are awaiting their own CI run. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, and opt-in, interface-scoped mDNS/DNS-SD service discovery. The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`; the latest mDNS result-deduplication refinement is awaiting its own CI run. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -31,7 +31,7 @@ The current branch contains these source-level features:
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
-The CI pipeline has passed on commit `b6d808a` (formatting, unit/integration tests, Clippy, release build). Subsequent small validation and wording changes are awaiting CI. This does not establish correct behavior on a real network or inside Flatpak. mDNS responses are unauthenticated and can be spoofed; no TXT records are exposed by the UI.
+The CI pipeline passed on commit `09320a1` (formatting, unit/integration tests, Clippy, release build). A subsequent mDNS result-deduplication refinement is awaiting CI. This does not establish correct behavior on a real network or inside Flatpak. mDNS responses are unauthenticated and can be spoofed; no TXT records are exposed by the UI.
 
 ## Planned features
 
