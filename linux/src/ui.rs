@@ -1351,7 +1351,10 @@ fn refresh_device_list(
         return;
     }
 
-    let responsive_count = records.iter().filter(|device| device.tcp_responded).count();
+    let responsive_count = records
+        .iter()
+        .filter(|device| device.tcp_responded || device.icmp_round_trip_time.is_some())
+        .count();
     let observed_count = records.len().saturating_sub(responsive_count);
 
     if responsive_count > 0 {
@@ -1378,8 +1381,13 @@ fn refresh_device_list(
     for device in records
         .iter()
         .copied()
-        .filter(|device| device.tcp_responded)
-        .chain(records.iter().copied().filter(|device| !device.tcp_responded))
+        .filter(|device| device.tcp_responded || device.icmp_round_trip_time.is_some())
+        .chain(
+            records
+                .iter()
+                .copied()
+                .filter(|device| !device.tcp_responded && device.icmp_round_trip_time.is_none()),
+        )
     {
         let mut details = Vec::new();
 
@@ -1388,8 +1396,14 @@ fn refresh_device_list(
         }
         if device.tcp_responded {
             details.push("TCP responsive".to_owned());
-        } else {
-            details.push("Reachability unknown (no TCP response observed)".to_owned());
+        }
+        if let Some(rtt) = device.icmp_round_trip_time {
+            details.push(format!("ICMP {:.2} ms", rtt.as_secs_f64() * 1000.0));
+        } else if device.icmp_checked {
+            details.push("No ICMP reply (inconclusive)".to_owned());
+        }
+        if !device.tcp_responded && device.icmp_round_trip_time.is_none() {
+            details.push("Reachability unknown".to_owned());
         }
         if !device.open_tcp_ports.is_empty() {
             let ports = device
@@ -1524,6 +1538,13 @@ fn device_detail_page(
     );
     if let Some(mac) = device.mac_address.as_deref() {
         append_detail_row(&identity, "MAC address", mac);
+    }
+    if device.icmp_checked {
+        let icmp_result = device
+            .icmp_round_trip_time
+            .map(|rtt| format!("{:.2} ms", rtt.as_secs_f64() * 1000.0))
+            .unwrap_or_else(|| "No echo reply (inconclusive)".to_owned());
+        append_detail_row(&identity, "ICMP echo", &icmp_result);
     }
     if let Some(netbios) = device.netbios_info.as_ref() {
         append_detail_row(&identity, "NetBIOS hostname", &netbios.hostname);
