@@ -917,7 +917,7 @@ fn refresh_device_list(list: &gtk::ListBox, catalog: &DeviceCatalog) {
 
         let row = adw::ActionRow::builder()
             .title(device.address.to_string())
-            .subtitle(&details.join("  ·  "))
+            .subtitle(details.join("  ·  "))
             .activatable(false)
             .build();
         list.append(&row);
