@@ -132,7 +132,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, opt-in interface-scoped IPv4 mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The SSDP engine and its UI integration are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
-**Current milestone:** validate the latest mDNS changes in CI; then exercise TCP and mDNS behavior on a controlled local network, refine the device/results experience, and continue protocol discovery without weakening the unprivileged security policy.
+**Current milestone:** consolidate TCP, mDNS, SSDP, and neighbour-table evidence into one device model; finish reproducible Flatpak inputs; then validate host and sandboxed network behavior. No user-side testing is requested until the application is feature-complete.
 
 ### 5.1 Foundation and application shell
 
@@ -152,7 +152,7 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 ### 5.3 Protocol discovery and inspection
 
 - [ ] Implement mDNS discovery. (A bounded, interface-scoped source implementation exists; runtime and Flatpak verification remain pending.)
-- [ ] Implement SSDP/UPnP discovery with bounded, safe device-description retrieval.
+- [ ] Implement SSDP/UPnP discovery with bounded response parsing. (One M-SEARCH query and untrusted LOCATION text are supported; device-description URLs are deliberately never fetched.)
 - [ ] Implement NetBIOS discovery where justified by feasibility results.
 - [ ] Implement reverse DNS lookup with timeouts and cancellation.
 - [ ] Implement configurable TCP port scanning with bounded concurrency and conservative defaults.
@@ -164,7 +164,7 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 
 ### 5.4 User experience and persistence
 
-- [ ] Implement the device list, device details, port/service details, and scan progress views.
+- [ ] Integrate the new protocol-neutral device-evidence catalog into a unified device list, device details, port/service details, and scan progress views.
 - [ ] Implement start, stop, cancellation, empty, partial-result, and error states.
 - [ ] Implement device naming, icon customization, and preferences.
 - [ ] Integrate scan results into the UI without blocking the main thread.
