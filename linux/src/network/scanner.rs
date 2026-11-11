@@ -162,19 +162,35 @@ fn scan_host(
     timeout: Duration,
     cancelled: &AtomicBool,
 ) -> HostScanResult {
+    let (open_ports, tcp_responded) =
+        probe_ports(address, timeout, &COMMON_TCP_PORTS, cancelled);
+
+    HostScanResult {
+        address,
+        open_ports,
+        tcp_responded,
+    }
+}
+
+fn probe_ports(
+    address: Ipv4Addr,
+    timeout: Duration,
+    ports: &[u16],
+    cancelled: &AtomicBool,
+) -> (Vec<u16>, bool) {
     let mut open_ports = Vec::new();
     let mut tcp_responded = false;
 
-    for port in COMMON_TCP_PORTS {
+    for port in ports {
         if cancelled.load(Ordering::Relaxed) {
             break;
         }
 
-        let socket = SocketAddr::V4(SocketAddrV4::new(address, port));
+        let socket = SocketAddr::V4(SocketAddrV4::new(address, *port));
         match TcpStream::connect_timeout(&socket, timeout) {
             Ok(stream) => {
                 tcp_responded = true;
-                open_ports.push(port);
+                open_ports.push(*port);
                 drop(stream);
             }
             Err(error) if is_connection_refused(&error) => {
@@ -184,11 +200,7 @@ fn scan_host(
         }
     }
 
-    HostScanResult {
-        address,
-        open_ports,
-        tcp_responded,
-    }
+    (open_ports, tcp_responded)
 }
 
 fn is_connection_refused(error: &io::Error) -> bool {
@@ -198,10 +210,12 @@ fn is_connection_refused(error: &io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_connection_refused, start_tcp_discovery, ScanEvent, ScanStartError, MAX_SCAN_TARGETS,
+        is_connection_refused, probe_ports, start_tcp_discovery, ScanEvent, ScanStartError,
+        MAX_SCAN_TARGETS,
     };
     use std::io;
-    use std::net::Ipv4Addr;
+    use std::net::{Ipv4Addr, TcpListener};
+    use std::sync::atomic::AtomicBool;
     use std::time::Duration;
 
     #[test]
@@ -214,6 +228,41 @@ mod tests {
     fn timeout_is_not_classified_as_a_tcp_response() {
         let error = io::Error::from(io::ErrorKind::TimedOut);
         assert!(!is_connection_refused(&error));
+    }
+
+    #[test]
+    fn detects_an_open_loopback_tcp_port() {
+        let listener =
+            TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind an ephemeral loopback port");
+        let port = listener
+            .local_addr()
+            .expect("read the loopback listener address")
+            .port();
+        let cancelled = AtomicBool::new(false);
+
+        let (open_ports, responded) = probe_ports(
+            Ipv4Addr::LOCALHOST,
+            Duration::from_millis(500),
+            &[port],
+            &cancelled,
+        );
+
+        assert_eq!(open_ports, vec![port]);
+        assert!(responded);
+    }
+
+    #[test]
+    fn cancelled_probe_does_not_open_connections() {
+        let cancelled = AtomicBool::new(true);
+        let (open_ports, responded) = probe_ports(
+            Ipv4Addr::LOCALHOST,
+            Duration::from_millis(100),
+            &[80],
+            &cancelled,
+        );
+
+        assert!(open_ports.is_empty());
+        assert!(!responded);
     }
 
     #[test]
