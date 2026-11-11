@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use adw::prelude::*;
 use gtk::glib;
 
+use crate::preferences::{AppPreferences, ThemeMode};
 use crate::network::cidr::Ipv4Network;
 use crate::network::device::{DeviceCatalog, DeviceRecord, MdnsEvidence, NetbiosEvidence, SsdpEvidence};
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
@@ -21,6 +22,9 @@ pub fn build_ui(application: &adw::Application) {
     let refresh_button = gtk::Button::with_label("Refresh");
     refresh_button.set_tooltip_text(Some("Refresh local network interfaces"));
     header.pack_end(&refresh_button);
+    let settings_button = gtk::Button::from_icon_name("emblem-system-symbolic");
+    settings_button.set_tooltip_text(Some("Settings"));
+    header.pack_end(&settings_button);
 
     let heading = gtk::Label::new(Some("Local network interfaces"));
     heading.add_css_class("title-2");
@@ -220,6 +224,9 @@ pub fn build_ui(application: &adw::Application) {
         .build();
     navigation_view.push(&home_page);
 
+    let preferences = Rc::new(RefCell::new(AppPreferences::load()));
+    apply_theme(preferences.borrow().theme);
+
     let window = adw::ApplicationWindow::builder()
         .application(application)
         .title("Praxis Scanner")
@@ -227,6 +234,18 @@ pub fn build_ui(application: &adw::Application) {
         .default_height(700)
         .content(&navigation_view)
         .build();
+
+    let navigation_for_settings = navigation_view.clone();
+    let window_for_settings = window.clone();
+    let preferences_for_settings = Rc::clone(&preferences);
+    settings_button.connect_clicked(move |_| {
+        let page = settings_page(
+            &navigation_for_settings,
+            &window_for_settings,
+            Rc::clone(&preferences_for_settings),
+        );
+        navigation_for_settings.push(&page);
+    });
 
     let interfaces = Rc::new(RefCell::new(Vec::<NetworkInterface>::new()));
     let selected_interface = Rc::new(RefCell::new(None::<NetworkInterface>));
@@ -1032,6 +1051,27 @@ pub fn build_ui(application: &adw::Application) {
         &selected_interface,
     );
     window.present();
+
+    if preferences.borrow().auto_scan_on_start {
+        let default_interface = network::system::read_ipv4_routes()
+            .ok()
+            .and_then(|routes| routes.into_iter().find(|route| route.is_default))
+            .map(|route| route.interface);
+        let selected_index = interfaces
+            .borrow()
+            .iter()
+            .position(|interface| {
+                is_scannable_interface(interface)
+                    && default_interface.as_deref().is_some_and(|name| name == interface.name)
+            })
+            .or_else(|| interfaces.borrow().iter().position(is_scannable_interface));
+        if let Some(index) = selected_index {
+            if let Some(row) = list.row_at_index(index as i32) {
+                list.select_row(Some(&row));
+                scan_button.emit_clicked();
+            }
+        }
+    }
 }
 
 fn clear_list(list: &gtk::ListBox) {
