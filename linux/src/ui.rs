@@ -337,6 +337,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns_for_tcp = Rc::clone(&active_mdns);
     let active_ssdp_for_tcp = Rc::clone(&active_ssdp);
     let active_netbios_for_tcp = Rc::clone(&active_netbios);
+    let active_device_scan_for_tcp = Rc::clone(&active_device_scan);
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -440,6 +441,7 @@ pub fn build_ui(application: &adw::Application) {
                 let catalog_for_events = Rc::clone(&catalog_for_scan);
                 let devices_for_events = devices_for_scan.clone();
                 let navigation_for_events = navigation_view.clone();
+                let active_device_scan_for_events = Rc::clone(&active_device_scan_for_tcp);
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
                 let mut inconclusive = 0usize;
@@ -453,7 +455,7 @@ pub fn build_ui(application: &adw::Application) {
                                     result.tcp_responded,
                                     result.open_ports.iter().copied(),
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
@@ -531,6 +533,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_tcp_for_mdns = Rc::clone(&active_scan);
     let active_ssdp_for_mdns = Rc::clone(&active_ssdp);
     let active_netbios_for_mdns = Rc::clone(&active_netbios);
+    let active_device_scan_for_mdns = Rc::clone(&active_device_scan);
     let ssdp_button_for_mdns = ssdp_button.clone();
     let netbios_button_for_mdns = netbios_button.clone();
     let refresh_for_mdns = refresh_button.clone();
@@ -622,6 +625,7 @@ pub fn build_ui(application: &adw::Application) {
                 let catalog_for_events = Rc::clone(&catalog_for_mdns);
                 let devices_for_events = devices_for_mdns.clone();
                 let navigation_for_events = navigation_view.clone();
+                let active_device_scan_for_events = Rc::clone(&active_device_scan_for_mdns);
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
@@ -714,6 +718,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_tcp_for_ssdp = Rc::clone(&active_scan);
     let active_mdns_for_ssdp = Rc::clone(&active_mdns);
     let active_netbios_for_ssdp = Rc::clone(&active_netbios);
+    let active_device_scan_for_ssdp = Rc::clone(&active_device_scan);
     let refresh_for_ssdp = refresh_button.clone();
     let interface_list_for_ssdp = list.clone();
     let port_entry_for_ssdp = port_entry.clone();
@@ -805,6 +810,7 @@ pub fn build_ui(application: &adw::Application) {
                 let catalog_for_events = Rc::clone(&catalog_for_ssdp);
                 let devices_for_events = devices_for_ssdp.clone();
                 let navigation_for_events = navigation_view.clone();
+                let active_device_scan_for_events = Rc::clone(&active_device_scan_for_ssdp);
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
@@ -900,6 +906,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_tcp_for_netbios = Rc::clone(&active_scan);
     let active_mdns_for_netbios = Rc::clone(&active_mdns);
     let active_ssdp_for_netbios = Rc::clone(&active_ssdp);
+    let active_device_scan_for_netbios = Rc::clone(&active_device_scan);
     let interface_list_for_netbios = list.clone();
     let refresh_for_netbios = refresh_button.clone();
     let tcp_button_for_netbios = scan_button.clone();
@@ -966,6 +973,7 @@ pub fn build_ui(application: &adw::Application) {
                 let catalog_for_events = Rc::clone(&catalog_for_netbios);
                 let devices_for_events = devices_for_netbios.clone();
                 let navigation_for_events = navigation_for_netbios.clone();
+                let active_device_scan_for_events = Rc::clone(&active_device_scan_for_netbios);
 
                 glib::timeout_add_local(Duration::from_millis(80), move || {
                     while let Ok(event) = events.try_recv() {
@@ -982,6 +990,7 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &active_device_scan_for_events,
                                 );
                             }
                             NetbiosEvent::Finished { total, completed, cancelled } => {
@@ -1092,6 +1101,7 @@ fn refresh_device_list(
     list: &gtk::ListBox,
     catalog: &DeviceCatalog,
     navigation: &adw::NavigationView,
+    active_device_scan: &Rc<RefCell<Option<ScanHandle>>>,
 ) {
     clear_list(list);
 
