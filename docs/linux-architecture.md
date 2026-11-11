@@ -21,7 +21,7 @@ Do not move, rename, or delete Android source files as part of the Linux port. S
 4. **Platform information** — read-only interface, address, route and neighbor-table queries.
 5. **Persistence** — user preferences and device customizations, with explicit schema/version handling.
 
-The first code milestone only implements the UI shell and read-only IPv4 interface enumeration. It deliberately does not initiate scans.
+The current implementation includes the UI shell, read-only IPv4 interface enumeration, bounded IPv4 target generation, and an explicit user-triggered TCP-connect discovery path. The TCP path is source-complete at this stage but still awaits successful CI and controlled-network verification.
 
 ## Security invariants
 
@@ -35,13 +35,13 @@ The first code milestone only implements the UI shell and read-only IPv4 interfa
 
 ## Concurrency model
 
-GTK widgets are created and mutated only on the main thread. Network operations must run on a bounded worker pool or async runtime and report owned, thread-safe events to the UI. Every scan must have cancellation, a global concurrency ceiling, per-operation deadlines and deterministic cleanup. Blocking work and untrusted protocol parsing must never run in GTK signal callbacks.
+GTK widgets are created and mutated only on the main thread. The current TCP discovery engine uses a bounded pool of at most 32 standard-library worker threads and reports owned events over a channel. GTK widgets are updated by a GLib main-thread timeout callback; worker threads never access GTK objects. Every scan must have cancellation, a global concurrency ceiling, per-operation deadlines and deterministic cleanup. Blocking work and untrusted protocol parsing must never run in GTK signal callbacks.
 
 ## Discovery order
 
 1. Interface/address enumeration.
 2. Read-only route and neighbor information, once the chosen API passes host and Flatpak tests.
-3. TCP connect discovery with a conservative, explicit scope.
+3. TCP connect discovery with a conservative, explicit scope (initial source implementation present; verification pending).
 4. ICMP datagram only if the exact datagram socket is proven to work without capabilities; never use raw ICMP.
 5. mDNS, SSDP and optional NetBIOS only after bounded protocol, lifecycle and Flatpak multicast tests.
 
