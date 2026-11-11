@@ -49,13 +49,13 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 | Choose a custom device icon and restore automatic icon | **Missing** | Implement icon chooser, mapping, and persistence |
 | Identity/network information (IP, MAC, vendor, hostname, device type) | **Partial** — raw IP/MAC and evidence summary only | Add structured fields and clear unavailable/unknown states |
 | Latency and TTL/OS hint | **Missing** — TCP response is not equivalent to ICMP latency/TTL | Implement only if safe Linux method is verified; never mislabel TCP timing as ping latency |
-| Discovery method, UPnP metadata, NetBIOS workgroup, mDNS services | **Partial** — mDNS and limited SSDP evidence exist; no NetBIOS | Complete safe parsing and detail presentation |
+| Discovery method, UPnP metadata, NetBIOS workgroup, mDNS services | **Partial** — mDNS, SSDP and NetBIOS evidence are displayed; identity remains unverified and presentation is incomplete | Complete evidence sections and verify on real devices |
 | Open web interface from SSDP LOCATION | **Not implemented by design** — Linux currently treats LOCATION as untrusted text and does not fetch it | Decide safe external-browser behavior; validate scheme/URL and require explicit user activation |
-| Automatic standard deep scan when opening an online device | **Missing** | Implement per-device scan lifecycle, cancellation, and progress |
-| Standard deep scan: common ports plus enabled custom ports | **Partial** — current network scan accepts a bounded custom comma-separated list but is not the detail-screen deep scan workflow | Reproduce the Android standard scan's target/port behavior within safe limits |
+| Automatic standard deep scan when opening a device detail page | **Implemented in source / unverified** — bounded parallel common-port scan starts on detail navigation with progress and cancellation | Verify repeated navigation, cancellation, timeouts and runtime behavior |
+| Standard deep scan: common ports plus enabled custom ports | **Implemented in source / unverified** — Android common-port list plus enabled persisted custom ports are passed to the bounded per-device scan | Verify exact standard-port parity and ensure the 256-port limit is never exceeded |
 | Full TCP port scan (1–65535) with explicit confirmation | **Missing** — current global scan has strict target/probe limits | Design a safe, rate-limited, cancellable full-scan equivalent; explain limits and require explicit confirmation |
 | Deep scan results: open ports, service labels, duration, detected OS/confidence | **Missing / partial** — simple conventional labels exist for a small port set; no OS result or detail page | Implement structured result model and conservative, confidence-labelled identification |
-| Deep scan idle/scanning/completed/error states and cancellation | **Partial — automatic common-port scan added** | Bounded parallel per-device scan now reports port progress, cancellation, port labels, and capped service banners; add error/empty states, richer result model, and full parity review |
+| Deep scan idle/scanning/completed/error states and cancellation | **Partial / implemented in source** — scanning, progress, completion, cancellation and bounded banners are present; error/empty states and richer result model remain | Verify UI state transitions and error reporting |
 
 ## 4. Network discovery and enrichment
 
@@ -75,7 +75,7 @@ Android references: `NetworkScanner.kt`, `ArpReader.kt`, `DnsLookup.kt`, `Networ
 | Device type classification from hostname/vendor/mDNS/SSDP/NetBIOS/ports | **Missing / partial** — conventional TCP port labels only | Implement explainable heuristic classification with confidence/uncertainty; never present guesses as facts |
 | Port-based device heuristics | **Missing** | Audit source rules; implement safe bounded probes and tests, avoid overclaiming device identity |
 | Banner collection and service/version hints | **Partial — bounded plain-protocol banner collection** | Initial greeting / HTTP HEAD response is read with a 350 ms timeout and 512-byte cap; no TLS banner support, service-version extraction or OS inference yet |
-| Current-device identification | **Missing** | Identify local interface address safely and mark it consistently |
+| Current-device identification | **Partial / implemented in source** — selected interface address is explicitly identified as this device's local IPv4 address; no dedicated device card/badge yet | Add a consistent current-device card/badge and verify multi-interface behavior |
 | Device cache/last-seen/first-seen state | **Missing / partial** | Define scan-session and persistence semantics; avoid falsely marking unresponsive devices offline |
 
 ## 5. Settings and custom ports
@@ -103,7 +103,7 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 | Android source and behavior audit | **Partial** | Complete source-backed feature inventory and inspect every relevant implementation/resource |
 | Visual reference set | **Missing** | Capture/review Android home, detail, settings, custom ports, dialogs, and all major states |
 | Linux visual parity review | **Missing** | Screen-by-screen comparison with documented differences |
-| Automated tests | **Partial** | Unit, parser, model, concurrency, cancellation, failure and UI/state tests; Linux CI workflow has now been added but no passing run has yet been recorded |
+| Automated tests | **Partial** | Unit, parser, model, concurrency, cancellation, failure and preference-store tests; dedicated Linux workflow runs formatting, tests, Clippy, release build, dependency-source generation, metadata validation, Flatpak build and headless launch smoke test; no passing result yet recorded |
 | Host runtime validation | **Pending** | Reproducible test report on supported Linux hosts, including CachyOS |
 | Flatpak runtime validation | **Pending** | Clean sandbox build/install/run and feature-specific network tests |
 | Permission/security audit | **Partial** | Verify no root/sudo, raw sockets, privileged helpers, elevated capabilities, or unnecessary Flatpak permissions |
