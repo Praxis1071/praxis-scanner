@@ -23,7 +23,14 @@ modules:
         CARGO_NET_OFFLINE: "true"
     build-commands:
       - mkdir -p .cargo
-      - cp -vf cargo/config .cargo/config.toml
+      - |
+        cat > .cargo/config.toml <<'EOF'
+        [source.crates-io]
+        replace-with = "vendored-sources"
+
+        [source.vendored-sources]
+        directory = "cargo/vendor"
+        EOF
       - cargo build --offline --release --locked --manifest-path linux/Cargo.toml
       - install -Dm755 linux/target/release/praxis-scanner-linux /app/bin/praxis-scanner
       - install -Dm644 linux/data/io.github.praxis1071.PraxisScanner.desktop /app/share/applications/io.github.praxis1071.PraxisScanner.desktop
