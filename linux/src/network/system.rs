@@ -115,7 +115,8 @@ fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ProcNetPa
             return Err(ProcNetParseError);
         }
 
-        let flags = u32::from_str_radix(fields[2], 16).map_err(|_| ProcNetParseError)?;
+        let flags_text = fields[2].strip_prefix("0x").unwrap_or(fields[2]);
+        let flags = u32::from_str_radix(flags_text, 16).map_err(|_| ProcNetParseError)?;
         const ATF_COM: u32 = 0x02;
         if flags & ATF_COM == 0 {
             continue;
