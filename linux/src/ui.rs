@@ -789,11 +789,7 @@ pub fn build_ui(application: &adw::Application) {
                             MdnsEvent::Failed(error) => {
                                 active_for_events.borrow_mut().take();
                                 progress_for_events.set_fraction(1.0);
-                                progress_for_events.set_text(Some(if cancelled {
-                                    "mDNS cancelled"
-                                } else {
-                                    "mDNS complete"
-                                }));
+                                progress_for_events.set_text(Some("mDNS failed"));
                                 mdns_button_for_events.set_label("Discover advertised services (mDNS)");
                                 mdns_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
@@ -809,12 +805,19 @@ pub fn build_ui(application: &adw::Application) {
                                 );
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
                                 status_for_events.set_text(&format!("mDNS discovery failed: {error}"));
                                 return glib::ControlFlow::Break;
                             }
                             MdnsEvent::Finished { services, cancelled } => {
                                 active_for_events.borrow_mut().take();
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "mDNS cancelled"
+                                } else {
+                                    "mDNS complete"
+                                }));
                                 mdns_button_for_events.set_label("Discover advertised services (mDNS)");
                                 mdns_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
@@ -1002,11 +1005,7 @@ pub fn build_ui(application: &adw::Application) {
                             SsdpEvent::Failed(error) => {
                                 active_for_events.borrow_mut().take();
                                 progress_for_events.set_fraction(1.0);
-                                progress_for_events.set_text(Some(if cancelled {
-                                    "SSDP cancelled"
-                                } else {
-                                    "SSDP complete"
-                                }));
+                                progress_for_events.set_text(Some("SSDP failed"));
                                 ssdp_button_for_events.set_label("Discover UPnP devices (SSDP)");
                                 ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
@@ -1022,12 +1021,19 @@ pub fn build_ui(application: &adw::Application) {
                                 );
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
+                                devices_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
                                 status_for_events.set_text(&format!("SSDP discovery failed: {error}"));
                                 return glib::ControlFlow::Break;
                             }
                             SsdpEvent::Finished { responses, cancelled } => {
                                 active_for_events.borrow_mut().take();
+                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_text(Some(if cancelled {
+                                    "SSDP cancelled"
+                                } else {
+                                    "SSDP complete"
+                                }));
                                 ssdp_button_for_events.set_label("Discover UPnP devices (SSDP)");
                                 ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
