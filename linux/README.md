@@ -11,7 +11,7 @@ This directory contains the native Linux implementation. The Android application
 
 ## Security boundary
 
-The Linux application is designed to run as an ordinary user. It must not use root, sudo, raw sockets, setuid helpers, privileged daemons, file capabilities, or elevated Linux capabilities. The current foundation only reads local IPv4 interface information through `getifaddrs`; it sends no discovery packets.
+The Linux application is designed to run as an ordinary user. It must not use root, sudo, raw sockets, setuid helpers, privileged daemons, file capabilities, or elevated Linux capabilities. Startup reads local IPv4 interface information through `getifaddrs`; only an explicit user action starts ordinary TCP `connect()` probes against the selected private or link-local subnet.
 
 ## Current implementation status
 
@@ -21,9 +21,11 @@ The first foundation milestone provides:
 - Read-only IPv4 interface enumeration.
 - Interface name, address, prefix, and UP/loopback state presentation.
 - Unit tests for IPv4 netmask-prefix parsing.
-- A bounded IPv4 subnet-range model that rejects networks above a caller-supplied host ceiling before allocating candidate addresses.
+- A bounded IPv4 subnet-range model that rejects networks above a 1024-address ceiling before allocating candidate addresses.
+- An explicit common-port TCP-connect scan with a 32-worker ceiling, per-connection timeout, cancellation, and conservative response classification.
+- A GTK results view that does not treat timeouts as proof that a host is offline.
 
-This is an initial development milestone, **not a complete network scanner**. Active host discovery, TCP connection checks, protocol discovery, device details, persistence, and Flatpak packaging remain future roadmap work. The subnet-range module currently calculates candidate addresses only; it sends no packets. No runtime test on the maintainer's CachyOS machine or inside Flatpak has been claimed.
+This is still early development, **not a complete or verified network scanner**. TCP discovery source is now present, but CI has not yet confirmed that it builds and tests successfully. mDNS, SSDP, NetBIOS, device/service enrichment, persistence, and Flatpak packaging remain future work. No runtime test on the maintainer's CachyOS machine or inside Flatpak has been claimed.
 
 ## Build prerequisites
 
