@@ -35,7 +35,7 @@ No item is complete until the Android reference has been examined, the Linux beh
 | `EmptyState.kt` | Distinct idle, no Wi-Fi, and no-results states | **Partial** — status text only | Implement equivalent empty/no-interface/no-result/error states |
 | `ScanProgressCard.kt` | Visible progress, phase/message, found-device count, cancel action | **Partial** — scan status/progress and cancellation exist in source; UI needs parity review | Match phases, progress semantics, counters, cancellation feedback |
 | Snackbar/error flow in `HomeScreen.kt` | Surface errors and useful recovery guidance | **Partial** — status labels are used | Add consistent error presentation and actionable recovery |
-| Online/offline ordering in `MainViewModel.kt` | Current device first, online then offline, numerically ordered IPs | **Missing / partial** | Define and test equivalent ordering and online confidence semantics |
+| Online/offline ordering in `MainViewModel.kt` | Current device first, online then offline, numerically ordered IPs | **Partial / source implemented** — current device first, TCP/ICMP responders next, then observations with unknown reachability; remaining rows sort by numeric IPv4 address | Verify ordering and keep unknown distinct from confirmed offline |
 
 ## 3. Device details
 
