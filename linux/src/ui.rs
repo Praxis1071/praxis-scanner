@@ -360,6 +360,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_ssdp_for_tcp = Rc::clone(&active_ssdp);
     let active_netbios_for_tcp = Rc::clone(&active_netbios);
     let active_device_scan_for_tcp = Rc::clone(&active_device_scan);
+    let active_icmp_for_tcp = Rc::clone(&active_icmp);
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -370,7 +371,11 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
-        if active_mdns_for_tcp.borrow().is_some() || active_ssdp_for_tcp.borrow().is_some() || active_netbios_for_tcp.borrow().is_some() {
+        if active_mdns_for_tcp.borrow().is_some()
+            || active_ssdp_for_tcp.borrow().is_some()
+            || active_netbios_for_tcp.borrow().is_some()
+            || active_icmp_for_tcp.borrow().is_some()
+        {
             status_for_scan.set_text("Wait for the active service-discovery operation to finish first.");
             return;
         }
@@ -556,6 +561,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_ssdp_for_mdns = Rc::clone(&active_ssdp);
     let active_netbios_for_mdns = Rc::clone(&active_netbios);
     let active_device_scan_for_mdns = Rc::clone(&active_device_scan);
+    let active_icmp_for_mdns = Rc::clone(&active_icmp);
     let ssdp_button_for_mdns = ssdp_button.clone();
     let netbios_button_for_mdns = netbios_button.clone();
     let refresh_for_mdns = refresh_button.clone();
@@ -572,7 +578,11 @@ pub fn build_ui(application: &adw::Application) {
             status_for_mdns.set_text("mDNS cancellation requested; waiting for the discovery worker to stop.");
             return;
         }
-        if active_tcp_for_mdns.borrow().is_some() || active_ssdp_for_mdns.borrow().is_some() || active_netbios_for_mdns.borrow().is_some() {
+        if active_tcp_for_mdns.borrow().is_some()
+            || active_ssdp_for_mdns.borrow().is_some()
+            || active_netbios_for_mdns.borrow().is_some()
+            || active_icmp_for_mdns.borrow().is_some()
+        {
             status_for_mdns.set_text("Wait for the active scan or SSDP discovery to finish before starting mDNS discovery.");
             return;
         }
@@ -741,6 +751,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns_for_ssdp = Rc::clone(&active_mdns);
     let active_netbios_for_ssdp = Rc::clone(&active_netbios);
     let active_device_scan_for_ssdp = Rc::clone(&active_device_scan);
+    let active_icmp_for_ssdp = Rc::clone(&active_icmp);
     let refresh_for_ssdp = refresh_button.clone();
     let interface_list_for_ssdp = list.clone();
     let port_entry_for_ssdp = port_entry.clone();
@@ -757,7 +768,11 @@ pub fn build_ui(application: &adw::Application) {
             status_for_ssdp.set_text("SSDP cancellation requested; waiting for the discovery worker to stop.");
             return;
         }
-        if active_tcp_for_ssdp.borrow().is_some() || active_mdns_for_ssdp.borrow().is_some() || active_netbios_for_ssdp.borrow().is_some() {
+        if active_tcp_for_ssdp.borrow().is_some()
+            || active_mdns_for_ssdp.borrow().is_some()
+            || active_netbios_for_ssdp.borrow().is_some()
+            || active_icmp_for_ssdp.borrow().is_some()
+        {
             status_for_ssdp.set_text("Wait for the active scan to finish before starting SSDP discovery.");
             return;
         }
@@ -929,6 +944,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns_for_netbios = Rc::clone(&active_mdns);
     let active_ssdp_for_netbios = Rc::clone(&active_ssdp);
     let active_device_scan_for_netbios = Rc::clone(&active_device_scan);
+    let active_icmp_for_netbios = Rc::clone(&active_icmp);
     let interface_list_for_netbios = list.clone();
     let refresh_for_netbios = refresh_button.clone();
     let tcp_button_for_netbios = scan_button.clone();
@@ -944,6 +960,7 @@ pub fn build_ui(application: &adw::Application) {
         if active_tcp_for_netbios.borrow().is_some()
             || active_mdns_for_netbios.borrow().is_some()
             || active_ssdp_for_netbios.borrow().is_some()
+            || active_icmp_for_netbios.borrow().is_some()
         {
             status_for_netbios.set_text("Wait for the active scan or service-discovery operation to finish first.");
             return;
