@@ -1371,6 +1371,7 @@ pub fn build_ui(application: &adw::Application) {
         selected_interface
             .borrow()
             .as_ref()
+            .filter(|interface| is_scannable_interface(interface))
             .map(|interface| interface.address),
     );
     window.present();
