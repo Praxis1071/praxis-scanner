@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main ]
   push:
-    branches: [ main ]
+    branches: [ main, linux/gtk4-port-planning ]
 
 permissions:
   contents: read
@@ -16,6 +16,55 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+
+  linux:
+    name: Linux Rust format, tests, lint and release build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install GTK4 and libadwaita development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes pkg-config libgtk-4-dev libadwaita-1-dev
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: linux
+
+      - name: Generate dependency lockfile
+        working-directory: linux
+        run: cargo generate-lockfile
+
+      - name: Check formatting
+        working-directory: linux
+        run: cargo fmt --all -- --check
+
+      - name: Run unit tests
+        working-directory: linux
+        run: cargo test --locked --all-targets
+
+      - name: Run strict Clippy
+        working-directory: linux
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Build optimized application
+        working-directory: linux
+        run: cargo build --locked --release
+
+      - name: Preserve generated Cargo.lock for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-cargo-lock
+          path: linux/Cargo.lock
+          if-no-files-found: error
   build:
     name: Test, lint & build
     runs-on: ubuntu-24.04
