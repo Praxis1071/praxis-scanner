@@ -37,7 +37,7 @@ pub fn build_ui(application: &adw::Application) {
     scan_button.set_margin_top(12);
 
     let scope_note = gtk::Label::new(Some(
-        "A scan checks common TCP ports on the selected interface's local subnet (maximum 1024 targets).",
+        "A scan checks TCP ports 22, 53, 80, 139, 443, 445 and 3389 on the selected private or link-local subnet (maximum 1024 addresses).",
     ));
     scope_note.set_halign(gtk::Align::Start);
     scope_note.set_wrap(true);
@@ -145,6 +145,12 @@ pub fn build_ui(application: &adw::Application) {
             );
             return;
         }
+        if !interface.address.is_private() && !interface.address.is_link_local() {
+            status_for_scan.set_text(
+                "For safety, scanning is limited to private IPv4 and link-local interfaces.",
+            );
+            return;
+        }
         let Some(prefix) = interface.prefix else {
             status_for_scan.set_text("The selected interface has no valid contiguous IPv4 netmask.");
             return;
@@ -178,9 +184,7 @@ pub fn build_ui(application: &adw::Application) {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
                 status_for_scan.set_text(&format!(
-                    "Scanning {}/{} on {}/{} using unprivileged TCP connections…",
-                    target_count,
-                    MAX_SCAN_TARGETS,
+                    "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
                     network.prefix()
                 ));
@@ -220,6 +224,14 @@ pub fn build_ui(application: &adw::Application) {
             }
             Err(error) => status_for_scan.set_text(&format!("Could not start scan: {error}")),
         }
+    });
+
+    let active_for_close = Rc::clone(&active_scan);
+    window.connect_close_request(move |_| {
+        if let Some(handle) = active_for_close.borrow().as_ref() {
+            handle.cancel();
+        }
+        glib::Propagation::Proceed
     });
 
     refresh_interfaces(&list, &status, &interfaces, &selected_interface);
