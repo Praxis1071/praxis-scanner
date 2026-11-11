@@ -299,6 +299,7 @@ pub fn build_ui(application: &adw::Application) {
     let icmp_button_for_selection = icmp_button.clone();
     let status_for_selection = status.clone();
     let progress_for_selection = scan_progress.clone();
+    let list_for_selection = list.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
             interfaces_for_selection
@@ -333,7 +334,7 @@ pub fn build_ui(application: &adw::Application) {
             &devices_for_selection,
             &catalog_for_selection.borrow(),
             &navigation_for_selection,
-            &list,
+            &list_for_selection,
             &refresh_button_for_selection,
             &active_device_scan_for_selection,
             &catalog_for_selection,
@@ -407,6 +408,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_netbios_for_tcp = Rc::clone(&active_netbios);
     let active_device_scan_for_tcp = Rc::clone(&active_device_scan);
     let active_icmp_for_tcp = Rc::clone(&active_icmp);
+    let navigation_for_scan = navigation_view.clone();
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -518,7 +520,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_scan);
                 let catalog_for_events = Rc::clone(&catalog_for_scan);
                 let devices_for_events = devices_for_scan.clone();
-                let navigation_for_events = navigation_view.clone();
+                let navigation_for_events = navigation_for_scan.clone();
                 let active_device_scan_for_events = Rc::clone(&active_device_scan_for_tcp);
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
@@ -667,6 +669,7 @@ pub fn build_ui(application: &adw::Application) {
     let mdns_results_for_scan = mdns_results_list.clone();
     let catalog_for_mdns = Rc::clone(&device_catalog);
     let devices_for_mdns = devices_list.clone();
+    let navigation_for_mdns = navigation_view.clone();
     mdns_button.connect_clicked(move |_| {
         if let Some(handle) = active_mdns_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -756,7 +759,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_mdns);
                 let catalog_for_events = Rc::clone(&catalog_for_mdns);
                 let devices_for_events = devices_for_mdns.clone();
-                let navigation_for_events = navigation_view.clone();
+                let navigation_for_events = navigation_for_mdns.clone();
                 let active_device_scan_for_events = Rc::clone(&active_device_scan_for_mdns);
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
@@ -885,6 +888,7 @@ pub fn build_ui(application: &adw::Application) {
     let ssdp_results_for_scan = ssdp_results_list.clone();
     let catalog_for_ssdp = Rc::clone(&device_catalog);
     let devices_for_ssdp = devices_list.clone();
+    let navigation_for_ssdp = navigation_view.clone();
     ssdp_button.connect_clicked(move |_| {
         if let Some(handle) = active_ssdp_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -974,7 +978,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_ssdp);
                 let catalog_for_events = Rc::clone(&catalog_for_ssdp);
                 let devices_for_events = devices_for_ssdp.clone();
-                let navigation_for_events = navigation_view.clone();
+                let navigation_for_events = navigation_for_ssdp.clone();
                 let active_device_scan_for_events = Rc::clone(&active_device_scan_for_ssdp);
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
@@ -2528,6 +2532,7 @@ fn settings_page(
     let theme_status = gtk::Label::new(None);
     theme_status.set_halign(gtk::Align::Start);
     theme_status.add_css_class("dim-label");
+    let theme_status_for_callback = theme_status.clone();
     theme_dropdown.connect_selected_notify(move |dropdown| {
         let theme = match dropdown.selected() {
             1 => ThemeMode::Light,
@@ -2541,7 +2546,7 @@ fn settings_page(
                 *preferences_for_theme.borrow_mut() = updated;
                 apply_theme(theme);
             }
-            Err(error) => theme_status.set_text(&format!("Could not save theme preference: {error}")),
+            Err(error) => theme_status_for_callback.set_text(&format!("Could not save theme preference: {error}")),
         }
     });
     let appearance_list = gtk::ListBox::new();
@@ -2567,12 +2572,13 @@ fn settings_page(
     let auto_scan_status = gtk::Label::new(None);
     auto_scan_status.set_halign(gtk::Align::Start);
     auto_scan_status.add_css_class("dim-label");
+    let auto_scan_status_for_callback = auto_scan_status.clone();
     auto_scan_switch.connect_active_notify(move |switch| {
         let mut updated = preferences_for_auto_scan.borrow().clone();
         updated.auto_scan_on_start = switch.is_active();
         match updated.save() {
             Ok(()) => *preferences_for_auto_scan.borrow_mut() = updated,
-            Err(error) => auto_scan_status.set_text(&format!("Could not save startup preference: {error}")),
+            Err(error) => auto_scan_status_for_callback.set_text(&format!("Could not save startup preference: {error}")),
         }
     });
     let scanning_list = gtk::ListBox::new();
