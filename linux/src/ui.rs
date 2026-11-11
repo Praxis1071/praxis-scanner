@@ -444,7 +444,7 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
         if active_tcp_for_mdns.borrow().is_some() || active_ssdp_for_mdns.borrow().is_some() {
-            status_for_mdns.set_text("Wait for the TCP scan to finish before starting mDNS discovery.");
+            status_for_mdns.set_text("Wait for the active scan or SSDP discovery to finish before starting mDNS discovery.");
             return;
         }
 
@@ -557,6 +557,9 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 tcp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 refresh_for_events.set_sensitive(true);
