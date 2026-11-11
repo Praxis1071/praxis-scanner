@@ -21,7 +21,7 @@ Do not move, rename, or delete Android source files as part of the Linux port. S
 4. **Platform information** — read-only interface, address, route and neighbor-table queries.
 5. **Persistence** — user preferences and device customizations, with explicit schema/version handling.
 
-The current implementation includes the UI shell, read-only IPv4 interface enumeration, bounded IPv4 target generation, and an explicit user-triggered TCP-connect discovery path. The TCP path is source-complete at this stage but still awaits successful CI and controlled-network verification.
+The current implementation includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded IPv4 target generation, explicit user-triggered TCP-connect discovery, and opt-in mDNS/DNS-SD discovery. The full CI pipeline passed on commit `b6d808a`; later mDNS validation and UI wording refinements are awaiting CI. Controlled-network and Flatpak runtime verification remain outstanding.
 
 ## Security invariants
 
@@ -32,6 +32,8 @@ The current implementation includes the UI shell, read-only IPv4 interface enume
 - A failed unprivileged operation is reported as unavailable; there is no privileged fallback.
 - Network observations must retain their source and confidence. A timeout is not proof that a host is offline.
 - No telemetry or undisclosed network requests.
+- mDNS/DNS-SD queries are opt-in, use ordinary UDP multicast on the selected interface, and are filtered to the selected IPv4 subnet.
+- mDNS/DNS-SD responses are unauthenticated and may be spoofed. Do not present service names or hostnames as verified identities; do not expose TXT properties by default.
 
 ## Concurrency model
 
@@ -41,13 +43,14 @@ GTK widgets are created and mutated only on the main thread. The current TCP dis
 
 1. Interface/address enumeration.
 2. Read-only route and neighbor information, once the chosen API passes host and Flatpak tests.
-3. TCP connect discovery with a conservative, explicit scope (initial source implementation present; verification pending).
-4. ICMP datagram only if the exact datagram socket is proven to work without capabilities; never use raw ICMP.
-5. mDNS, SSDP and optional NetBIOS only after bounded protocol, lifecycle and Flatpak multicast tests.
+3. TCP connect discovery with a conservative, explicit scope (source implementation present; CI passed on an earlier commit, controlled-network verification pending).
+4. mDNS/DNS-SD service discovery (source implementation present, bounded to the selected interface and IPv4 subnet; runtime and Flatpak multicast verification pending).
+5. ICMP datagram only if the exact datagram socket is proven to work without capabilities; never use raw ICMP.
+6. SSDP and optional NetBIOS only after bounded protocol, lifecycle and Flatpak multicast tests.
 
 ## Dependency policy
 
-Direct dependencies must be minimal and reviewed for maintenance, MSRV, license, transitive graph and security advisories. `rtnetlink` remains unapproved until its published version discrepancy is resolved. The initial implementation uses `nix` only for the read-only `getifaddrs` call; the complete resolved graph must be locked and audited before release.
+Direct dependencies must be minimal and reviewed for maintenance, MSRV, license, transitive graph and security advisories. `rtnetlink` remains unapproved until its published version discrepancy is resolved. The implementation uses `nix` for read-only interface enumeration and `mdns-sd 0.21.7` for DNS-SD browsing with default features disabled (no async runtime dependency). The mDNS crate is still described by its maintainers as beta software; its MIT/Apache-2.0 dual license is compatible with this GPL-3.0 project. The complete resolved graph must be locked and audited before release.
 
 ## Verification policy
 
