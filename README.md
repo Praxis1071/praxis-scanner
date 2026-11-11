@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Early implementation**
 >
-> The native Linux application now has an initial Rust/GTK4/libadwaita shell and read-only IPv4 interface listing under [`linux/`](linux/). This is a foundation milestone, not a complete or tested scanner. The Android Gradle project remains present and unchanged; `main` is not modified.
+> The native Linux application now has a Rust/GTK4/libadwaita shell, read-only IPv4 interface listing, bounded subnet calculation, and an explicit, bounded TCP-connect scan for a selected private or link-local subnet under [`linux/`](linux/). This is still early implementation and has not yet passed CI or runtime verification. The Android Gradle project remains present and unchanged; `main` is not modified.
 
 ## Project goals
 
