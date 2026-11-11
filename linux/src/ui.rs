@@ -239,6 +239,7 @@ pub fn build_ui(application: &adw::Application) {
         };
         let target_count = hosts.len();
         let port_count = ports.len();
+        let selected_interface_name = interface.name.clone();
         match scanner::start_tcp_discovery_with_ports(
             hosts,
             ports,
@@ -299,6 +300,7 @@ pub fn build_ui(application: &adw::Application) {
                                     Ok(neighbours) => {
                                         let mac_by_address: HashMap<_, _> = neighbours
                                             .into_iter()
+                                            .filter(|neighbour| neighbour.interface == selected_interface_name)
                                             .map(|neighbour| (neighbour.address, neighbour.hardware_address))
                                             .collect();
                                         let mut enriched = 0usize;
