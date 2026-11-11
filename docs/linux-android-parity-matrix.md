@@ -48,7 +48,7 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 | Edit custom device name and restore default | **Implemented in source / unverified** — validated local name editor, reset action and list/header update; key is IPv4 address | Verify persistence and DHCP address-change behavior |
 | Choose a custom device icon and restore automatic icon | **Implemented in source / unverified** — icon chooser includes automatic plus eight local icon mappings | Verify icon theme availability, restart persistence and visual parity |
 | Identity/network information (IP, MAC, vendor, hostname, device type) | **Partial** — raw IP/MAC and evidence summary only | Add structured fields and clear unavailable/unknown states |
-| Latency and TTL/OS hint | **Missing** — TCP response is not equivalent to ICMP latency/TTL | Implement only if safe Linux method is verified; never mislabel TCP timing as ping latency |
+| Latency and TTL/OS hint | **Partial / source implemented** — optional datagram-only ICMP echo checks report RTT; TTL extraction and OS inference are not implemented | Verify ping_group_range behavior, sandbox permissions, cancellation and latency accuracy; add TTL only through a safe datagram metadata path |
 | Discovery method, UPnP metadata, NetBIOS workgroup, mDNS services | **Partial** — mDNS, SSDP and NetBIOS evidence are displayed; identity remains unverified and presentation is incomplete | Complete evidence sections and verify on real devices |
 | Open web interface from SSDP LOCATION | **Not implemented by design** — Linux currently treats LOCATION as untrusted text and does not fetch it | Decide safe external-browser behavior; validate scheme/URL and require explicit user activation |
 | Automatic standard deep scan when opening a device detail page | **Implemented in source / unverified** — bounded parallel common-port scan starts on detail navigation with progress and cancellation | Verify repeated navigation, cancellation, timeouts and runtime behavior |
@@ -64,7 +64,7 @@ Android references: `NetworkScanner.kt`, `ArpReader.kt`, `DnsLookup.kt`, `Networ
 | Android capability | Linux branch status | Required parity work / constraints |
 |---|---|---|
 | Network/interface/subnet discovery | **Partial / implemented in source, runtime unverified** | Verify interface selection, prefix, route/gateway and subnet behavior on host and Flatpak |
-| ICMP host discovery, latency and TTL | **Missing** | Investigate datagram ping sockets without raw sockets/capabilities; do not substitute TCP connect timing |
+| ICMP host discovery, latency and TTL | **Partial / source implemented** — opt-in checks use SOCK_DGRAM/IPPROTO_ICMPv4 only, selected-source binding, 450 ms default timeout, 32 workers, cancellation and validated echo replies; no raw fallback, capability or sysctl changes | Verify on supported and denied ping_group_range systems and inside Flatpak; TTL remains missing |
 | TCP reachability fallback | **Implemented / unverified** | Keep inconclusive timeouts distinct from offline; test cancellation and bounds |
 | Read-only ARP/neighbour MAC enrichment | **Partial / unverified** | Verify permissions and correct interface-scoped lookup; do not add privileged fallback |
 | mDNS/DNS-SD service discovery | **Implemented / unverified** | Verify protocol coverage, host and Flatpak multicast behavior, parsing, bounds, and service presentation |
@@ -118,7 +118,7 @@ The Linux UI currently has a main page containing interface selection, route/nei
 
 The Android source tree clearly defines four primary destinations: Home, Device Detail, Settings, and Custom Ports. The Linux implementation now has native navigation for all four destinations, but Settings and Custom Ports are early source implementations and Device Detail remains partial. The Android home flow also has auto-scan preference, online/offline device grouping, rich device cards, current-device indication, empty states and a scan progress card. The Android detail flow includes automatic per-device deep scanning, full-scan confirmation, device identity/customization, network/protocol evidence and detailed results. Android settings include theme, language, auto-scan, neighbour source, custom ports, about, privacy and project link.
 
-The largest current parity gaps are **home-screen visual/state parity, a dedicated current-device card, language selection, dynamic colors, neighbour-source selection, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and a safe reviewed full-scan equivalent**. Settings, custom-port management and basic per-device name/icon customization now have initial source implementations but still require automated, host, Flatpak and visual verification.
+The largest current parity gaps are **home-screen visual/state parity, a dedicated current-device card, language selection, dynamic colors, neighbour-source selection, ICMP TTL extraction, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and a safe reviewed full-scan equivalent**. Settings, custom-port management and basic per-device name/icon customization now have initial source implementations but still require automated, host, Flatpak and visual verification.
 
 ## 8. Verification record
 
