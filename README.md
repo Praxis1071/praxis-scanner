@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita application with bounded TCP, mDNS, SSDP and NetBIOS discovery, a partial device-detail page, per-device deep scans with capped service banners, and initial Settings and Custom TCP Ports screens. Theme, opt-in auto-scan and custom ports are persisted locally. A Linux-specific CI job has been added for formatting, tests, strict Clippy and a release build, but no passing Linux CI result has yet been verified. No Flatpak manifest/build or controlled-network validation is currently verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita application with bounded TCP, mDNS, SSDP and NetBIOS discovery, a partial device-detail page, per-device deep scans with capped service banners, and initial Settings and Custom TCP Ports screens. Theme, opt-in auto-scan and custom ports are persisted locally. A dedicated Linux CI workflow runs formatting, tests, strict Clippy, release build, offline Cargo-source generation, metadata validation and Flatpak build. The root Flatpak manifest exists, but no passing Linux CI/Flatpak build or controlled-network validation has yet been verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -33,7 +33,7 @@ The current branch contains these source-level features:
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
-The previous CI workflow only built the Android Gradle project; it did not compile or test the Linux Rust application. A Linux-specific job has now been added, but its first successful run is not yet confirmed. This does not establish correct behavior on a real network or inside Flatpak. mDNS, SSDP and NetBIOS responses are unauthenticated and can be spoofed; advertised URLs and names are treated as untrusted data.
+The generic Android CI workflow only builds the Android Gradle project. Linux compilation and Flatpak packaging are handled by the separate `linux-ci.yml` workflow. Its successful result must be checked before claiming the Linux build is verified. This does not establish correct behavior on a real network or inside Flatpak. mDNS, SSDP and NetBIOS responses are unauthenticated and can be spoofed; advertised URLs and names are treated as untrusted data.
 
 ## Planned features
 
