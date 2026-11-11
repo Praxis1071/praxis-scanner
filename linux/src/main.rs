@@ -30,6 +30,8 @@ mod preferences {
         }
     }
 
+    pub const MAX_CUSTOM_PORTS: usize = 128;
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct CustomPort {
         pub port: u16,
@@ -82,6 +84,9 @@ mod preferences {
             }
             if self.custom_ports.iter().any(|item| item.port == port) {
                 return Err("That TCP port is already in the list.");
+            }
+            if self.custom_ports.len() >= MAX_CUSTOM_PORTS {
+                return Err("The custom port list is full (128 entries maximum).");
             }
             let service_name = service_name.trim();
             if !valid_service_name(service_name) {
@@ -158,7 +163,9 @@ mod preferences {
                         if port == 0 || !valid_service_name(name) {
                             continue;
                         }
-                        if preferences.custom_ports.iter().any(|item| item.port == port) {
+                        if preferences.custom_ports.iter().any(|item| item.port == port)
+                            || preferences.custom_ports.len() >= MAX_CUSTOM_PORTS
+                        {
                             continue;
                         }
                         preferences.custom_ports.push(CustomPort {
@@ -273,6 +280,19 @@ mod preferences {
             assert!(preferences.add_custom_port(22, "Duplicate").is_err());
             assert!(preferences.add_custom_port(23, "bad|name").is_err());
             assert!(preferences.add_custom_port(0, "Zero").is_err());
+        }
+
+        #[test]
+        fn custom_port_count_is_bounded() {
+            let mut preferences = AppPreferences::default();
+            for port in 1..=super::MAX_CUSTOM_PORTS {
+                preferences
+                    .add_custom_port(port as u16, "Custom")
+                    .expect("port should fit");
+            }
+            assert!(preferences
+                .add_custom_port(20_000, "Overflow")
+                .is_err());
         }
 
         #[test]
