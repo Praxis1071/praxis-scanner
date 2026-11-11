@@ -43,7 +43,7 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 
 | Expected behavior | Linux branch status | Remaining work |
 |---|---|---|
-| Open detail view for a selected device | **Partial — source committed, CI pending** | An initial Adw NavigationView detail page opens from device rows and displays currently collected evidence; complete identity, status, customization, deep-scan workflow, and visual parity remain missing |
+| Open detail view for a selected device | **Partial — source committed, CI pending** | An Adw NavigationView detail page opens from device rows, displays collected evidence, supports local name/icon editing, and starts a bounded deep scan; full identity, status, scan parity and visual parity remain incomplete |
 | Device header with icon, display name, type, online/offline and current-device badges | **Partial / source implemented** — custom display name and icon are shown; type, online/offline and current-device badges remain missing | Add confidence-scored type and evidence-based reachability/current-device badges |
 | Edit custom device name and restore default | **Implemented in source / unverified** — validated local name editor, reset action and list/header update; key is IPv4 address | Verify persistence and DHCP address-change behavior |
 | Choose a custom device icon and restore automatic icon | **Implemented in source / unverified** — icon chooser includes automatic plus eight local icon mappings | Verify icon theme availability, restart persistence and visual parity |
