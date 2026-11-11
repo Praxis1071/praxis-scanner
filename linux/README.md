@@ -47,7 +47,7 @@ Source currently includes:
 - A partial device-detail page with automatic bounded common-port deep scans, progress, cancellation, and capped plain-protocol banners.
 - Native Settings and Custom TCP Ports pages.
 - Local versioned preferences for theme, opt-in startup scanning, custom TCP ports, and per-device custom names/icons. Device customizations are currently keyed by IPv4 address, so DHCP address changes can require reapplying them.
-- A responsive device list that separates TCP/ICMP responders from other observations without falsely labelling the latter offline.
+- A responsive device list that places the selected local device first, separates TCP/ICMP responders from other observations, and never falsely labels missing responses as offline.
 - Unit tests for CIDR calculations, procfs parsers, port-list parsing, service hints, scan limits, cancellation, loopback TCP behavior, mDNS scope/type validation, SSDP response parsing, NetBIOS packet parsing, preference persistence, device customizations, ICMP packet validation, and deep-scan banner sanitization.
 
 **This remains a development build, not a complete or release-ready network scanner.** The source changes, CI formatting, Rust compilation, strict Clippy, controlled-network behavior, Flatpak build, and sandbox launch have not yet been verified together on the current branch. The Linux CI workflow is configured to run Rust formatting/tests/Clippy/release build, generate offline Cargo sources, validate AppStream/desktop metadata, build the Flatpak, and launch it under a virtual display. The first successful run must be inspected before any build or runtime success is claimed.
