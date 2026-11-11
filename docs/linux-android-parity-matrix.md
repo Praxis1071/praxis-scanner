@@ -20,16 +20,16 @@ No item is complete until the Android reference has been examined, the Linux beh
 |---|---|---|---|
 | `NavGraph.kt` — Home route | Home is the start destination; navigation to detail and settings | **Partial** — one main window only | Add native page navigation and back/close behavior |
 | `NavGraph.kt` — DeviceDetail route | Open a selected device by IP | **Missing** | Implement device detail page and lifecycle |
-| `NavGraph.kt` — Settings route | Open settings | **Missing** | Implement settings page |
-| `NavGraph.kt` — CustomPorts route | Navigate to custom TCP port management | **Missing** | Implement custom ports page |
+| `NavGraph.kt` — Settings route | Open settings | **Implemented in source / unverified** — native settings page and navigation added | Verify navigation, keyboard operation, persistence and visual parity |
+| `NavGraph.kt` — CustomPorts route | Navigate to custom TCP port management | **Implemented in source / unverified** — add, enable/disable, delete and persistent storage | Verify validation, persistence, empty state and visual parity |
 | Android expressive navigation/transitions | Clear, consistent screen transitions and back behavior | **Missing / desktop adaptation needed** | Define GTK/libadwaita-native equivalent; verify keyboard and window navigation |
 
 ## 2. Home screen and device list
 
 | Android reference | Expected behavior | Linux branch status | Remaining work |
 |---|---|---|---|
-| `HomeScreen.kt` | Main screen with app title and settings action | **Partial** — title/window and Refresh exist; no settings action | Match home header/actions |
-| `HomeScreen.kt` auto-scan preference | Automatically start a scan on launch when enabled (Android default: enabled) | **Missing** — Linux requires explicit scan action | Add persisted auto-scan setting and safe startup behavior |
+| `HomeScreen.kt` | Main screen with app title and settings action | **Partial** — settings action now opens a native settings page; home information hierarchy still differs | Match home header/actions and screen spacing |
+| `HomeScreen.kt` auto-scan preference | Automatically start a scan on launch when enabled (Android default: enabled) | **Implemented in source / unverified** — persisted toggle; disabled by default as a deliberate Linux safety difference; when enabled selects default-route interface and starts bounded scan | Verify startup selection, no-route fallback, persistence and cancellation |
 | `NetworkInfoBar.kt` | Show current network information and selectable interfaces | **Partial** — interface list/selection and route summary exist | Match information fields, selection presentation, unavailable states |
 | `DeviceList.kt`, `DeviceCard.kt` | Separate online/offline devices; readable identity/type/IP/status; custom icon; current-device marker | **Partial** — basic unified rows show IP/MAC/TCP/mDNS/SSDP evidence | Add online/offline semantics, device type/name/icon, current-device indication, card/list visual parity |
 | `EmptyState.kt` | Distinct idle, no Wi-Fi, and no-results states | **Partial** — status text only | Implement equivalent empty/no-interface/no-result/error states |
@@ -84,16 +84,16 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 
 | Android setting/action | Linux branch status | Remaining work |
 |---|---|---|
-| Theme mode selection | **Missing** | Add system/light/dark preference using libadwaita conventions |
+| Theme mode selection | **Implemented in source / unverified** — system/light/dark persisted and applied through libadwaita StyleManager | Verify restart persistence and GNOME theme integration |
 | Dynamic colors | **Android-specific** | Provide a Linux-native theme/accent equivalent where supported; document platform difference |
-| Language selection | **Missing** | Add localization infrastructure and language preference |
-| Auto-scan on startup | **Missing** | Add persistent toggle and test startup behavior |
+| Language selection | **Missing** | Add gettext/localization infrastructure and a language preference; document system-language behavior |
+| Auto-scan on startup | **Implemented in source / unverified** — opt-in persisted toggle, default off for safety | Verify default-route selection and first-launch behavior |
 | Neighbour/MAC source selection and availability/probe feedback | **Missing** | Design safe Linux-native source choices; no privileged source or permission escalation |
-| Custom ports list | **Partial** — one transient comma-separated scan entry | Add persistent records, service labels, enabled toggle, delete, add dialog, validation and empty state |
+| Custom ports list | **Implemented in source / unverified** — persistent add, enable/disable, delete, validation and empty state; enabled ports are included in per-device deep scans | Verify persistence, scan integration, duplicate handling and UI parity |
 | About dialog/version | **Missing** | Add app/version/license information |
 | Privacy dialog/policy | **Missing** | Add accurate privacy information consistent with actual network behavior |
 | GitHub project link | **Missing** | Add verified repository link |
-| Settings persistence | **Missing** | Implement versioned, migration-aware user preferences |
+| Settings persistence | **Partial / implemented in source** — versioned local INI storage for theme, auto-scan and custom ports; no migration beyond version 1 yet | Verify corruption handling, permissions, atomic replacement and future migrations |
 | Custom device names/icons persistence | **Missing** | Implement versioned persistence and stable identity strategy |
 
 ## 6. Quality, security, packaging, and parity verification
@@ -103,7 +103,7 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 | Android source and behavior audit | **Partial** | Complete source-backed feature inventory and inspect every relevant implementation/resource |
 | Visual reference set | **Missing** | Capture/review Android home, detail, settings, custom ports, dialogs, and all major states |
 | Linux visual parity review | **Missing** | Screen-by-screen comparison with documented differences |
-| Automated tests | **Partial** | Unit, parser, model, concurrency, cancellation, failure and UI/state tests |
+| Automated tests | **Partial** | Unit, parser, model, concurrency, cancellation, failure and UI/state tests; Linux CI workflow has now been added but no passing run has yet been recorded |
 | Host runtime validation | **Pending** | Reproducible test report on supported Linux hosts, including CachyOS |
 | Flatpak runtime validation | **Pending** | Clean sandbox build/install/run and feature-specific network tests |
 | Permission/security audit | **Partial** | Verify no root/sudo, raw sockets, privileged helpers, elevated capabilities, or unnecessary Flatpak permissions |
@@ -114,11 +114,11 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 
 ## 7. Immediate audit findings (2026-11-11)
 
-The Linux UI currently has a main page containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS, SSDP and NetBIOS actions, separate result lists, and status text. Device rows open a partial evidence-detail page; it automatically runs a bounded common-port scan with progress/cancellation and displays limited service banners. CI/runtime verification is pending. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
+The Linux UI currently has a main page containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS, SSDP and NetBIOS actions, separate result lists, and status text. Device rows open a partial evidence-detail page; it automatically runs a bounded common-port scan plus enabled custom ports with progress/cancellation and displays limited service banners. Native Settings and Custom TCP Ports pages now exist, with persisted theme, auto-scan and custom-port preferences. These screens are source implementations only; CI, host, Flatpak and visual verification are still pending. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
 
 The Android source tree clearly defines four primary destinations: Home, Device Detail, Settings, and Custom Ports. The Linux implementation currently lacks the latter three. The Android home flow also has auto-scan preference, online/offline device grouping, rich device cards, current-device indication, empty states and a scan progress card. The Android detail flow includes automatic per-device deep scanning, full-scan confirmation, device identity/customization, network/protocol evidence and detailed results. Android settings include theme, language, auto-scan, neighbour source, custom ports, about, privacy and project link.
 
-The largest current parity gaps are therefore **navigation/screens, full device identity and detail parity, persistent preferences/customizations, custom-port management, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and the home screen's visual/state behavior**. The next implementation milestone must start with a complete visual/source reference audit and architecture for these screens, not add unrelated discovery features ahead of core product parity.
+The largest current parity gaps are **home-screen visual/state parity, device identity and customization, language selection, dynamic colors, neighbour-source selection, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and a safe reviewed full-scan equivalent**. Settings and custom-port workflows now have initial source implementations but still require automated, host, Flatpak and visual verification.
 
 ## 8. Verification record
 
@@ -135,4 +135,4 @@ Record each verification run with commit SHA, date, environment, command, result
 - Added a parallel, bounded single-device deep-scan engine using the Android standard common-port set; progress and cancellation are surfaced in the detail view.
 - Added capped, sanitized initial service banners for plain TCP services; TLS endpoints are not probed with plaintext.
 - Added bounded NetBIOS NBSTAT query/parser code and merged hostname/workgroup evidence into the device catalog and detail view.
-- Automated parser/engine tests are present in source. CI, host behavior, Flatpak behavior, and visual parity are still unverified.
+- Automated parser/engine and preference-store tests are present in source. A Linux-specific CI job now runs formatting, tests, strict Clippy and release build on the feature branch; its first successful result has not yet been observed. Host behavior, Flatpak behavior, and visual parity remain unverified.
