@@ -210,10 +210,6 @@ impl DeviceCatalog {
         self.devices.values()
     }
 
-    pub fn len(&self) -> usize {
-        self.devices.len()
-    }
-
     pub fn is_empty(&self) -> bool {
         self.devices.is_empty()
     }
