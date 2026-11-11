@@ -195,6 +195,9 @@ fn browse_on_selected_interface(
     daemon
         .enable_interface(IfKind::Name(interface_name.to_owned()))
         .map_err(|error| format!("could not enable mDNS on {interface_name}: {error}"))?;
+    daemon
+        .disable_interface(IfKind::IPv6)
+        .map_err(|error| format!("could not restrict mDNS to IPv4 on {interface_name}: {error}"))?;
 
     let mut subscriptions = Vec::new();
     let mut service_types = HashSet::new();
@@ -236,7 +239,11 @@ fn browse_on_selected_interface(
                     ServiceEvent::ServiceFound(_, fullname)
                         if subscription_type == ENUMERATION_TYPE =>
                     {
-                        if is_valid_service_type(&fullname) {
+                        if is_valid_service_type(&fullname)
+                            && !service_types.contains(&fullname)
+                            && !pending_types.contains(&fullname)
+                            && service_types.len() + pending_types.len() < MAX_MDNS_SERVICE_TYPES
+                        {
                             pending_types.push(fullname);
                         }
                     }
@@ -244,8 +251,9 @@ fn browse_on_selected_interface(
                         if subscription_type != ENUMERATION_TYPE =>
                     {
                         if !resolved.is_valid()
-                            || resolved.fullname.len() > 255
-                            || resolved.host.len() > 255
+                            || !is_safe_dns_text(&resolved.fullname)
+                            || !is_safe_dns_text(&resolved.host)
+                            || !is_valid_service_type(&resolved.ty_domain)
                             || resolved.port == 0
                         {
                             continue;
@@ -341,12 +349,21 @@ fn subscribe(
     }
 }
 
+fn is_safe_dns_text(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 255
+        && !value.chars().any(char::is_control)
+}
+
 fn is_valid_interface_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 15
-        && name
-            .bytes()
-            .all(|byte| !byte.is_ascii_control() && !byte.is_ascii_whitespace())
+        && name.bytes().all(|byte| {
+            !byte.is_ascii_control()
+                && !byte.is_ascii_whitespace()
+                && byte != b'/'
+                && byte != b':'
+        })
 }
 
 fn is_valid_service_type(service_type: &str) -> bool {
