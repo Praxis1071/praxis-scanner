@@ -240,4 +240,4 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state:** Planning documentation only. The Android source audit and initial research documents are complete. Host and Flatpak feasibility tests have not yet been run. No Linux application implementation has started.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. The Rust/GTK4/libadwaita shell, read-only IPv4 interface enumeration, and a bounded IPv4 subnet-range calculation module are present. The subnet module only computes candidate addresses and does not send packets. CI has not yet completed successfully; host and Flatpak feasibility tests have not yet been run. The application is not ready for maintainer testing.
