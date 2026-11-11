@@ -1105,6 +1105,7 @@ fn refresh_device_list(
 ) {
     clear_list(list);
 
+    let preferences = AppPreferences::load();
     let records = catalog
         .iter()
         .filter(|device| device.has_discovery_evidence())
@@ -1204,19 +1205,34 @@ fn refresh_device_list(
             details.push(format!("NetBIOS: {}", netbios.hostname));
         }
 
+        let customization = preferences.customization_for(device.address);
+        let display_name = customization
+            .and_then(|item| item.custom_name.as_deref())
+            .map(str::to_owned)
+            .unwrap_or_else(|| device.address.to_string());
+        let icon_name = customization
+            .and_then(|item| item.icon_key.as_deref())
+            .map(icon_name_for_key)
+            .unwrap_or("network-server-symbolic");
+        let device_icon = gtk::Image::from_icon_name(icon_name);
         let row = adw::ActionRow::builder()
-            .title(device.address.to_string())
+            .title(&display_name)
             .subtitle(details.join("  ·  "))
             .activatable(true)
             .build();
+        row.add_prefix(&device_icon);
         let navigation_for_row = navigation.clone();
         let active_scan_for_row = Rc::clone(active_device_scan);
         let selected_device = device.clone();
+        let selected_row = row.clone();
+        let selected_icon = device_icon.clone();
         row.connect_activated(move |_| {
             let page = device_detail_page(
                 &selected_device,
                 &navigation_for_row,
                 Rc::clone(&active_scan_for_row),
+                selected_row.clone(),
+                selected_icon.clone(),
             );
             navigation_for_row.push(&page);
         });
@@ -1229,7 +1245,24 @@ fn device_detail_page(
     device: &DeviceRecord,
     navigation: &adw::NavigationView,
     active_device_scan: Rc<RefCell<Option<ScanHandle>>>,
+    device_row: adw::ActionRow,
+    device_icon: gtk::Image,
 ) -> adw::NavigationPage {
+    let preferences = Rc::new(RefCell::new(AppPreferences::load()));
+    let customization = preferences
+        .borrow()
+        .customization_for(device.address)
+        .cloned();
+    let display_name = customization
+        .as_ref()
+        .and_then(|item| item.custom_name.as_deref())
+        .unwrap_or("");
+    let display_name = if display_name.is_empty() {
+        device.address.to_string()
+    } else {
+        display_name.to_owned()
+    };
+
     let header = adw::HeaderBar::new();
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
     back_button.set_tooltip_text(Some("Back to discovered devices"));
@@ -1242,10 +1275,7 @@ fn device_detail_page(
         navigation_for_back.pop();
     });
     header.pack_start(&back_button);
-    let title = adw::WindowTitle::new(
-        &format!("Device {}", device.address),
-        "Network details",
-    );
+    let title = adw::WindowTitle::new(&display_name, &device.address.to_string());
     header.set_title_widget(Some(&title));
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
     content.set_margin_top(18);
@@ -1281,14 +1311,14 @@ fn device_detail_page(
     }
     content.append(&identity);
 
-    let preferences = AppPreferences::load();
     let custom_service_names = preferences
+        .borrow()
         .custom_ports
         .iter()
         .map(|item| (item.port, item.service_name.clone()))
         .collect::<HashMap<_, _>>();
     let mut deep_scan_ports = scanner::DEEP_SCAN_TCP_PORTS.to_vec();
-    deep_scan_ports.extend(preferences.enabled_custom_ports());
+    deep_scan_ports.extend(preferences.borrow().enabled_custom_ports());
     deep_scan_ports.sort_unstable();
     deep_scan_ports.dedup();
 
