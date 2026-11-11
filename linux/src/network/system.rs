@@ -6,7 +6,6 @@
 use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
-use std::path::Path;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Ipv4Route {
@@ -154,12 +153,6 @@ fn is_valid_mac_address(value: &str) -> bool {
             .all(|octet| octet.len() == 2 && u8::from_str_radix(octet, 16).is_ok())
 }
 
-/// Read a procfs fixture from a path, useful for integration tests and diagnostics.
-#[allow(dead_code)]
-fn read_text(path: &Path) -> io::Result<String> {
-    fs::read_to_string(path)
-}
-
 #[cfg(test)]
 mod tests {
     use super::{parse_ipv4_neighbours, parse_ipv4_routes};
@@ -170,13 +163,13 @@ mod tests {
         let fixture = concat!(
             "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT\\n",
             "eth0 0001A8C0 00000000 0001 0 0 100 00FFFFFF 0 0 0\\n",
-            "wlan0 00000000 01A8C0A8 0003 0 0 600 00000000 0 0 0\\n",
+            "wlan0 00000000 0101A8C0 0003 0 0 600 00000000 0 0 0\\n",
         );
         let routes = parse_ipv4_routes(fixture).expect("valid route fixture");
         assert_eq!(routes.len(), 2);
         assert!(routes[0].is_default);
         assert_eq!(routes[0].interface, "wlan0");
-        assert_eq!(routes[0].gateway, Ipv4Addr::new(192, 168, 0, 1));
+        assert_eq!(routes[0].gateway, Ipv4Addr::new(192, 168, 1, 1));
         assert_eq!(routes[0].metric, 600);
         assert_eq!(routes[1].destination, Ipv4Addr::new(192, 168, 1, 0));
         assert_eq!(routes[1].prefix, 24);
