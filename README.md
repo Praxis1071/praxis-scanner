@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, opt-in interface-scoped mDNS/DNS-SD and SSDP/UPnP, plus an initial unified device list combining TCP, mDNS, SSDP, and MAC evidence. The latest CI run passed formatting and tests but failed strict Clippy on one needless borrow; that lint has been corrected and a fresh CI run is queued. No Flatpak build or controlled-network validation has passed yet. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita application with bounded TCP, mDNS, SSDP and NetBIOS discovery, a partial device-detail page, per-device deep scans with capped service banners, and initial Settings and Custom TCP Ports screens. Theme, opt-in auto-scan and custom ports are persisted locally. A Linux-specific CI job has been added for formatting, tests, strict Clippy and a release build, but no passing Linux CI result has yet been verified. No Flatpak manifest/build or controlled-network validation is currently verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -29,7 +29,7 @@ The current branch contains these source-level features:
 - TCP connect checks with editable comma-separated ports and conservative port-number service hints.
 - Opt-in mDNS/DNS-SD service discovery, restricted to the selected interface and IPv4 subnet, with a five-second default window, cancellation, and bounded results.
 - Opt-in SSDP/UPnP M-SEARCH discovery with selected-interface binding, bounded response parsing, and no automatic fetching of advertised URLs.
-- An initial unified device list that merges TCP, mDNS, SSDP, and read-only MAC evidence by IPv4 address; device detail pages, renaming, and persistence are not implemented.
+- An initial unified device list that merges TCP, mDNS, SSDP, NetBIOS, and read-only MAC evidence by IPv4 address; a partial device-detail page, Settings page, Custom TCP Ports page, and local persistence for theme/auto-scan/custom ports exist but remain unverified.
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
