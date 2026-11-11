@@ -14,7 +14,7 @@ on:
       - ".github/workflows/linux-ci.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: linux-ci-${{ github.ref }}
@@ -78,3 +78,16 @@ jobs:
             linux/cargo-sources.json
           if-no-files-found: error
           retention-days: 7
+
+      - name: Commit generated Flatpak dependency sources
+        if: github.event_name == 'push' && github.ref == 'refs/heads/linux/gtk4-port-planning'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add linux/Cargo.lock linux/cargo-sources.json
+          if git diff --cached --quiet; then
+            echo "Flatpak dependency sources are already up to date."
+          else
+            git commit -m "build(linux): pin Rust dependencies for Flatpak"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
