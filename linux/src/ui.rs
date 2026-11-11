@@ -7,7 +7,7 @@ use adw::prelude::*;
 use gtk::glib;
 
 use crate::network::cidr::Ipv4Network;
-use crate::network::device::{DeviceCatalog, MdnsEvidence, SsdpEvidence};
+use crate::network::device::{DeviceCatalog, DeviceRecord, MdnsEvidence, SsdpEvidence};
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
 use crate::network::ssdp::{self, SsdpEvent, SsdpHandle};
 use crate::network::scanner::{
@@ -195,12 +195,19 @@ pub fn build_ui(application: &adw::Application) {
         .child(&content)
         .build();
 
+    let navigation_view = adw::NavigationView::new();
+    let home_page = adw::NavigationPage::builder()
+        .title("Praxis Scanner")
+        .child(&scrolled)
+        .build();
+    navigation_view.push(&home_page);
+
     let window = adw::ApplicationWindow::builder()
         .application(application)
         .title("Praxis Scanner")
         .default_width(900)
         .default_height(700)
-        .content(&scrolled)
+        .content(&navigation_view)
         .build();
 
     let interfaces = Rc::new(RefCell::new(Vec::<NetworkInterface>::new()));
@@ -385,6 +392,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_scan);
                 let catalog_for_events = Rc::clone(&catalog_for_scan);
                 let devices_for_events = devices_for_scan.clone();
+                let navigation_for_events = navigation_view.clone();
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
                 let mut inconclusive = 0usize;
@@ -398,7 +406,7 @@ pub fn build_ui(application: &adw::Application) {
                                     result.tcp_responded,
                                     result.open_ports.iter().copied(),
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
@@ -439,7 +447,7 @@ pub fn build_ui(application: &adw::Application) {
                                         for (address, mac) in &mac_by_address {
                                             catalog_for_events.borrow_mut().set_mac_address(*address, mac.clone());
                                         }
-                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
+                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
                                         let mut enriched = 0usize;
                                         for (address, row, details) in &result_rows {
                                             if let Some(mac) = mac_by_address.get(address) {
@@ -559,6 +567,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_mdns);
                 let catalog_for_events = Rc::clone(&catalog_for_mdns);
                 let devices_for_events = devices_for_mdns.clone();
+                let navigation_for_events = navigation_view.clone();
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
@@ -573,7 +582,7 @@ pub fn build_ui(application: &adw::Application) {
                                         port: service.port,
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
                                 let details = format!(
                                     "{}  ·  {}:{}  ·  {}",
                                     service.hostname,
@@ -731,6 +740,7 @@ pub fn build_ui(application: &adw::Application) {
                 let selected_for_events = Rc::clone(&selected_for_ssdp);
                 let catalog_for_events = Rc::clone(&catalog_for_ssdp);
                 let devices_for_events = devices_for_ssdp.clone();
+                let navigation_for_events = navigation_view.clone();
 
                 glib::timeout_add_local(Duration::from_millis(100), move || {
                     while let Ok(event) = events.try_recv() {
@@ -745,7 +755,7 @@ pub fn build_ui(application: &adw::Application) {
                                         location: device.location.clone(),
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow());
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events);
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
                                 let location = device.location.as_deref().unwrap_or("location not supplied");
                                 let details = format!(
@@ -847,7 +857,11 @@ fn clear_list(list: &gtk::ListBox) {
     }
 }
 
-fn refresh_device_list(list: &gtk::ListBox, catalog: &DeviceCatalog) {
+fn refresh_device_list(
+    list: &gtk::ListBox,
+    catalog: &DeviceCatalog,
+    navigation: &adw::NavigationView,
+) {
     clear_list(list);
 
     let records = catalog
@@ -918,10 +932,143 @@ fn refresh_device_list(list: &gtk::ListBox, catalog: &DeviceCatalog) {
         let row = adw::ActionRow::builder()
             .title(device.address.to_string())
             .subtitle(details.join("  ·  "))
-            .activatable(false)
+            .activatable(true)
             .build();
+        let navigation_for_row = navigation.clone();
+        let selected_device = device.clone();
+        row.connect_activated(move |_| {
+            let page = device_detail_page(&selected_device);
+            navigation_for_row.push(&page);
+        });
         list.append(&row);
     }
+}
+
+
+fn device_detail_page(device: &DeviceRecord) -> adw::NavigationPage {
+    let header = adw::HeaderBar::new();
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.set_margin_top(18);
+    content.set_margin_bottom(24);
+    content.set_margin_start(18);
+    content.set_margin_end(18);
+
+    let identity_heading = gtk::Label::new(Some("Device identity"));
+    identity_heading.add_css_class("title-2");
+    identity_heading.set_halign(gtk::Align::Start);
+    content.append(&identity_heading);
+
+    let identity = gtk::ListBox::new();
+    identity.add_css_class("boxed-list");
+    append_detail_row(&identity, "IPv4 address", &device.address.to_string());
+    append_detail_row(
+        &identity,
+        "TCP reachability",
+        if device.tcp_responded {
+            "A TCP response was observed"
+        } else {
+            "No TCP response observed; this does not prove the device is offline"
+        },
+    );
+    if let Some(mac) = device.mac_address.as_deref() {
+        append_detail_row(&identity, "MAC address", mac);
+    }
+    content.append(&identity);
+
+    let ports_heading = gtk::Label::new(Some("Open TCP ports"));
+    ports_heading.add_css_class("title-2");
+    ports_heading.set_halign(gtk::Align::Start);
+    content.append(&ports_heading);
+
+    let ports = gtk::ListBox::new();
+    ports.add_css_class("boxed-list");
+    if device.open_tcp_ports.is_empty() {
+        append_detail_row(&ports, "No open ports recorded", "No configured TCP probe found an open port.");
+    } else {
+        for port in &device.open_tcp_ports {
+            let service = scanner::service_name(*port)
+                .unwrap_or("Unknown service");
+            append_detail_row(&ports, &format!("TCP {port}"), service);
+        }
+    }
+    content.append(&ports);
+
+    if !device.mdns_services.is_empty() {
+        let heading = gtk::Label::new(Some("Advertised mDNS services"));
+        heading.add_css_class("title-2");
+        heading.set_halign(gtk::Align::Start);
+        content.append(&heading);
+
+        let services = gtk::ListBox::new();
+        services.add_css_class("boxed-list");
+        for service in &device.mdns_services {
+            append_detail_row(
+                &services,
+                &service.fullname,
+                &format!("{}:{}  ·  {}", service.hostname, service.port, service.service_type),
+            );
+        }
+        content.append(&services);
+    }
+
+    if !device.ssdp_advertisements.is_empty() {
+        let heading = gtk::Label::new(Some("UPnP / SSDP advertisements"));
+        heading.add_css_class("title-2");
+        heading.set_halign(gtk::Align::Start);
+        content.append(&heading);
+
+        let advertisements = gtk::ListBox::new();
+        advertisements.add_css_class("boxed-list");
+        for advertisement in &device.ssdp_advertisements {
+            append_detail_row(
+                &advertisements,
+                &advertisement.search_target,
+                &format!(
+                    "USN: {}  ·  Server: {}",
+                    advertisement.unique_service_name,
+                    advertisement.server.as_deref().unwrap_or("not supplied")
+                ),
+            );
+            if let Some(location) = advertisement.location.as_deref() {
+                append_detail_row(
+                    &advertisements,
+                    "Untrusted LOCATION header",
+                    &format!("{location} (not fetched)"),
+                );
+            }
+        }
+        content.append(&advertisements);
+    }
+
+    let note = gtk::Label::new(Some(
+        "Network-advertised names and service details are unverified claims. Missing information does not mean the device lacks that capability.",
+    ));
+    note.add_css_class("dim-label");
+    note.set_wrap(true);
+    note.set_halign(gtk::Align::Start);
+    content.append(&note);
+
+    let scrolled = gtk::ScrolledWindow::builder()
+        .vexpand(true)
+        .child(&content)
+        .build();
+    let page_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page_content.append(&header);
+    page_content.append(&scrolled);
+
+    adw::NavigationPage::builder()
+        .title(format!("Device {}", device.address))
+        .child(&page_content)
+        .build()
+}
+
+fn append_detail_row(list: &gtk::ListBox, title: &str, subtitle: &str) {
+    let row = adw::ActionRow::builder()
+        .title(title)
+        .subtitle(subtitle)
+        .activatable(false)
+        .build();
+    list.append(&row);
 }
 
 fn is_scannable_interface(interface: &NetworkInterface) -> bool {
