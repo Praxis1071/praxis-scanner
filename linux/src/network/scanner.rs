@@ -855,12 +855,13 @@ mod tests {
 
     #[test]
     fn icmp_discovery_completes_empty_target_list_without_opening_socket() {
+        let source = Ipv4Addr::new(192, 0, 2, 1);
         let (_handle, events) = super::start_icmp_discovery(
-            Ipv4Addr::new(192, 0, 2, 1),
-            Vec::new(),
+            source,
+            vec![source],
             super::DEFAULT_ICMP_TIMEOUT,
         )
-        .expect("empty ICMP target list is valid");
+        .expect("source-only ICMP target list is valid");
         assert!(matches!(
             events.recv().expect("finished event"),
             super::IcmpEvent::Finished {
