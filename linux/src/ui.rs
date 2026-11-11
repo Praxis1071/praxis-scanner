@@ -336,7 +336,7 @@ pub fn build_ui(application: &adw::Application) {
             &refresh_button_for_selection,
             &active_device_scan_for_selection,
             &catalog_for_selection,
-            selected.as_ref().filter(|interface| is_scannable_interface(interface)).map(|interface| interface.address),
+            selected.as_ref().filter(|interface| is_scannable_interface(*interface)).map(|interface| interface.address),
         );
     });
 
@@ -381,7 +381,7 @@ pub fn build_ui(application: &adw::Application) {
             selected_for_refresh
                 .borrow()
                 .as_ref()
-                .filter(|interface| is_scannable_interface(interface))
+                .filter(|interface| is_scannable_interface(*interface))
                 .map(|interface| interface.address),
         );
     });
@@ -542,7 +542,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                                 completed += 1;
@@ -614,7 +614,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                                         let mut enriched = 0usize;
@@ -781,7 +781,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                                 let details = format!(
@@ -999,7 +999,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
@@ -1190,7 +1190,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                             }
@@ -1390,7 +1390,7 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events
                                         .borrow()
                                         .as_ref()
-                                        .filter(|interface| is_scannable_interface(interface))
+                                        .filter(|interface| is_scannable_interface(*interface))
                                         .map(|interface| interface.address),
                                 );
                                 devices_for_events.set_sensitive(true);
@@ -1494,7 +1494,7 @@ pub fn build_ui(application: &adw::Application) {
         selected_interface
             .borrow()
             .as_ref()
-            .filter(|interface| is_scannable_interface(interface))
+            .filter(|interface| is_scannable_interface(*interface))
             .map(|interface| interface.address),
     );
     window.present();
