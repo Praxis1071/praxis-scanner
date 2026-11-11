@@ -43,7 +43,7 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 
 | Expected behavior | Linux branch status | Remaining work |
 |---|---|---|
-| Open detail view for a selected device | **Missing** | Add detail navigation and selected-device model |
+| Open detail view for a selected device | **Partial — source committed, CI pending** | An initial Adw NavigationView detail page opens from device rows and displays currently collected evidence; complete identity, status, customization, deep-scan workflow, and visual parity remain missing |
 | Device header with icon, display name, type, online/offline and current-device badges | **Missing** | Implement visual and semantic equivalent |
 | Edit custom device name and restore default | **Missing** | Implement validated name editor and persistence |
 | Choose a custom device icon and restore automatic icon | **Missing** | Implement icon chooser, mapping, and persistence |
@@ -114,7 +114,7 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 
 ## 7. Immediate audit findings (2026-11-11)
 
-The Linux UI currently has one vertically-scrolled main window containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS and SSDP actions, separate result lists, and status text. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
+The Linux UI currently has a main page containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS and SSDP actions, separate result lists, and status text. Device rows now have an initial navigation action that opens a partial evidence-detail page; CI is pending for this change. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
 
 The Android source tree clearly defines four primary destinations: Home, Device Detail, Settings, and Custom Ports. The Linux implementation currently lacks the latter three. The Android home flow also has auto-scan preference, online/offline device grouping, rich device cards, current-device indication, empty states and a scan progress card. The Android detail flow includes automatic per-device deep scanning, full-scan confirmation, device identity/customization, network/protocol evidence and detailed results. Android settings include theme, language, auto-scan, neighbour source, custom ports, about, privacy and project link.
 
@@ -126,5 +126,5 @@ Record each verification run with commit SHA, date, environment, command, result
 
 | Date | Commit | Check | Environment | Result / evidence |
 |---|---|---|---|---|
-| 2026-11-11 | Initial audit | Android source tree + primary navigation/screens inspected; Linux UI and TCP scanner inspected | GitHub source review | Four Android routes confirmed; major Linux parity gaps documented above. No runtime claim. |
+| 2026-11-11 | Initial audit | Android source tree + primary navigation/screens inspected; Linux UI and TCP scanner inspected | GitHub source review | Four Android routes confirmed; major Linux parity gaps documented above. No runtime claim. |\n| 2026-11-11 | `6bcf9fa` | Initial device detail navigation and evidence page added; libadwaita NavigationView enabled | CI run `43092906677` | Pending. Do not treat as build/test verified until CI completes. |
 
