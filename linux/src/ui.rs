@@ -482,7 +482,17 @@ pub fn build_ui(application: &adw::Application) {
                                     result.tcp_responded,
                                     result.open_ports.iter().copied(),
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                    &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
+                                );
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
@@ -526,7 +536,17 @@ pub fn build_ui(application: &adw::Application) {
                                         for (address, mac) in &mac_by_address {
                                             catalog_for_events.borrow_mut().set_mac_address(*address, mac.clone());
                                         }
-                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
+                                        refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                    &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
+                                );
                                         let mut enriched = 0usize;
                                         for (address, row, details) in &result_rows {
                                             if let Some(mac) = mac_by_address.get(address) {
@@ -672,7 +692,17 @@ pub fn build_ui(application: &adw::Application) {
                                         port: service.port,
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                    &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
+                                );
                                 let details = format!(
                                     "{}  ·  {}:{}  ·  {}",
                                     service.hostname,
@@ -862,7 +892,17 @@ pub fn build_ui(application: &adw::Application) {
                                         location: device.location.clone(),
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                    &active_device_scan_for_events,
+                                    &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
+                                );
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
                                 let location = device.location.as_deref().unwrap_or("location not supplied");
                                 let details = format!(
@@ -1031,6 +1071,10 @@ pub fn build_ui(application: &adw::Application) {
                                     &navigation_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
                                 );
                             }
                             NetbiosEvent::Finished { total, completed, cancelled } => {
@@ -1202,6 +1246,10 @@ pub fn build_ui(application: &adw::Application) {
                                     &navigation_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
+                                    selected_for_events
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|interface| interface.address),
                                 );
                                 active_icmp_for_events.borrow_mut().take();
                                 icmp_button_for_events.set_label("Check ICMP reachability");
