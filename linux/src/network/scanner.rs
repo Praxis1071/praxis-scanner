@@ -88,7 +88,7 @@ pub fn start_tcp_discovery(
     let worker_cancelled = Arc::clone(&cancelled);
     let (event_sender, event_receiver) = mpsc::channel();
 
-    thread::spawn(move || {
+    let _coordinator = thread::spawn(move || {
         let total = hosts.len();
         if total == 0 {
             let _ = event_sender.send(ScanEvent::Finished {
