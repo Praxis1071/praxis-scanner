@@ -199,7 +199,7 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 
 - [ ] Integrate the new protocol-neutral device-evidence catalog into a unified device list, device details, port/service details, and scan progress views.
 - [ ] Implement start, stop, cancellation, empty, partial-result, and error states.
-- [ ] Implement device naming, icon customization, and preferences.
+- [ ] Implement device naming and icon customization; theme, opt-in auto-scan, and custom-port preferences now have initial source implementations.
 - [ ] Integrate scan results into the UI without blocking the main thread.
 - [ ] Add accessible labels, keyboard operation, responsive layouts, and localization support.
 - [ ] Review the implementation against the feature parity matrix and remove unsupported promises.
@@ -223,8 +223,8 @@ Implementation is authorized and active on this branch. Source includes the GTK4
 
 ## 7. Flatpak packaging and release engineering
 
-- [ ] Select and pin a suitable Freedesktop runtime and SDK version.
-- [ ] Create a minimal Flatpak manifest with auditable permissions.
+- [x] Select a supported GNOME 50 runtime and matching Freedesktop 25.08 Rust SDK extension branch; recheck at each runtime upgrade.
+- [x] Create a minimal Flatpak manifest with auditable permissions (`io.github.praxis1071.PraxisScanner.yml`); validate effective sandbox behavior in CI and on a host.
 - [ ] Ensure the app ID, desktop entry, icon, metainfo, and application name are consistent.
 - [ ] Build and install the Flatpak locally for clean-environment testing.
 - [ ] Verify updates and data migration behavior.
@@ -283,7 +283,7 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the Android project remains present and Kotlin sources are unchanged. Linux source includes GTK4/libadwaita navigation, read-only IPv4 interface/route/ARP summaries, bounded TCP subnet discovery, opt-in mDNS/SSDP/NetBIOS, a unified device catalog, a partial detail page, bounded per-device deep scans with capped plain-protocol banners, and initial native Settings and Custom TCP Ports pages. Theme, opt-in auto-scan, and custom-port records are persisted in a versioned user config file; enabled custom ports are included in device deep scans. A Linux-specific GitHub Actions job has been added for formatting, unit tests, strict Clippy, and release build. Its first successful result has not yet been observed. The workflow currently generates Cargo.lock during CI and uploads it for review; no committed lockfile or verified Flatpak manifest/build is present yet. No host build or Flatpak runtime test has been completed. Remaining parity gaps include home visual/state parity, device rename/icon customization, current-device/type/vendor identity, language selection, neighbour-source settings, ICMP latency/TTL, reverse DNS, reliable OS inference, TLS service inspection, and a reviewed safe equivalent for Android's 1–65535 scan. Linux scan limits remain 1024 targets, 256 unique ports per operation, 8192 connection attempts, and 32 workers; do not claim parity for Android full-scan behavior. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the Android project remains present and Kotlin sources are unchanged. Linux source includes GTK4/libadwaita navigation, read-only IPv4 interface/route/ARP summaries, bounded TCP subnet discovery, opt-in mDNS/SSDP/NetBIOS, a unified device catalog, a partial detail page, bounded per-device deep scans with capped plain-protocol banners, and initial native Settings and Custom TCP Ports pages. Theme, opt-in auto-scan, and custom-port records are persisted in a versioned user config file; enabled custom ports are included in device deep scans. A dedicated Linux GitHub Actions workflow already exists and runs formatting, unit tests, strict Clippy, release build, offline Cargo-source generation, AppStream/desktop validation, and Flatpak build. Its first successful result has not yet been observed. The dedicated Linux workflow generates Cargo.lock and offline Cargo sources during CI, uploads them, and commits them to the feature branch after Rust checks pass. The root Flatpak manifest exists and its missing Cargo vendor config has been corrected; no successful Flatpak build or sandbox launch has yet been confirmed. No host build or Flatpak runtime test has been completed. Remaining parity gaps include home visual/state parity, device rename/icon customization, current-device/type/vendor identity, language selection, neighbour-source settings, ICMP latency/TTL, reverse DNS, reliable OS inference, TLS service inspection, and a reviewed safe equivalent for Android's 1–65535 scan. Linux scan limits remain 1024 targets, 256 unique ports per operation, 8192 connection attempts, and 32 workers; do not claim parity for Android full-scan behavior. The application is not ready for maintainer testing.
 
 
 ## Latest parity implementation update (2026-11-11)
