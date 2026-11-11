@@ -5,6 +5,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::Ipv4Addr;
+use std::time::Duration;
 
 pub const MAX_MDNS_EVIDENCE_PER_DEVICE: usize = 32;
 pub const MAX_SSDP_EVIDENCE_PER_DEVICE: usize = 32;
@@ -38,6 +39,10 @@ pub struct DeviceRecord {
     pub mac_address: Option<String>,
     /// True when at least one TCP connection attempt received a TCP response.
     pub tcp_responded: bool,
+    /// Whether a datagram-only ICMP echo check was completed for this address.
+    pub icmp_checked: bool,
+    /// Round-trip time for a validated ICMP echo reply, if one was received.
+    pub icmp_round_trip_time: Option<Duration>,
     pub open_tcp_ports: BTreeSet<u16>,
     pub mdns_services: Vec<MdnsEvidence>,
     pub ssdp_advertisements: Vec<SsdpEvidence>,
@@ -50,11 +55,18 @@ impl DeviceRecord {
             address,
             mac_address: None,
             tcp_responded: false,
+            icmp_checked: false,
+            icmp_round_trip_time: None,
             open_tcp_ports: BTreeSet::new(),
             mdns_services: Vec::new(),
             ssdp_advertisements: Vec::new(),
             netbios_info: None,
         }
+    }
+
+    pub fn record_icmp(&mut self, round_trip_time: Option<Duration>) {
+        self.icmp_checked = true;
+        self.icmp_round_trip_time = round_trip_time;
     }
 
     pub fn record_tcp(&mut self, responded: bool, open_ports: impl IntoIterator<Item = u16>) {
@@ -123,7 +135,8 @@ impl DeviceRecord {
 
     pub fn has_discovery_evidence(&self) -> bool {
         self.tcp_responded
-            || !self.open_tcp_ports.is_empty()
+            || self.icmp_round_trip_time.is_some()
+            || !self.open_tcp_ports.is_empty
             || !self.mdns_services.is_empty()
             || !self.ssdp_advertisements.is_empty()
             || self.netbios_info.is_some()
@@ -138,6 +151,17 @@ pub struct DeviceCatalog {
 }
 
 impl DeviceCatalog {
+    pub fn record_icmp(
+        &mut self,
+        address: Ipv4Addr,
+        round_trip_time: Option<Duration>,
+    ) {
+        self.devices
+            .entry(address)
+            .or_insert_with(|| DeviceRecord::new(address))
+            .record_icmp(round_trip_time);
+    }
+
     pub fn record_tcp(
         &mut self,
         address: Ipv4Addr,
@@ -275,6 +299,25 @@ mod tests {
         assert_eq!(first.address, address());
         assert_eq!(first.open_tcp_ports.len(), 2);
         assert_eq!(first.mdns_services.len(), 1);
+    }
+
+    #[test]
+    fn records_icmp_latency_without_claiming_no_reply_means_offline() {
+        let mut catalog = DeviceCatalog::default();
+        catalog.record_icmp(address(), Some(Duration::from_millis(8)));
+        let device = catalog.iter().next().expect("device exists");
+        assert!(device.icmp_checked);
+        assert_eq!(
+            device.icmp_round_trip_time,
+            Some(Duration::from_millis(8))
+        );
+        assert!(device.has_discovery_evidence());
+
+        catalog.record_icmp(address(), None);
+        let device = catalog.iter().next().expect("device exists");
+        assert!(device.icmp_checked);
+        assert_eq!(device.icmp_round_trip_time, None);
+        assert!(!device.tcp_responded);
     }
 
     #[test]
