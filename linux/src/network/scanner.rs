@@ -839,6 +839,56 @@ mod tests {
     use std::time::Duration;
 
     #[test]
+    fn icmp_discovery_rejects_unspecified_source_without_opening_socket() {
+        let result = super::start_icmp_discovery(
+            Ipv4Addr::UNSPECIFIED,
+            Vec::new(),
+            super::DEFAULT_ICMP_TIMEOUT,
+        );
+        assert_eq!(result.unwrap_err(), super::ScanStartError::InvalidSourceAddress);
+    }
+
+    #[test]
+    fn icmp_discovery_completes_empty_target_list_without_opening_socket() {
+        let (_handle, events) = super::start_icmp_discovery(
+            Ipv4Addr::new(192, 0, 2, 1),
+            Vec::new(),
+            super::DEFAULT_ICMP_TIMEOUT,
+        )
+        .expect("empty ICMP target list is valid");
+        assert!(matches!(
+            events.recv().expect("finished event"),
+            super::IcmpEvent::Finished {
+                total: 0,
+                completed: 0,
+                cancelled: false
+            }
+        ));
+    }
+
+    #[test]
+    fn icmp_discovery_enforces_target_and_timeout_limits() {
+        let too_many = vec![Ipv4Addr::new(192, 0, 2, 2); super::MAX_SCAN_TARGETS + 1];
+        assert!(matches!(
+            super::start_icmp_discovery(
+                Ipv4Addr::new(192, 0, 2, 1),
+                too_many,
+                super::DEFAULT_ICMP_TIMEOUT
+            ),
+            Err(super::ScanStartError::TooManyTargets { .. })
+        ));
+        assert_eq!(
+            super::start_icmp_discovery(
+                Ipv4Addr::new(192, 0, 2, 1),
+                Vec::new(),
+                Duration::ZERO
+            )
+            .unwrap_err(),
+            super::ScanStartError::InvalidTimeout
+        );
+    }
+
+    #[test]
     fn datagram_icmp_echo_packet_has_valid_checksum_and_expected_fields() {
         let target = Ipv4Addr::new(192, 0, 2, 10);
         let request = super::build_icmp_echo_request(target, 0x1234, 7);
