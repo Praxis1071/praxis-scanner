@@ -8,6 +8,17 @@ use std::io;
 use std::net::Ipv4Addr;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+struct ProcNetParseError;
+
+impl std::fmt::Display for ProcNetParseError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("malformed procfs network table")
+    }
+}
+
+impl std::error::Error for ProcNetParseError {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Ipv4Route {
     pub interface: String,
     pub destination: Ipv4Addr,
@@ -42,11 +53,11 @@ pub fn read_ipv4_neighbours() -> io::Result<Vec<Ipv4Neighbour>> {
     })
 }
 
-fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ()> {
+fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ProcNetParseError> {
     let mut lines = contents.lines();
-    let header = lines.next().ok_or(())?;
+    let header = lines.next().ok_or(ProcNetParseError)?;
     if !header.starts_with("Iface") {
-        return Err(());
+        return Err(ProcNetParseError);
     }
 
     let mut routes = Vec::new();
@@ -56,7 +67,7 @@ fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ()> {
             return Err(());
         }
 
-        let flags = u32::from_str_radix(fields[3], 16).map_err(|_| ())?;
+        let flags = u32::from_str_radix(fields[3], 16).map_err(|_| ProcNetParseError)?;
         const RTF_UP: u32 = 0x0001;
         const RTF_GATEWAY: u32 = 0x0002;
         if flags & RTF_UP == 0 {
@@ -90,7 +101,7 @@ fn parse_ipv4_routes(contents: &str) -> Result<Vec<Ipv4Route>, ()> {
     Ok(routes)
 }
 
-fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ()> {
+fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ProcNetParseError> {
     let mut lines = contents.lines();
     let header = lines.next().ok_or(())?;
     if !header.starts_with("IP address") {
@@ -131,7 +142,7 @@ fn parse_ipv4_neighbours(contents: &str) -> Result<Vec<Ipv4Neighbour>, ()> {
     Ok(neighbours)
 }
 
-fn parse_proc_ipv4(value: &str) -> Result<Ipv4Addr, ()> {
+fn parse_proc_ipv4(value: &str) -> Result<Ipv4Addr, ProcNetParseError> {
     let raw = u32::from_str_radix(value, 16).map_err(|_| ())?;
     Ok(Ipv4Addr::from(raw.to_ne_bytes()))
 }
