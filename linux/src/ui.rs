@@ -205,6 +205,7 @@ pub fn build_ui(application: &adw::Application) {
                 *active_for_scan.borrow_mut() = Some(handle);
                 button_for_scan.set_label("Cancel scan");
                 refresh_button_for_scan.set_sensitive(false);
+                refresh_button_for_scan.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
