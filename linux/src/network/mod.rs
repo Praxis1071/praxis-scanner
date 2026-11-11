@@ -3,6 +3,8 @@
 //! This module deliberately does not open raw sockets, modify routes, change
 //! system settings, or require elevated capabilities.
 
+pub mod cidr;
+
 use std::net::Ipv4Addr;
 
 use nix::ifaddrs::getifaddrs;
