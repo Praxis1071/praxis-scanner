@@ -1,6 +1,7 @@
 mod preferences {
     use std::fs::{self, OpenOptions};
     use std::io::{self, Write};
+    use std::net::Ipv4Addr;
     use std::path::{Path, PathBuf};
 
     #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -31,6 +32,7 @@ mod preferences {
     }
 
     pub const MAX_CUSTOM_PORTS: usize = 128;
+    pub const MAX_DEVICE_CUSTOMIZATIONS: usize = 1024;
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct CustomPort {
@@ -40,10 +42,18 @@ mod preferences {
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct DeviceCustomization {
+        pub address: Ipv4Addr,
+        pub custom_name: Option<String>,
+        pub icon_key: Option<String>,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct AppPreferences {
         pub auto_scan_on_start: bool,
         pub theme: ThemeMode,
         pub custom_ports: Vec<CustomPort>,
+        pub device_customizations: Vec<DeviceCustomization>,
     }
 
     impl Default for AppPreferences {
@@ -53,6 +63,7 @@ mod preferences {
                 auto_scan_on_start: false,
                 theme: ThemeMode::System,
                 custom_ports: Vec::new(),
+                device_customizations: Vec::new(),
             }
         }
     }
@@ -109,6 +120,56 @@ mod preferences {
             if let Some(item) = self.custom_ports.iter_mut().find(|item| item.port == port) {
                 item.enabled = enabled;
             }
+        }
+
+        pub fn customization_for(&self, address: Ipv4Addr) -> Option<&DeviceCustomization> {
+            self.device_customizations
+                .iter()
+                .find(|item| item.address == address)
+        }
+
+        pub fn set_device_customization(
+            &mut self,
+            address: Ipv4Addr,
+            custom_name: Option<&str>,
+            icon_key: Option<&str>,
+        ) -> Result<(), &'static str> {
+            let custom_name = custom_name.map(str::trim).filter(|name| !name.is_empty());
+            if custom_name.is_some_and(|name| !valid_device_name(name)) {
+                return Err("Device names must be 1–48 characters and contain no control characters or |.");
+            }
+            let icon_key = icon_key.filter(|key| *key != "auto");
+            if icon_key.is_some_and(|key| !valid_icon_key(key)) {
+                return Err("Choose one of the supported device icons.");
+            }
+
+            if custom_name.is_none() && icon_key.is_none() {
+                self.device_customizations
+                    .retain(|item| item.address != address);
+                return Ok(());
+            }
+
+            if let Some(item) = self
+                .device_customizations
+                .iter_mut()
+                .find(|item| item.address == address)
+            {
+                item.custom_name = custom_name.map(str::to_owned);
+                item.icon_key = icon_key.map(str::to_owned);
+                return Ok(());
+            }
+
+            if self.device_customizations.len() >= MAX_DEVICE_CUSTOMIZATIONS {
+                return Err("The device customization list is full.");
+            }
+
+            self.device_customizations.push(DeviceCustomization {
+                address,
+                custom_name: custom_name.map(str::to_owned),
+                icon_key: icon_key.map(str::to_owned),
+            });
+            self.device_customizations.sort_by_key(|item| item.address);
+            Ok(())
         }
 
         fn load_from(path: &Path) -> io::Result<Self> {
@@ -174,6 +235,48 @@ mod preferences {
                             enabled,
                         });
                     }
+                    "device" => {
+                        let mut fields = value.splitn(3, '|');
+                        let Some(address) = fields.next().and_then(|item| item.parse::<Ipv4Addr>().ok()) else {
+                            continue;
+                        };
+                        let Some(name) = fields.next() else {
+                            continue;
+                        };
+                        let Some(icon) = fields.next() else {
+                            continue;
+                        };
+                        let custom_name = if name.is_empty() {
+                            None
+                        } else if valid_device_name(name) {
+                            Some(name.to_owned())
+                        } else {
+                            continue;
+                        };
+                        let icon_key = if icon.is_empty() {
+                            None
+                        } else if valid_icon_key(icon) {
+                            Some(icon.to_owned())
+                        } else {
+                            continue;
+                        };
+                        if custom_name.is_none() && icon_key.is_none() {
+                            continue;
+                        }
+                        if preferences
+                            .device_customizations
+                            .iter()
+                            .any(|item| item.address == address)
+                            || preferences.device_customizations.len() >= MAX_DEVICE_CUSTOMIZATIONS
+                        {
+                            continue;
+                        }
+                        preferences.device_customizations.push(DeviceCustomization {
+                            address,
+                            custom_name,
+                            icon_key,
+                        });
+                    }
                     _ => {}
                 }
             }
@@ -185,6 +288,7 @@ mod preferences {
                 ));
             }
             preferences.custom_ports.sort_by_key(|item| item.port);
+            preferences.device_customizations.sort_by_key(|item| item.address);
             Ok(preferences)
         }
 
@@ -211,6 +315,22 @@ mod preferences {
                     item.port, item.enabled, item.service_name
                 ));
             }
+            for item in &self.device_customizations {
+                if item.custom_name.as_deref().is_some_and(|name| !valid_device_name(name))
+                    || item.icon_key.as_deref().is_some_and(|icon| !valid_icon_key(icon))
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "device customization contains an invalid value",
+                    ));
+                }
+                contents.push_str(&format!(
+                    "device={}|{}|{}\n",
+                    item.address,
+                    item.custom_name.as_deref().unwrap_or(""),
+                    item.icon_key.as_deref().unwrap_or("")
+                ));
+            }
 
             let temporary = path.with_extension(format!("tmp.{}", std::process::id()));
             let mut options = OpenOptions::new();
@@ -234,6 +354,19 @@ mod preferences {
             && value.chars().all(|character| {
                 character.is_ascii_alphanumeric() || " -_./".contains(character)
             })
+    }
+
+    fn valid_device_name(value: &str) -> bool {
+        !value.is_empty()
+            && value.chars().count() <= 48
+            && value.chars().all(|character| !character.is_control() && character != '|')
+    }
+
+    fn valid_icon_key(value: &str) -> bool {
+        matches!(
+            value,
+            "computer" | "phone" | "tablet" | "printer" | "router" | "server" | "network" | "other"
+        )
     }
 
     fn preferences_path() -> PathBuf {
@@ -292,6 +425,43 @@ mod preferences {
             }
             assert!(preferences
                 .add_custom_port(20_000, "Overflow")
+                .is_err());
+        }
+
+        #[test]
+        fn device_customizations_round_trip_and_can_be_reset() {
+            let path = std::env::temp_dir().join(format!(
+                "praxis-scanner-device-preferences-{}.ini",
+                std::process::id()
+            ));
+            let address = "192.0.2.42".parse().expect("valid test IPv4");
+            let mut preferences = AppPreferences::default();
+            preferences
+                .set_device_customization(address, Some("Office NAS"), Some("server"))
+                .expect("valid device customization");
+            preferences.save_to(&path).expect("save customizations");
+
+            let mut loaded = AppPreferences::load_from(&path).expect("load customizations");
+            let customization = loaded.customization_for(address).expect("saved customization");
+            assert_eq!(customization.custom_name.as_deref(), Some("Office NAS"));
+            assert_eq!(customization.icon_key.as_deref(), Some("server"));
+
+            loaded
+                .set_device_customization(address, None, None)
+                .expect("reset customization");
+            assert!(loaded.customization_for(address).is_none());
+            let _ = fs::remove_file(path);
+        }
+
+        #[test]
+        fn device_customization_rejects_invalid_names_and_icons() {
+            let mut preferences = AppPreferences::default();
+            let address = "192.0.2.43".parse().expect("valid test IPv4");
+            assert!(preferences
+                .set_device_customization(address, Some("bad|name"), Some("server"))
+                .is_err());
+            assert!(preferences
+                .set_device_customization(address, Some("Valid"), Some("unknown"))
                 .is_err());
         }
 
