@@ -243,16 +243,20 @@ fn refresh_interfaces(
                 list.append(&interface_row(interface));
             }
 
-            let first_usable = interfaces.iter().enumerate().find(|(_, interface)| {
-                interface.is_up
-                    && !interface.is_loopback
-                    && !interface.address.is_unspecified()
-                    && interface.prefix.is_some()
-            });
+            let first_usable = interfaces
+                .iter()
+                .enumerate()
+                .find(|(_, interface)| {
+                    interface.is_up
+                        && !interface.is_loopback
+                        && !interface.address.is_unspecified()
+                        && interface.prefix.is_some()
+                })
+                .map(|(index, interface)| (index, interface.clone()));
             *interfaces_state.borrow_mut() = interfaces;
 
             if let Some((index, interface)) = first_usable {
-                *selected_state.borrow_mut() = Some(interface.clone());
+                *selected_state.borrow_mut() = Some(interface);
                 if let Some(row) = list.row_at_index(index as i32) {
                     list.select_row(Some(&row));
                 }
