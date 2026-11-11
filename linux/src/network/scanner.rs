@@ -504,7 +504,7 @@ fn collect_service_banner(
 
     if matches!(port, 80 | 8000 | 8008 | 8080 | 8081 | 8888) {
         let request = format!(
-            "HEAD / HTTP/1.0\\r\\nHost: {address}\\r\\nConnection: close\\r\\n\\r\\n"
+            "HEAD / HTTP/1.0\r\nHost: {address}\r\nConnection: close\r\n\r\n"
         );
         stream.write_all(request.as_bytes()).ok()?;
     }
@@ -522,7 +522,7 @@ fn sanitize_service_banner(bytes: &[u8]) -> Option<String> {
     let first_line = decoded.lines().find(|line| !line.trim().is_empty())?;
     let sanitized = first_line
         .chars()
-        .filter(|character| !character.is_control() || *character == '\\t')
+        .filter(|character| !character.is_control() || *character == '\t')
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -652,11 +652,11 @@ mod tests {
     #[test]
     fn service_banner_sanitizer_keeps_one_bounded_printable_line() {
         let banner = super::sanitize_service_banner(
-            b"SSH-2.0-OpenSSH_9.8\\r\\nignored second line\\n",
+            b"SSH-2.0-OpenSSH_9.8\r\nignored second line\\n",
         )
         .expect("valid banner");
         assert_eq!(banner, "SSH-2.0-OpenSSH_9.8");
-        assert!(super::sanitize_service_banner(b"\\0\\r\\n").is_none());
+        assert!(super::sanitize_service_banner(b"\\0\r\n").is_none());
     }
 
     #[test]
