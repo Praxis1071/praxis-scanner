@@ -8,6 +8,7 @@ use gtk::glib;
 
 use crate::network::cidr::Ipv4Network;
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
+use crate::network::ssdp::{self, SsdpEvent, SsdpHandle};
 use crate::network::scanner::{
     self, HostScanResult, ScanEvent, ScanHandle, MAX_SCAN_TARGETS,
 };
@@ -70,6 +71,21 @@ pub fn build_ui(application: &adw::Application) {
     mdns_button.set_margin_start(18);
     mdns_button.set_margin_top(8);
 
+    let ssdp_button = gtk::Button::with_label("Discover UPnP devices (SSDP)");
+    ssdp_button.set_sensitive(false);
+    ssdp_button.set_halign(gtk::Align::Start);
+    ssdp_button.set_margin_start(18);
+    ssdp_button.set_margin_top(8);
+
+    let ssdp_note = gtk::Label::new(Some(
+        "Sends one SSDP M-SEARCH multicast query on the selected IPv4 interface. Responses are unauthenticated; device-description URLs are shown only as untrusted text and are never downloaded.",
+    ));
+    ssdp_note.set_halign(gtk::Align::Start);
+    ssdp_note.set_wrap(true);
+    ssdp_note.set_margin_start(18);
+    ssdp_note.set_margin_end(18);
+    ssdp_note.add_css_class("dim-label");
+
     let mdns_note = gtk::Label::new(Some(
         "mDNS/DNS-SD sends multicast queries on the selected interface only. Responses are unauthenticated and may be spoofed; use on trusted local networks. It does not identify every device.",
     ));
@@ -115,6 +131,19 @@ pub fn build_ui(application: &adw::Application) {
     mdns_results_list.set_margin_start(18);
     mdns_results_list.set_margin_end(18);
 
+    let ssdp_results_heading = gtk::Label::new(Some("Discovered UPnP devices (SSDP)"));
+    ssdp_results_heading.add_css_class("title-2");
+    ssdp_results_heading.set_halign(gtk::Align::Start);
+    ssdp_results_heading.set_margin_start(18);
+    ssdp_results_heading.set_margin_top(18);
+    ssdp_results_heading.set_margin_bottom(8);
+
+    let ssdp_results_list = gtk::ListBox::new();
+    ssdp_results_list.set_selection_mode(gtk::SelectionMode::None);
+    ssdp_results_list.add_css_class("boxed-list");
+    ssdp_results_list.set_margin_start(18);
+    ssdp_results_list.set_margin_end(18);
+
     let status = gtk::Label::new(Some("Reading local interface information…"));
     status.set_halign(gtk::Align::Start);
     status.set_wrap(true);
@@ -134,11 +163,15 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&scan_button);
     content.append(&mdns_button);
     content.append(&mdns_note);
+    content.append(&ssdp_button);
+    content.append(&ssdp_note);
     content.append(&scope_note);
     content.append(&results_heading);
     content.append(&results_list);
     content.append(&mdns_results_heading);
     content.append(&mdns_results_list);
+    content.append(&ssdp_results_heading);
+    content.append(&ssdp_results_list);
     content.append(&status);
 
     let scrolled = gtk::ScrolledWindow::builder()
@@ -158,11 +191,13 @@ pub fn build_ui(application: &adw::Application) {
     let selected_interface = Rc::new(RefCell::new(None::<NetworkInterface>));
     let active_scan = Rc::new(RefCell::new(None::<ScanHandle>));
     let active_mdns = Rc::new(RefCell::new(None::<MdnsHandle>));
+    let active_ssdp = Rc::new(RefCell::new(None::<SsdpHandle>));
 
     let interfaces_for_selection = Rc::clone(&interfaces);
     let selected_for_selection = Rc::clone(&selected_interface);
     let scan_button_for_selection = scan_button.clone();
     let mdns_button_for_selection = mdns_button.clone();
+    let ssdp_button_for_selection = ssdp_button.clone();
     let status_for_selection = status.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
@@ -174,6 +209,7 @@ pub fn build_ui(application: &adw::Application) {
         let can_scan = selected.as_ref().is_some_and(is_scannable_interface);
         scan_button_for_selection.set_sensitive(can_scan);
         mdns_button_for_selection.set_sensitive(can_scan);
+        ssdp_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
                 "Selected {} ({}/{}). Press Scan selected network to begin; no scan starts automatically.",
@@ -192,6 +228,7 @@ pub fn build_ui(application: &adw::Application) {
     let selected_for_refresh = Rc::clone(&selected_interface);
     let scan_button_for_refresh = scan_button.clone();
     let mdns_button_for_refresh = mdns_button.clone();
+    let ssdp_button_for_refresh = ssdp_button.clone();
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
             &list_for_refresh,
@@ -201,6 +238,7 @@ pub fn build_ui(application: &adw::Application) {
             &selected_for_refresh,
             &scan_button_for_refresh,
             &mdns_button_for_refresh,
+            &ssdp_button_for_refresh,
         );
     });
 
@@ -214,6 +252,9 @@ pub fn build_ui(application: &adw::Application) {
     let interface_list_for_scan = list.clone();
     let port_entry_for_sensitivity = port_entry.clone();
     let mdns_button_for_tcp = mdns_button.clone();
+    let ssdp_button_for_tcp = ssdp_button.clone();
+    let active_mdns_for_tcp = Rc::clone(&active_mdns);
+    let active_ssdp_for_tcp = Rc::clone(&active_ssdp);
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -224,6 +265,10 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
+        if active_mdns_for_tcp.borrow().is_some() || active_ssdp_for_tcp.borrow().is_some() {
+            status_for_scan.set_text("Wait for the active service-discovery operation to finish first.");
+            return;
+        }
         let Some(interface) = selected_for_scan.borrow().clone() else {
             status_for_scan.set_text("Select an IPv4 network interface first.");
             return;
@@ -291,6 +336,7 @@ pub fn build_ui(application: &adw::Application) {
                 interface_list_for_scan.set_sensitive(false);
                 port_entry_for_sensitivity.set_sensitive(false);
                 mdns_button_for_tcp.set_sensitive(false);
+                ssdp_button_for_tcp.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) across {port_count} TCP port(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
@@ -304,6 +350,7 @@ pub fn build_ui(application: &adw::Application) {
                 let interface_list_for_events = interface_list_for_scan.clone();
                 let port_entry_for_events = port_entry_for_sensitivity.clone();
                 let mdns_button_for_events = mdns_button_for_tcp.clone();
+                let ssdp_button_for_events = ssdp_button_for_tcp.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let selected_for_events = Rc::clone(&selected_for_scan);
                 let mut completed = 0usize;
@@ -339,6 +386,9 @@ pub fn build_ui(application: &adw::Application) {
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
                                 mdns_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 let mac_summary = match network::system::read_ipv4_neighbours() {
@@ -379,6 +429,8 @@ pub fn build_ui(application: &adw::Application) {
     let selected_for_mdns = Rc::clone(&selected_interface);
     let active_mdns_for_scan = Rc::clone(&active_mdns);
     let active_tcp_for_mdns = Rc::clone(&active_scan);
+    let active_ssdp_for_mdns = Rc::clone(&active_ssdp);
+    let ssdp_button_for_mdns = ssdp_button.clone();
     let refresh_for_mdns = refresh_button.clone();
     let interface_list_for_mdns = list.clone();
     let port_entry_for_mdns = port_entry.clone();
@@ -391,7 +443,7 @@ pub fn build_ui(application: &adw::Application) {
             status_for_mdns.set_text("mDNS cancellation requested; waiting for the discovery worker to stop.");
             return;
         }
-        if active_tcp_for_mdns.borrow().is_some() {
+        if active_tcp_for_mdns.borrow().is_some() || active_ssdp_for_mdns.borrow().is_some() {
             status_for_mdns.set_text("Wait for the TCP scan to finish before starting mDNS discovery.");
             return;
         }
@@ -439,6 +491,7 @@ pub fn build_ui(application: &adw::Application) {
                 *active_mdns_for_scan.borrow_mut() = Some(handle);
                 mdns_button_for_scan.set_label("Cancel mDNS discovery");
                 tcp_button_for_mdns.set_sensitive(false);
+                ssdp_button_for_mdns.set_sensitive(false);
                 refresh_for_mdns.set_sensitive(false);
                 interface_list_for_mdns.set_sensitive(false);
                 port_entry_for_mdns.set_sensitive(false);
@@ -453,6 +506,7 @@ pub fn build_ui(application: &adw::Application) {
                 let status_for_events = status_for_mdns.clone();
                 let mdns_button_for_events = mdns_button_for_scan.clone();
                 let tcp_button_for_events = tcp_button_for_mdns.clone();
+                let ssdp_button_for_events = ssdp_button_for_mdns.clone();
                 let refresh_for_events = refresh_for_mdns.clone();
                 let interface_list_for_events = interface_list_for_mdns.clone();
                 let port_entry_for_events = port_entry_for_mdns.clone();
@@ -485,6 +539,9 @@ pub fn build_ui(application: &adw::Application) {
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 tcp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                ssdp_button_for_events.set_sensitive(
                                     selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
                                 );
                                 refresh_for_events.set_sensitive(true);
@@ -522,13 +579,175 @@ pub fn build_ui(application: &adw::Application) {
         }
     });
 
+    let status_for_ssdp = status.clone();
+    let ssdp_button_for_scan = ssdp_button.clone();
+    let selected_for_ssdp = Rc::clone(&selected_interface);
+    let active_ssdp_for_scan = Rc::clone(&active_ssdp);
+    let active_tcp_for_ssdp = Rc::clone(&active_scan);
+    let active_mdns_for_ssdp = Rc::clone(&active_mdns);
+    let refresh_for_ssdp = refresh_button.clone();
+    let interface_list_for_ssdp = list.clone();
+    let port_entry_for_ssdp = port_entry.clone();
+    let tcp_button_for_ssdp = scan_button.clone();
+    let mdns_button_for_ssdp = mdns_button.clone();
+    let ssdp_results_for_scan = ssdp_results_list.clone();
+    ssdp_button.connect_clicked(move |_| {
+        if let Some(handle) = active_ssdp_for_scan.borrow().as_ref() {
+            handle.cancel();
+            ssdp_button_for_scan.set_label("Cancelling SSDP…");
+            status_for_ssdp.set_text("SSDP cancellation requested; waiting for the discovery worker to stop.");
+            return;
+        }
+        if active_tcp_for_ssdp.borrow().is_some() || active_mdns_for_ssdp.borrow().is_some() {
+            status_for_ssdp.set_text("Wait for the active scan to finish before starting SSDP discovery.");
+            return;
+        }
+
+        let Some(interface) = selected_for_ssdp.borrow().clone() else {
+            status_for_ssdp.set_text("Select an eligible IPv4 network interface first.");
+            return;
+        };
+        if !is_scannable_interface(&interface) {
+            status_for_ssdp.set_text("Select an active private or link-local IPv4 interface first.");
+            return;
+        }
+        let Some(prefix) = interface.prefix else {
+            status_for_ssdp.set_text("The selected interface has no valid IPv4 netmask.");
+            return;
+        };
+        let network = match Ipv4Network::from_interface(
+            interface.address,
+            prefix,
+            MAX_SCAN_TARGETS as u32,
+        ) {
+            Ok(network) => network,
+            Err(error) => {
+                status_for_ssdp.set_text(&format!("Cannot discover devices on this subnet: {error}"));
+                return;
+            }
+        };
+        let mut allowed_addresses = network.hosts();
+        allowed_addresses.retain(|address| *address != interface.address);
+        if allowed_addresses.is_empty() {
+            status_for_ssdp.set_text("The selected subnet has no other candidate addresses.");
+            return;
+        }
+
+        while let Some(child) = ssdp_results_for_scan.first_child() {
+            ssdp_results_for_scan.remove(&child);
+        }
+
+        match ssdp::start_ssdp_discovery(
+            interface.address,
+            allowed_addresses,
+            ssdp::DEFAULT_SSDP_WINDOW,
+        ) {
+            Ok((handle, events)) => {
+                *active_ssdp_for_scan.borrow_mut() = Some(handle);
+                ssdp_button_for_scan.set_label("Cancel SSDP discovery");
+                tcp_button_for_ssdp.set_sensitive(false);
+                mdns_button_for_ssdp.set_sensitive(false);
+                refresh_for_ssdp.set_sensitive(false);
+                interface_list_for_ssdp.set_sensitive(false);
+                port_entry_for_ssdp.set_sensitive(false);
+                status_for_ssdp.set_text(&format!(
+                    "Sending one SSDP M-SEARCH query on {} ({}/{}) for up to {} seconds…",
+                    interface.name,
+                    network.address(),
+                    network.prefix(),
+                    ssdp::DEFAULT_SSDP_WINDOW.as_secs()
+                ));
+
+                let status_for_events = status_for_ssdp.clone();
+                let ssdp_button_for_events = ssdp_button_for_scan.clone();
+                let tcp_button_for_events = tcp_button_for_ssdp.clone();
+                let mdns_button_for_events = mdns_button_for_ssdp.clone();
+                let refresh_for_events = refresh_for_ssdp.clone();
+                let interface_list_for_events = interface_list_for_ssdp.clone();
+                let port_entry_for_events = port_entry_for_ssdp.clone();
+                let results_for_events = ssdp_results_for_scan.clone();
+                let active_for_events = Rc::clone(&active_ssdp_for_scan);
+                let selected_for_events = Rc::clone(&selected_for_ssdp);
+
+                glib::timeout_add_local(Duration::from_millis(100), move || {
+                    while let Ok(event) = events.try_recv() {
+                        match event {
+                            SsdpEvent::DeviceFound(device) => {
+                                let server = device.server.as_deref().unwrap_or("server header not supplied");
+                                let location = device.location.as_deref().unwrap_or("location not supplied");
+                                let details = format!(
+                                    "{}  ·  {}  ·  {server}  ·  untrusted location (not fetched): {location}",
+                                    device.address,
+                                    device.search_target
+                                );
+                                let row = adw::ActionRow::builder()
+                                    .title(&device.unique_service_name)
+                                    .subtitle(&details)
+                                    .activatable(false)
+                                    .build();
+                                results_for_events.append(&row);
+                            }
+                            SsdpEvent::Failed(error) => {
+                                active_for_events.borrow_mut().take();
+                                ssdp_button_for_events.set_label("Discover UPnP devices (SSDP)");
+                                ssdp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                tcp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                mdns_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                refresh_for_events.set_sensitive(true);
+                                interface_list_for_events.set_sensitive(true);
+                                port_entry_for_events.set_sensitive(true);
+                                status_for_events.set_text(&format!("SSDP discovery failed: {error}"));
+                                return glib::ControlFlow::Break;
+                            }
+                            SsdpEvent::Finished { responses, cancelled } => {
+                                active_for_events.borrow_mut().take();
+                                ssdp_button_for_events.set_label("Discover UPnP devices (SSDP)");
+                                ssdp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                tcp_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                mdns_button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                refresh_for_events.set_sensitive(true);
+                                interface_list_for_events.set_sensitive(true);
+                                port_entry_for_events.set_sensitive(true);
+                                let state = if cancelled { "cancelled" } else { "finished" };
+                                status_for_events.set_text(&format!(
+                                    "SSDP discovery {state}: {responses} response(s) received from the selected IPv4 subnet. Responses are unverified."
+                                ));
+                                return glib::ControlFlow::Break;
+                            }
+                        }
+                    }
+                    glib::ControlFlow::Continue
+                });
+            }
+            Err(error) => {
+                status_for_ssdp.set_text(&format!("Could not start SSDP discovery: {error}"));
+            }
+        }
+    });
+
     let active_for_close = Rc::clone(&active_scan);
+    let active_ssdp_for_close = Rc::clone(&active_ssdp);
     let active_mdns_for_close = Rc::clone(&active_mdns);
     window.connect_close_request(move |_| {
         if let Some(handle) = active_for_close.borrow().as_ref() {
             handle.cancel();
         }
         if let Some(handle) = active_mdns_for_close.borrow().as_ref() {
+            handle.cancel();
+        }
+        if let Some(handle) = active_ssdp_for_close.borrow().as_ref() {
             handle.cancel();
         }
         glib::Propagation::Proceed
@@ -542,6 +761,7 @@ pub fn build_ui(application: &adw::Application) {
         &selected_interface,
         &scan_button,
         &mdns_button,
+        &ssdp_button,
     );
     window.present();
 }
@@ -562,6 +782,7 @@ fn refresh_interfaces(
     selected_state: &Rc<RefCell<Option<NetworkInterface>>>,
     scan_button: &gtk::Button,
     mdns_button: &gtk::Button,
+    ssdp_button: &gtk::Button,
 ) {
     while let Some(child) = list.first_child() {
         list.remove(&child);
@@ -569,6 +790,7 @@ fn refresh_interfaces(
     *selected_state.borrow_mut() = None;
     scan_button.set_sensitive(false);
     mdns_button.set_sensitive(false);
+    ssdp_button.set_sensitive(false);
 
     match network::ipv4_interfaces() {
         Ok(interfaces) => {
