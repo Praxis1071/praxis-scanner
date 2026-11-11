@@ -1862,7 +1862,7 @@ fn device_detail_page(
     page_content.append(&scrolled);
 
     adw::NavigationPage::builder()
-        .title(format!("Device {}", device.address))
+        .title(display_name)
         .child(&page_content)
         .build()
 }
