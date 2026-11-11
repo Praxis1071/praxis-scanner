@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** GTK4/libadwaita shell, bounded TCP discovery, read-only route/ARP summaries, and configurable ports are present in source; build/runtime verification pending  
+> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, and opt-in interface-scoped mDNS/DNS-SD are present in source. Full CI passed on `b6d808a`; later validation/UI refinements are awaiting CI. Host and Flatpak runtime verification remain pending  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -130,9 +130,9 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation is authorized and active on this branch. Source now includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect discovery, configurable ports, conservative service hints, and scan cancellation. These are source-level additions only: compilation, formatting, Clippy, and runtime behavior remain unverified. Implementation must proceed incrementally, and no feature is considered complete until its tests and behavior are verified.
+Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, and opt-in interface-scoped IPv4 mDNS/DNS-SD service discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `b6d808a`. Newer mDNS validation and UI wording changes are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
-**Current milestone:** make CI reliable and obtain the first successful build/test/lint result; then validate scanner behavior and continue the full device/results experience.
+**Current milestone:** validate the latest mDNS changes in CI; then exercise TCP and mDNS behavior on a controlled local network, refine the device/results experience, and continue protocol discovery without weakening the unprivileged security policy.
 
 ### 5.1 Foundation and application shell
 
@@ -151,7 +151,7 @@ Implementation is authorized and active on this branch. Source now includes the 
 
 ### 5.3 Protocol discovery and inspection
 
-- [ ] Implement mDNS discovery.
+- [ ] Implement mDNS discovery. (A bounded, interface-scoped source implementation exists; runtime and Flatpak verification remain pending.)
 - [ ] Implement SSDP/UPnP discovery with bounded, safe device-description retrieval.
 - [ ] Implement NetBIOS discovery where justified by feasibility results.
 - [ ] Implement reverse DNS lookup with timeouts and cancellation.
