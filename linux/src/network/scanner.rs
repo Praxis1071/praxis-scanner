@@ -136,10 +136,14 @@ pub enum DeepScanEvent {
 
 /// Start a bounded, parallel TCP port scan against one explicitly selected device.
 pub fn start_device_deep_scan(
+    source_address: Ipv4Addr,
     address: Ipv4Addr,
     mut ports: Vec<u16>,
     timeout: Duration,
 ) -> Result<(ScanHandle, mpsc::Receiver<DeepScanEvent>), ScanStartError> {
+    if source_address.is_unspecified() {
+        return Err(ScanStartError::InvalidSourceAddress);
+    }
     if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
         return Err(ScanStartError::InvalidTimeout);
     }
@@ -999,6 +1003,7 @@ mod tests {
         assert!(matches!(
             super::start_device_deep_scan(
                 Ipv4Addr::LOCALHOST,
+                Ipv4Addr::LOCALHOST,
                 vec![0],
                 Duration::from_millis(100)
             ),
@@ -1006,6 +1011,7 @@ mod tests {
         ));
         assert!(matches!(
             super::start_device_deep_scan(
+                Ipv4Addr::LOCALHOST,
                 Ipv4Addr::LOCALHOST,
                 (1..=MAX_TCP_PORTS + 1).map(|port| port as u16).collect(),
                 Duration::from_millis(100)
@@ -1193,6 +1199,7 @@ mod tests {
         );
         assert_eq!(
             start_tcp_discovery_with_ports(
+                Ipv4Addr::LOCALHOST,
                 vec![Ipv4Addr::LOCALHOST],
                 vec![0],
                 Duration::from_millis(100),
@@ -1209,6 +1216,7 @@ mod tests {
             .collect();
         assert!(matches!(
             start_tcp_discovery_with_ports(
+                Ipv4Addr::LOCALHOST,
                 vec![Ipv4Addr::LOCALHOST],
                 ports,
                 Duration::from_millis(100),
@@ -1220,7 +1228,7 @@ mod tests {
     #[test]
     fn rejects_zero_timeout() {
         assert_eq!(
-            start_tcp_discovery_with_ports(vec![Ipv4Addr::LOCALHOST], DEFAULT_TCP_PORTS.to_vec(), Duration::ZERO).err(),
+            start_tcp_discovery_with_ports(Ipv4Addr::LOCALHOST, vec![Ipv4Addr::LOCALHOST], DEFAULT_TCP_PORTS.to_vec(), Duration::ZERO).err(),
             Some(ScanStartError::InvalidTimeout)
         );
     }
