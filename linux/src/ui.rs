@@ -291,6 +291,7 @@ pub fn build_ui(application: &adw::Application) {
     let navigation_for_selection = navigation_view.clone();
     let active_device_scan_for_selection = Rc::clone(&active_device_scan);
     let scan_button_for_selection = scan_button.clone();
+    let refresh_button_for_selection = refresh_button.clone();
     let mdns_button_for_selection = mdns_button.clone();
     let ssdp_button_for_selection = ssdp_button.clone();
     let netbios_button_for_selection = netbios_button.clone();
@@ -331,6 +332,8 @@ pub fn build_ui(application: &adw::Application) {
             &devices_for_selection,
             &catalog_for_selection.borrow(),
             &navigation_for_selection,
+            &list,
+            &refresh_button_for_selection,
             &active_device_scan_for_selection,
             &catalog_for_selection,
             selected.as_ref().filter(|interface| is_scannable_interface(interface)).map(|interface| interface.address),
@@ -338,6 +341,7 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let list_for_refresh = list.clone();
+    let refresh_button_for_refresh = refresh_button.clone();
     let status_for_refresh = status.clone();
     let system_info_for_refresh = system_info.clone();
     let interfaces_for_refresh = Rc::clone(&interfaces);
@@ -370,6 +374,8 @@ pub fn build_ui(application: &adw::Application) {
             &devices_for_refresh,
             &catalog_for_refresh.borrow(),
             &navigation_for_refresh,
+            &list_for_refresh,
+            &refresh_button_for_refresh,
             &active_device_scan_for_refresh,
             &catalog_for_refresh,
             selected_for_refresh
@@ -529,6 +535,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -599,6 +607,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -764,6 +774,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -980,6 +992,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -1169,6 +1183,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -1367,6 +1383,8 @@ pub fn build_ui(application: &adw::Application) {
                                     &devices_for_events,
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
+                                    &interface_list_for_events,
+                                    &refresh_button_for_events,
                                     &active_device_scan_for_events,
                                     &catalog_for_events,
                                     selected_for_events
@@ -1469,6 +1487,8 @@ pub fn build_ui(application: &adw::Application) {
         &devices_list,
         &device_catalog.borrow(),
         &navigation_view,
+        &list,
+        &refresh_button,
         &active_device_scan,
         &device_catalog,
         selected_interface
