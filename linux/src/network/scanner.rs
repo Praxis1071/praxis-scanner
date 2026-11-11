@@ -14,6 +14,7 @@ pub const MAX_CONCURRENT_WORKERS: usize = 32;
 pub const DEFAULT_TCP_TIMEOUT: Duration = Duration::from_millis(450);
 pub const DEFAULT_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
 pub const MAX_TCP_PORTS: usize = 256;
+pub const MAX_SCAN_PROBES: usize = 8_192;
 
 /// Return a conventional service label for a TCP port, not a verified service identity.
 pub fn service_name(port: u16) -> Option<&'static str> {
@@ -55,6 +56,7 @@ pub enum ScanStartError {
     InvalidTimeout,
     EmptyPortList,
     TooManyPorts { requested: usize, limit: usize },
+    TooManyProbes { requested: usize, limit: usize },
     InvalidPort(u16),
 }
 
@@ -72,6 +74,10 @@ impl std::fmt::Display for ScanStartError {
             Self::TooManyPorts { requested, limit } => write!(
                 formatter,
                 "port list contains {requested} ports; the configured limit is {limit}"
+            ),
+            Self::TooManyProbes { requested, limit } => write!(
+                formatter,
+                "scan would perform {requested} TCP connection attempts; the configured limit is {limit}"
             ),
             Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
         }
@@ -185,6 +191,13 @@ pub fn start_tcp_discovery_with_ports(
     }
     ports.sort_unstable();
     ports.dedup();
+    let requested_probes = hosts.len().saturating_mul(ports.len());
+    if requested_probes > MAX_SCAN_PROBES {
+        return Err(ScanStartError::TooManyProbes {
+            requested: requested_probes,
+            limit: MAX_SCAN_PROBES,
+        });
+    }
 
     let ports = Arc::new(ports);
     let cancelled = Arc::new(AtomicBool::new(false));
@@ -403,6 +416,18 @@ mod tests {
 
         assert!(open_ports.is_empty());
         assert!(!responded);
+    }
+
+    #[test]
+    fn rejects_scan_combinations_above_the_probe_budget() {
+        let hosts = vec![Ipv4Addr::LOCALHOST; 33];
+        let ports = (1..=MAX_SCAN_TARGETS.min(super::MAX_TCP_PORTS))
+            .map(|port| port as u16)
+            .collect::<Vec<_>>();
+        assert!(matches!(
+            super::start_tcp_discovery_with_ports(hosts, ports, Duration::from_millis(100)),
+            Err(ScanStartError::TooManyProbes { .. })
+        ));
     }
 
     #[test]
