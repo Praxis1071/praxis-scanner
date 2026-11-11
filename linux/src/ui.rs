@@ -1311,6 +1311,158 @@ fn device_detail_page(
     }
     content.append(&identity);
 
+    let customization_heading = gtk::Label::new(Some("Device customization"));
+    customization_heading.add_css_class("title-2");
+    customization_heading.set_halign(gtk::Align::Start);
+    content.append(&customization_heading);
+
+    let name_form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let name_entry = gtk::Entry::new();
+    name_entry.set_placeholder_text(Some("Custom device name"));
+    name_entry.set_max_length(48);
+    name_entry.set_hexpand(true);
+    if let Some(name) = customization
+        .as_ref()
+        .and_then(|item| item.custom_name.as_deref())
+    {
+        name_entry.set_text(name);
+    }
+    let save_name_button = gtk::Button::with_label("Save name");
+    save_name_button.add_css_class("suggested-action");
+    let reset_name_button = gtk::Button::with_label("Reset");
+    name_form.append(&name_entry);
+    name_form.append(&save_name_button);
+    name_form.append(&reset_name_button);
+    content.append(&name_form);
+
+    let icon_form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let icon_dropdown = gtk::DropDown::from_strings(&[
+        "Automatic",
+        "Computer",
+        "Phone",
+        "Tablet",
+        "Printer",
+        "Router",
+        "Server",
+        "Network",
+        "Other",
+    ]);
+    let selected_icon = customization
+        .as_ref()
+        .and_then(|item| item.icon_key.as_deref())
+        .unwrap_or("auto");
+    icon_dropdown.set_selected(match selected_icon {
+        "computer" => 1,
+        "phone" => 2,
+        "tablet" => 3,
+        "printer" => 4,
+        "router" => 5,
+        "server" => 6,
+        "network" => 7,
+        "other" => 8,
+        _ => 0,
+    });
+    icon_dropdown.set_hexpand(true);
+    let save_icon_button = gtk::Button::with_label("Save icon");
+    icon_form.append(&icon_dropdown);
+    icon_form.append(&save_icon_button);
+    content.append(&icon_form);
+
+    let customization_status = gtk::Label::new(Some(
+        "Names and icon choices are saved locally for this IPv4 address.",
+    ));
+    customization_status.set_wrap(true);
+    customization_status.set_halign(gtk::Align::Start);
+    customization_status.add_css_class("dim-label");
+    content.append(&customization_status);
+
+    let preferences_for_name = Rc::clone(&preferences);
+    let name_entry_for_save = name_entry.clone();
+    let name_status_for_save = customization_status.clone();
+    let row_for_name = device_row.clone();
+    let title_for_name = title.clone();
+    let address_for_name = device.address;
+    let icon_for_name = device_icon.clone();
+    save_name_button.connect_clicked(move |_| {
+        let custom_name = name_entry_for_save.text().to_string();
+        let icon_key = preferences_for_name
+            .borrow()
+            .customization_for(address_for_name)
+            .and_then(|item| item.icon_key.clone());
+        let mut updated = preferences_for_name.borrow().clone();
+        match updated.set_device_customization(
+            address_for_name,
+            Some(&custom_name),
+            icon_key.as_deref(),
+        ) {
+            Ok(()) => match updated.save() {
+                Ok(()) => {
+                    *preferences_for_name.borrow_mut() = updated;
+                    let label = if custom_name.trim().is_empty() {
+                        address_for_name.to_string()
+                    } else {
+                        custom_name.trim().to_owned()
+                    };
+                    row_for_name.set_title(&label);
+                    title_for_name.set_title(&label);
+                    name_status_for_save.set_text("Device name saved locally.");
+                    let _ = &icon_for_name;
+                }
+                Err(error) => name_status_for_save
+                    .set_text(&format!("Could not save device name: {error}")),
+            },
+            Err(error) => name_status_for_save.set_text(error),
+        }
+    });
+
+    let name_entry_for_reset = name_entry.clone();
+    let save_name_for_reset = save_name_button.clone();
+    reset_name_button.connect_clicked(move |_| {
+        name_entry_for_reset.set_text("");
+        save_name_for_reset.emit_clicked();
+    });
+
+    let preferences_for_icon = Rc::clone(&preferences);
+    let name_entry_for_icon = name_entry.clone();
+    let icon_dropdown_for_save = icon_dropdown.clone();
+    let icon_status_for_save = customization_status.clone();
+    let icon_for_save = device_icon.clone();
+    let address_for_icon = device.address;
+    save_icon_button.connect_clicked(move |_| {
+        let icon_key = match icon_dropdown_for_save.selected() {
+            1 => Some("computer"),
+            2 => Some("phone"),
+            3 => Some("tablet"),
+            4 => Some("printer"),
+            5 => Some("router"),
+            6 => Some("server"),
+            7 => Some("network"),
+            8 => Some("other"),
+            _ => None,
+        };
+        let custom_name = name_entry_for_icon.text().to_string();
+        let mut updated = preferences_for_icon.borrow().clone();
+        match updated.set_device_customization(
+            address_for_icon,
+            Some(&custom_name),
+            icon_key,
+        ) {
+            Ok(()) => match updated.save() {
+                Ok(()) => {
+                    *preferences_for_icon.borrow_mut() = updated;
+                    let icon_name = icon_key
+                        .map(icon_name_for_key)
+                        .unwrap_or("network-server-symbolic");
+                    icon_for_save.set_icon_name(Some(icon_name));
+                    icon_status_for_save.set_text("Device icon preference saved locally.");
+                }
+                Err(error) => icon_status_for_save
+                    .set_text(&format!("Could not save device icon: {error}")),
+            },
+            Err(error) => icon_status_for_save.set_text(error),
+        }
+    });
+
     let custom_service_names = preferences
         .borrow()
         .custom_ports
@@ -2112,4 +2264,18 @@ fn show_information_dialog(
     content.append(&close_button);
     dialog.set_content(Some(&content));
     dialog.present();
+}
+
+fn icon_name_for_key(key: &str) -> &'static str {
+    match key {
+        "computer" => "computer-symbolic",
+        "phone" => "phone-symbolic",
+        "tablet" => "tablet-symbolic",
+        "printer" => "printer-symbolic",
+        "router" => "network-wired-symbolic",
+        "server" => "network-server-symbolic",
+        "network" => "network-workgroup-symbolic",
+        "other" => "applications-other-symbolic",
+        _ => "network-server-symbolic",
+    }
 }
