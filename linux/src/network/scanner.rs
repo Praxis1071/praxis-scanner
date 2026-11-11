@@ -309,6 +309,7 @@ impl std::fmt::Display for PortListError {
 
 impl std::error::Error for PortListError {}
 
+#[derive(Clone)]
 pub struct ScanHandle {
     cancelled: Arc<AtomicBool>,
 }
