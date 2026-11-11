@@ -33,7 +33,7 @@ const COMMON_SERVICE_TYPES: &[&str] = &[
     "_ftp._tcp.local.",
 ];
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MdnsService {
     pub address: Ipv4Addr,
     pub fullname: String,
@@ -242,7 +242,7 @@ fn browse_on_selected_interface(
     }
 
     let deadline = Instant::now() + duration;
-    let mut results = HashSet::new();
+    let mut results = HashSet::<(String, Ipv4Addr, u16)>::new();
     let mut failed = None;
 
     while Instant::now() < deadline && !cancelled.load(Ordering::Relaxed) {
@@ -262,6 +262,7 @@ fn browse_on_selected_interface(
                     ServiceEvent::ServiceFound(_, fullname)
                         if subscription_type == ENUMERATION_TYPE =>
                     {
+                        let fullname = fullname.to_ascii_lowercase();
                         if is_valid_service_type(&fullname)
                             && !service_types.contains(&fullname)
                             && !pending_types.contains(&fullname)
@@ -300,7 +301,12 @@ fn browse_on_selected_interface(
                             if results.len() >= MAX_MDNS_RESULTS {
                                 break;
                             }
-                            if results.insert(service.clone())
+                            let result_key = (
+                                service.fullname.to_ascii_lowercase(),
+                                service.address,
+                                service.port,
+                            );
+                            if results.insert(result_key)
                                 && sender.send(MdnsEvent::ServiceFound(service)).is_err()
                             {
                                 return Ok(());
@@ -400,11 +406,12 @@ fn is_valid_service_type(service_type: &str) -> bool {
         return false;
     };
 
-    !service_name.is_empty()
+    let mut name_bytes = service_name.bytes();
+    name_bytes
+        .next()
+        .is_some_and(|byte| byte.is_ascii_alphanumeric())
         && service_name.len() <= 15
-        && service_name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        && name_bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
 #[cfg(test)]
@@ -423,6 +430,8 @@ mod tests {
         assert!(is_valid_service_type("_printer._udp.local."));
         assert!(!is_valid_service_type("http._tcp.local."));
         assert!(!is_valid_service_type("_bad_name._tcp.local."));
+        assert!(!is_valid_service_type("_-invalid._tcp.local."));
+        assert!(is_valid_service_type("_HTTP-ALT._tcp.local."));
         assert!(!is_valid_service_type("_this-service-name-is-too-long._tcp.local."));
         assert!(!is_valid_service_type("_http._tcp.example.com."));
         assert!(!is_valid_service_type("_http._sctp.local."));
