@@ -12,7 +12,8 @@ use std::time::Duration;
 pub const MAX_SCAN_TARGETS: usize = 1024;
 pub const MAX_CONCURRENT_WORKERS: usize = 32;
 pub const DEFAULT_TCP_TIMEOUT: Duration = Duration::from_millis(450);
-const COMMON_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
+pub const DEFAULT_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
+pub const MAX_TCP_PORTS: usize = 256;
 const MAX_TCP_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,6 +38,9 @@ pub enum ScanEvent {
 pub enum ScanStartError {
     TooManyTargets { requested: usize, limit: usize },
     InvalidTimeout,
+    EmptyPortList,
+    TooManyPorts { requested: usize, limit: usize },
+    InvalidPort(u16),
 }
 
 impl std::fmt::Display for ScanStartError {
@@ -49,11 +53,71 @@ impl std::fmt::Display for ScanStartError {
             Self::InvalidTimeout => formatter.write_str(
                 "TCP timeout must be greater than zero and no longer than five seconds",
             ),
+            Self::EmptyPortList => formatter.write_str("at least one TCP port must be selected"),
+            Self::TooManyPorts { requested, limit } => write!(
+                formatter,
+                "port list contains {requested} ports; the configured limit is {limit}"
+            ),
+            Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
         }
     }
 }
 
 impl std::error::Error for ScanStartError {}
+
+
+/// Parse a comma-separated list of TCP ports. Duplicate values are removed.
+pub fn parse_tcp_ports(input: &str) -> Result<Vec<u16>, PortListError> {
+    if input.trim().is_empty() {
+        return Err(PortListError::Empty);
+    }
+
+    let mut ports = Vec::new();
+    for item in input.split(',') {
+        let item = item.trim();
+        if item.is_empty() {
+            return Err(PortListError::EmptyItem);
+        }
+        let port = item
+            .parse::<u16>()
+            .map_err(|_| PortListError::InvalidNumber(item.to_owned()))?;
+        if port == 0 {
+            return Err(PortListError::PortZero);
+        }
+        if !ports.contains(&port) {
+            if ports.len() == MAX_TCP_PORTS {
+                return Err(PortListError::TooMany {
+                    limit: MAX_TCP_PORTS,
+                });
+            }
+            ports.push(port);
+        }
+    }
+    Ok(ports)
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PortListError {
+    Empty,
+    EmptyItem,
+    InvalidNumber(String),
+    PortZero,
+    TooMany { limit: usize },
+}
+
+impl std::fmt::Display for PortListError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Empty => formatter.write_str("enter at least one TCP port"),
+            Self::EmptyItem => formatter.write_str("remove empty entries from the port list"),
+            Self::InvalidNumber(value) => write!(formatter, "‘{value}’ is not a valid TCP port"),
+            Self::PortZero => formatter.write_str("TCP port 0 cannot be scanned"),
+            Self::TooMany { limit } => write!(formatter, "use no more than {limit} unique TCP ports"),
+        }
+    }
+}
+
+impl std::error::Error for PortListError {}
 
 pub struct ScanHandle {
     cancelled: Arc<AtomicBool>,
@@ -74,6 +138,15 @@ pub fn start_tcp_discovery(
     hosts: Vec<Ipv4Addr>,
     timeout: Duration,
 ) -> Result<(ScanHandle, mpsc::Receiver<ScanEvent>), ScanStartError> {
+    start_tcp_discovery_with_ports(hosts, DEFAULT_TCP_PORTS.to_vec(), timeout)
+}
+
+/// Start a bounded TCP-connect scan using a caller-supplied port list.
+pub fn start_tcp_discovery_with_ports(
+    hosts: Vec<Ipv4Addr>,
+    mut ports: Vec<u16>,
+    timeout: Duration,
+) -> Result<(ScanHandle, mpsc::Receiver<ScanEvent>), ScanStartError> {
     if hosts.len() > MAX_SCAN_TARGETS {
         return Err(ScanStartError::TooManyTargets {
             requested: hosts.len(),
@@ -83,7 +156,22 @@ pub fn start_tcp_discovery(
     if timeout.is_zero() || timeout > MAX_TCP_TIMEOUT {
         return Err(ScanStartError::InvalidTimeout);
     }
+    if ports.is_empty() {
+        return Err(ScanStartError::EmptyPortList);
+    }
+    if ports.len() > MAX_TCP_PORTS {
+        return Err(ScanStartError::TooManyPorts {
+            requested: ports.len(),
+            limit: MAX_TCP_PORTS,
+        });
+    }
+    if let Some(port) = ports.iter().find(|port| **port == 0) {
+        return Err(ScanStartError::InvalidPort(*port));
+    }
+    ports.sort_unstable();
+    ports.dedup();
 
+    let ports = Arc::new(ports);
     let cancelled = Arc::new(AtomicBool::new(false));
     let worker_cancelled = Arc::clone(&cancelled);
     let (event_sender, event_receiver) = mpsc::channel();
@@ -110,6 +198,7 @@ pub fn start_tcp_discovery(
             let sender = event_sender.clone();
             let worker_cancelled = Arc::clone(&worker_cancelled);
             let worker_completed = Arc::clone(&completed);
+            let worker_ports = Arc::clone(&ports);
 
             workers.push(thread::spawn(move || loop {
                 let next_host = receiver
@@ -124,7 +213,7 @@ pub fn start_tcp_discovery(
                     continue;
                 }
 
-                let result = scan_host(address, timeout, &worker_cancelled);
+                let result = scan_host(address, timeout, &worker_ports, &worker_cancelled);
                 worker_completed.fetch_add(1, Ordering::Relaxed);
                 if sender.send(ScanEvent::HostCompleted(result)).is_err() {
                     worker_cancelled.store(true, Ordering::Relaxed);
@@ -160,10 +249,10 @@ pub fn start_tcp_discovery(
 fn scan_host(
     address: Ipv4Addr,
     timeout: Duration,
+    ports: &[u16],
     cancelled: &AtomicBool,
 ) -> HostScanResult {
-    let (open_ports, tcp_responded) =
-        probe_ports(address, timeout, &COMMON_TCP_PORTS, cancelled);
+    let (open_ports, tcp_responded) = probe_ports(address, timeout, ports, cancelled);
 
     HostScanResult {
         address,
@@ -217,6 +306,35 @@ mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::AtomicBool;
     use std::time::Duration;
+
+    #[test]
+    fn parses_port_lists_and_removes_duplicates() {
+        assert_eq!(
+            super::parse_tcp_ports("22, 80,443,22").expect("valid ports"),
+            vec![22, 80, 443]
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_port_list_values() {
+        assert!(super::parse_tcp_ports("").is_err());
+        assert!(super::parse_tcp_ports("22,,80").is_err());
+        assert!(super::parse_tcp_ports("0,80").is_err());
+        assert!(super::parse_tcp_ports("abc").is_err());
+        assert!(super::parse_tcp_ports("65536").is_err());
+    }
+
+    #[test]
+    fn rejects_port_lists_above_the_configured_limit() {
+        let input = (1..=super::MAX_TCP_PORTS + 1)
+            .map(|port| port.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        assert!(matches!(
+            super::parse_tcp_ports(&input),
+            Err(super::PortListError::TooMany { .. })
+        ));
+    }
 
     #[test]
     fn connection_refused_is_still_evidence_of_a_tcp_response() {
