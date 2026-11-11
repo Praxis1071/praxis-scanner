@@ -32,6 +32,7 @@ pub fn build_ui(application: &adw::Application) {
 
     let scan_button = gtk::Button::with_label("Scan selected network");
     scan_button.add_css_class("suggested-action");
+    scan_button.set_sensitive(false);
     scan_button.set_halign(gtk::Align::Start);
     scan_button.set_margin_start(18);
     scan_button.set_margin_top(12);
@@ -97,6 +98,8 @@ pub fn build_ui(application: &adw::Application) {
 
     let interfaces_for_selection = Rc::clone(&interfaces);
     let selected_for_selection = Rc::clone(&selected_interface);
+    let scan_button_for_selection = scan_button.clone();
+    let status_for_selection = status.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
             interfaces_for_selection
@@ -104,6 +107,21 @@ pub fn build_ui(application: &adw::Application) {
                 .get(row.index() as usize)
                 .cloned()
         });
+        let can_scan = selected.as_ref().is_some_and(|interface| {
+            interface.is_up
+                && !interface.is_loopback
+                && interface.prefix.is_some()
+                && (interface.address.is_private() || interface.address.is_link_local())
+        });
+        scan_button_for_selection.set_sensitive(can_scan);
+        if let Some(interface) = selected.as_ref() {
+            status_for_selection.set_text(&format!(
+                "Selected {} ({}/{}). Press Scan selected network to begin; no scan starts automatically.",
+                interface.name,
+                interface.address,
+                interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
+            ));
+        }
         *selected_for_selection.borrow_mut() = selected;
     });
 
@@ -111,12 +129,14 @@ pub fn build_ui(application: &adw::Application) {
     let status_for_refresh = status.clone();
     let interfaces_for_refresh = Rc::clone(&interfaces);
     let selected_for_refresh = Rc::clone(&selected_interface);
+    let scan_button_for_refresh = scan_button.clone();
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
             &list_for_refresh,
             &status_for_refresh,
             &interfaces_for_refresh,
             &selected_for_refresh,
+            &scan_button_for_refresh,
         );
     });
 
@@ -234,7 +254,13 @@ pub fn build_ui(application: &adw::Application) {
         glib::Propagation::Proceed
     });
 
-    refresh_interfaces(&list, &status, &interfaces, &selected_interface);
+    refresh_interfaces(
+        &list,
+        &status,
+        &interfaces,
+        &selected_interface,
+        &scan_button,
+    );
     window.present();
 }
 
@@ -243,11 +269,13 @@ fn refresh_interfaces(
     status: &gtk::Label,
     interfaces_state: &Rc<RefCell<Vec<NetworkInterface>>>,
     selected_state: &Rc<RefCell<Option<NetworkInterface>>>,
+    scan_button: &gtk::Button,
 ) {
     while let Some(child) = list.first_child() {
         list.remove(&child);
     }
     *selected_state.borrow_mut() = None;
+    scan_button.set_sensitive(false);
 
     match network::ipv4_interfaces() {
         Ok(interfaces) => {
@@ -255,28 +283,11 @@ fn refresh_interfaces(
                 list.append(&interface_row(interface));
             }
 
-            let first_usable = interfaces
-                .iter()
-                .enumerate()
-                .find(|(_, interface)| {
-                    interface.is_up
-                        && !interface.is_loopback
-                        && !interface.address.is_unspecified()
-                        && interface.prefix.is_some()
-                })
-                .map(|(index, interface)| (index, interface.clone()));
             *interfaces_state.borrow_mut() = interfaces;
-
-            if let Some((index, interface)) = first_usable {
-                *selected_state.borrow_mut() = Some(interface);
-                if let Some(row) = list.row_at_index(index as i32) {
-                    list.select_row(Some(&row));
-                }
-            }
 
             let count = interfaces_state.borrow().len();
             status.set_text(&format!(
-                "{count} IPv4 interface address(es) found. Select an active interface to scan its local subnet. No scan has started."
+                "{count} IPv4 interface address(es) found. Select a private or link-local interface to enable scanning. No scan has started."
             ));
         }
         Err(error) => {
