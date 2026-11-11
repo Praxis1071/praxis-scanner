@@ -202,6 +202,15 @@ pub fn build_ui(application: &adw::Application) {
     status.set_margin_bottom(12);
     status.add_css_class("dim-label");
 
+    let scan_progress = gtk::ProgressBar::new();
+    scan_progress.set_show_text(true);
+    scan_progress.set_text(Some("Idle"));
+    scan_progress.set_fraction(0.0);
+    scan_progress.set_hexpand(true);
+    scan_progress.set_margin_start(18);
+    scan_progress.set_margin_end(18);
+    scan_progress.set_margin_bottom(12);
+
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.append(&header);
     content.append(&heading);
@@ -228,6 +237,7 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&ssdp_results_heading);
     content.append(&ssdp_results_list);
     content.append(&status);
+    content.append(&scan_progress);
 
     let scrolled = gtk::ScrolledWindow::builder()
         .vexpand(true)
