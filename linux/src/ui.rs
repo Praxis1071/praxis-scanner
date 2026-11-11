@@ -102,14 +102,14 @@ pub fn build_ui(application: &adw::Application) {
     netbios_button.set_margin_start(18);
     netbios_button.set_margin_top(8);
 
-    let icmp_button = gtk::Button::with_label("Check ICMP reachability");
+    let icmp_button = gtk::Button::with_label("Discover ICMP responders");
     icmp_button.set_sensitive(false);
     icmp_button.set_halign(gtk::Align::Start);
     icmp_button.set_margin_start(18);
     icmp_button.set_margin_top(8);
 
     let icmp_note = gtk::Label::new(Some(
-        "Uses Linux datagram ICMP ping sockets only. Availability depends on the kernel ping_group_range policy. No raw sockets, root privileges, or sysctl changes are used; no reply does not prove a device is offline.",
+        "Checks up to 1024 addresses on the selected IPv4 subnet using Linux datagram ICMP ping sockets only. Availability depends on ping_group_range; no raw sockets, root privileges, or sysctl changes are used. No reply is inconclusive.",
     ));
     icmp_note.set_halign(gtk::Align::Start);
     icmp_note.set_wrap(true);
@@ -1280,22 +1280,35 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
-        let targets = catalog_for_icmp
-            .borrow()
-            .iter()
-            .filter(|device| device.has_discovery_evidence())
-            .map(|device| device.address)
-            .filter(|address| *address != interface.address)
-            .take(MAX_SCAN_TARGETS + 1)
-            .collect::<Vec<_>>();
-        if targets.is_empty() {
+        let Some(prefix) = interface.prefix else {
             status_for_icmp.set_text(
-                "No previously discovered devices are available. Run TCP, mDNS, or SSDP discovery first.",
+                "The selected interface has no usable IPv4 prefix; ICMP subnet discovery cannot calculate a safe target range.",
             );
+            return;
+        };
+        let network = match network::cidr::Ipv4Network::from_interface(
+            interface.address,
+            prefix,
+            scanner::MAX_SCAN_TARGETS as u32,
+        ) {
+            Ok(network) => network,
+            Err(error) => {
+                status_for_icmp.set_text(&format!(
+                    "ICMP subnet discovery was not started: {error}"
+                ));
+                return;
+            }
+        };
+        let targets = network.hosts();
+        let total_targets = targets
+            .iter()
+            .filter(|address| **address != interface.address)
+            .count();
+        if total_targets == 0 {
+            status_for_icmp.set_text("The selected IPv4 subnet contains no other host addresses to check.");
             return;
         }
 
-        let total_targets = targets.len();
         progress_for_icmp.set_fraction(0.0);
         progress_for_icmp.set_text(Some(&format!("0/{total_targets} devices checked")));
         match scanner::start_icmp_discovery(
@@ -1315,7 +1328,7 @@ pub fn build_ui(application: &adw::Application) {
                 devices_for_icmp.set_sensitive(false);
                 port_entry_for_icmp.set_sensitive(false);
                 status_for_icmp.set_text(
-                    "Checking previously discovered devices with datagram-only ICMP echo requests…",
+                    "Checking the selected IPv4 subnet with datagram-only ICMP echo requests…",
                 );
 
                 let status_for_events = status_for_icmp.clone();
@@ -1394,7 +1407,7 @@ pub fn build_ui(application: &adw::Application) {
                                         .map(|interface| interface.address),
                                 );
                                 devices_for_events.set_sensitive(true);
-                                icmp_button_for_events.set_label("Check ICMP reachability");
+                                icmp_button_for_events.set_label("Discover ICMP responders");
                                 let can_scan = selected_for_events
                                     .borrow()
                                     .as_ref()
