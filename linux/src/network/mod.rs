@@ -4,6 +4,7 @@
 //! system settings, or require elevated capabilities.
 
 pub mod cidr;
+pub mod device;
 pub mod mdns;
 pub mod scanner;
 pub mod ssdp;
