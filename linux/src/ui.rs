@@ -30,6 +30,14 @@ pub fn build_ui(application: &adw::Application) {
     list.set_margin_start(18);
     list.set_margin_end(18);
 
+    let system_info = gtk::Label::new(Some("Reading route and neighbour information…"));
+    system_info.set_halign(gtk::Align::Start);
+    system_info.set_wrap(true);
+    system_info.set_margin_start(18);
+    system_info.set_margin_end(18);
+    system_info.set_margin_top(8);
+    system_info.add_css_class("dim-label");
+
     let scan_button = gtk::Button::with_label("Scan selected network");
     scan_button.add_css_class("suggested-action");
     scan_button.set_sensitive(false);
@@ -73,6 +81,7 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&header);
     content.append(&heading);
     content.append(&list);
+    content.append(&system_info);
     content.append(&scan_button);
     content.append(&scope_note);
     content.append(&results_heading);
@@ -127,6 +136,7 @@ pub fn build_ui(application: &adw::Application) {
 
     let list_for_refresh = list.clone();
     let status_for_refresh = status.clone();
+    let system_info_for_refresh = system_info.clone();
     let interfaces_for_refresh = Rc::clone(&interfaces);
     let selected_for_refresh = Rc::clone(&selected_interface);
     let scan_button_for_refresh = scan_button.clone();
@@ -134,6 +144,7 @@ pub fn build_ui(application: &adw::Application) {
         refresh_interfaces(
             &list_for_refresh,
             &status_for_refresh,
+            &system_info_for_refresh,
             &interfaces_for_refresh,
             &selected_for_refresh,
             &scan_button_for_refresh,
@@ -270,6 +281,7 @@ pub fn build_ui(application: &adw::Application) {
     refresh_interfaces(
         &list,
         &status,
+        &system_info,
         &interfaces,
         &selected_interface,
         &scan_button,
@@ -280,6 +292,7 @@ pub fn build_ui(application: &adw::Application) {
 fn refresh_interfaces(
     list: &gtk::ListBox,
     status: &gtk::Label,
+    system_info: &gtk::Label,
     interfaces_state: &Rc<RefCell<Vec<NetworkInterface>>>,
     selected_state: &Rc<RefCell<Option<NetworkInterface>>>,
     scan_button: &gtk::Button,
@@ -299,12 +312,33 @@ fn refresh_interfaces(
             *interfaces_state.borrow_mut() = interfaces;
 
             let count = interfaces_state.borrow().len();
+            let route_summary = match network::system::read_ipv4_routes() {
+                Ok(routes) => routes
+                    .iter()
+                    .find(|route| route.is_default)
+                    .map(|route| {
+                        format!(
+                            "Default gateway: {} via {} (metric {})",
+                            route.gateway, route.interface, route.metric
+                        )
+                    })
+                    .unwrap_or_else(|| "Default gateway: no active IPv4 default route".to_owned()),
+                Err(_) => "Default gateway: route information unavailable".to_owned(),
+            };
+            let neighbour_summary = match network::system::read_ipv4_neighbours() {
+                Ok(neighbours) => {
+                    format!("Complete IPv4 neighbour entries: {}", neighbours.len())
+                }
+                Err(_) => "IPv4 neighbour table: unavailable".to_owned(),
+            };
+            system_info.set_text(&format!("{route_summary}\n{neighbour_summary}"));
             status.set_text(&format!(
                 "{count} IPv4 interface address(es) found. Select a private or link-local interface to enable scanning. No scan has started."
             ));
         }
         Err(error) => {
             interfaces_state.borrow_mut().clear();
+            system_info.set_text("Route and neighbour information not refreshed.");
             status.set_text(&format!("Could not read interface information: {error}"));
         }
     }
