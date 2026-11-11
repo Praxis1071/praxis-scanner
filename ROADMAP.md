@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** Initial application foundation added; build/runtime verification pending  
+> **Implementation status:** GTK4/libadwaita shell, bounded TCP discovery, read-only route/ARP summaries, and configurable ports are present in source; build/runtime verification pending  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -130,9 +130,9 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 ## 5. Implementation phases (maintainer approval received 2026-11-08)
 
-Implementation is now authorized and has started on this branch. The first GTK/libadwaita shell and read-only IPv4 interface listing are present under `linux/`; they have not yet been compiled or tested. A Linux CI workflow has been added, but no successful run has been observed yet. Implementation must proceed incrementally. Each item needs tests and review before dependent work is considered complete.
+Implementation is authorized and active on this branch. Source now includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect discovery, configurable ports, conservative service hints, and scan cancellation. These are source-level additions only: compilation, formatting, Clippy, and runtime behavior remain unverified. Implementation must proceed incrementally, and no feature is considered complete until its tests and behavior are verified.
 
-**Current milestone:** foundation source added; build verification and the first functional TCP discovery milestone are still pending.
+**Current milestone:** make CI reliable and obtain the first successful build/test/lint result; then validate scanner behavior and continue the full device/results experience.
 
 ### 5.1 Foundation and application shell
 
@@ -240,4 +240,4 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. The Rust/GTK4/libadwaita shell, read-only IPv4 interface enumeration, bounded IPv4 subnet calculation, and an explicit local TCP-connect discovery path are present. The scanner probes seven common TCP ports, uses at most 32 workers, limits the subnet to 1024 candidate addresses, supports cancellation, and treats timeouts as inconclusive. CI has not yet completed successfully; host and Flatpak feasibility tests have not yet been run. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, and UI progress. The scanner caps each run at 1024 target addresses, 256 unique ports, 8192 total connection attempts, and 32 workers; the UI uses a 450 ms per-connection timeout. These changes have not yet passed CI. The most recent previously observed workflow was cancelled during dependency installation, so it provides no build/test evidence. Host and Flatpak feasibility tests have not been run. The application is not ready for maintainer testing.
