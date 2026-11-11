@@ -4,7 +4,7 @@ A Linux desktop network scanner in active development in the **Praxis Scanner** 
 
 > **Project status: Active implementation — not yet test-ready**
 >
-> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, and opt-in, interface-scoped mDNS/DNS-SD service discovery. The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`; the latest mDNS result-deduplication refinement is awaiting its own CI run. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
+> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded TCP-connect discovery with custom ports and cancellation, opt-in interface-scoped mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`; the latest SSDP implementation and related UI changes are awaiting their own CI run. Host-network and Flatpak runtime behavior are not yet verified. The Android Gradle project remains present and unchanged; Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -43,7 +43,7 @@ The following are targets, not claims of current implementation. Each feature mu
 - TCP-based reachability checks and fallback discovery.
 - Read-only use of the system neighbor table where available.
 - mDNS / DNS-SD service discovery (source implementation present; host and Flatpak runtime verification pending).
-- SSDP / UPnP discovery.
+- SSDP / UPnP discovery (source implementation present; host and Flatpak runtime verification pending).
 - NetBIOS name and workgroup discovery.
 - Network interface selection where supported by the sandbox.
 
