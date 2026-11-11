@@ -1580,7 +1580,7 @@ fn device_detail_page(
 
     let icon_form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let icon_dropdown = gtk::DropDown::from_strings(&[
-        "Automatic",
+        "Default",
         "Computer",
         "Phone",
         "Tablet",
