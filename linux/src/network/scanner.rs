@@ -652,11 +652,11 @@ mod tests {
     #[test]
     fn service_banner_sanitizer_keeps_one_bounded_printable_line() {
         let banner = super::sanitize_service_banner(
-            b"SSH-2.0-OpenSSH_9.8\r\nignored second line\\n",
+            b"SSH-2.0-OpenSSH_9.8\r\nignored second line\n",
         )
         .expect("valid banner");
         assert_eq!(banner, "SSH-2.0-OpenSSH_9.8");
-        assert!(super::sanitize_service_banner(b"\\0\r\n").is_none());
+        assert!(super::sanitize_service_banner(b"\0\r\n").is_none());
     }
 
     #[test]
