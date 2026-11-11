@@ -560,7 +560,9 @@ pub fn build_ui(application: &adw::Application) {
                                 cancelled,
                             } => {
                                 *active_for_events.borrow_mut() = None;
-                                progress_for_events.set_fraction(1.0);
+                                progress_for_events.set_fraction(
+                                    finished_count as f64 / total.max(1) as f64,
+                                );
                                 progress_for_events.set_text(Some(if cancelled {
                                     "Cancelled"
                                 } else {
@@ -624,7 +626,10 @@ pub fn build_ui(application: &adw::Application) {
                     glib::ControlFlow::Continue
                 });
             }
-            Err(error) => status_for_scan.set_text(&format!("Could not start scan: {error}")),
+            Err(error) => {
+                progress_for_scan.set_text(Some("Could not start"));
+                status_for_scan.set_text(&format!("Could not start scan: {error}"));
+            }
         }
     });
 
