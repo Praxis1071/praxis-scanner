@@ -14,6 +14,8 @@ Update checkboxes only after the corresponding work has been completed and verif
 The maintainer has explicitly clarified that **full Android-to-Linux product parity is the central goal**. Keep the Android implementation and Kotlin files; do not treat their presence or GitHub's language statistics as a problem. Build the Linux implementation alongside them.
 
 ### What “clone the Android application” means
+The active implementation checklist is [Android → Linux Feature-Parity Matrix](docs/linux-android-parity-matrix.md). Update it whenever a feature is inspected, implemented, verified, or found to differ; do not treat the initial audit as complete.
+
 
 - Reproduce every user-visible Android screen, major component, information hierarchy, interaction, workflow, and setting in a native GTK4/libadwaita desktop experience.
 - Reproduce the application's advertised and actually implemented functionality, not just the easiest subset. Map every Android feature to its Linux equivalent and track it in a feature-parity matrix.
@@ -95,7 +97,7 @@ The Linux edition is a separate native platform implementation, not a Kotlin-to-
 - [x] Inspect device naming, icon assignment, network-interface selection, and preferences persistence.
 - [ ] Review Android screenshot images visually and approve desktop wireframes. Source-level screen/interaction mapping is documented; visual review remains open.
 - [x] Record reusable behavior, platform-specific code that must be replaced, and code that must not be ported.
-- [x] Produce the preliminary feature parity matrix. Runtime and Flatpak verification remain open.
+- [x] Produce the initial source-backed Android → Linux feature-parity matrix in [docs/linux-android-parity-matrix.md](docs/linux-android-parity-matrix.md). The audit is intentionally incomplete and remains a living checklist; visual review, deeper source tracing, implementation, and runtime verification remain open.
 
 ## 2. Linux feasibility and unprivileged networking research
 
