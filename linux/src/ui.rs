@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use adw::prelude::*;
 use gtk::glib;
@@ -213,6 +213,7 @@ pub fn build_ui(application: &adw::Application) {
     let interfaces = Rc::new(RefCell::new(Vec::<NetworkInterface>::new()));
     let selected_interface = Rc::new(RefCell::new(None::<NetworkInterface>));
     let active_scan = Rc::new(RefCell::new(None::<ScanHandle>));
+    let active_device_scan = Rc::new(RefCell::new(None::<ScanHandle>));
     let active_mdns = Rc::new(RefCell::new(None::<MdnsHandle>));
     let active_ssdp = Rc::new(RefCell::new(None::<SsdpHandle>));
     let device_catalog = Rc::new(RefCell::new(DeviceCatalog::default()));
@@ -821,10 +822,14 @@ pub fn build_ui(application: &adw::Application) {
     });
 
     let active_for_close = Rc::clone(&active_scan);
+    let active_device_for_close = Rc::clone(&active_device_scan);
     let active_ssdp_for_close = Rc::clone(&active_ssdp);
     let active_mdns_for_close = Rc::clone(&active_mdns);
     window.connect_close_request(move |_| {
         if let Some(handle) = active_for_close.borrow().as_ref() {
+            handle.cancel();
+        }
+        if let Some(handle) = active_device_for_close.borrow().as_ref() {
             handle.cancel();
         }
         if let Some(handle) = active_mdns_for_close.borrow().as_ref() {
@@ -935,9 +940,14 @@ fn refresh_device_list(
             .activatable(true)
             .build();
         let navigation_for_row = navigation.clone();
+        let active_scan_for_row = Rc::clone(&active_device_scan);
         let selected_device = device.clone();
         row.connect_activated(move |_| {
-            let page = device_detail_page(&selected_device, &navigation_for_row);
+            let page = device_detail_page(
+                &selected_device,
+                &navigation_for_row,
+                Rc::clone(&active_scan_for_row),
+            );
             navigation_for_row.push(&page);
         });
         list.append(&row);
@@ -948,12 +958,17 @@ fn refresh_device_list(
 fn device_detail_page(
     device: &DeviceRecord,
     navigation: &adw::NavigationView,
+    active_device_scan: Rc<RefCell<Option<ScanHandle>>>,
 ) -> adw::NavigationPage {
     let header = adw::HeaderBar::new();
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
     back_button.set_tooltip_text(Some("Back to discovered devices"));
     let navigation_for_back = navigation.clone();
+    let active_scan_for_back = Rc::clone(&active_device_scan);
     back_button.connect_clicked(move |_| {
+        if let Some(handle) = active_scan_for_back.borrow().as_ref() {
+            handle.cancel();
+        }
         navigation_for_back.pop();
     });
     header.pack_start(&back_button);
@@ -1007,6 +1022,49 @@ fn device_detail_page(
         }
     }
     content.append(&ports);
+
+    let deep_scan_heading = gtk::Label::new(Some("Deep scan results"));
+    deep_scan_heading.add_css_class("title-2");
+    deep_scan_heading.set_halign(gtk::Align::Start);
+    content.append(&deep_scan_heading);
+
+    let deep_scan_note = gtk::Label::new(Some(
+        "Automatically checks the Android app's standard common TCP ports. Timeouts are inconclusive; service names are port-based hints. A full 1–65535 scan is not available in this Linux build because scans are deliberately bounded.",
+    ));
+    deep_scan_note.add_css_class("dim-label");
+    deep_scan_note.set_wrap(true);
+    deep_scan_note.set_halign(gtk::Align::Start);
+    content.append(&deep_scan_note);
+
+    let deep_scan_progress = gtk::ProgressBar::new();
+    deep_scan_progress.set_show_text(true);
+    deep_scan_progress.set_text(Some("Preparing scan…"));
+    content.append(&deep_scan_progress);
+
+    let deep_scan_status = gtk::Label::new(Some("Starting standard port scan…"));
+    deep_scan_status.set_halign(gtk::Align::Start);
+    deep_scan_status.set_wrap(true);
+    content.append(&deep_scan_status);
+
+    let deep_scan_cancel = gtk::Button::with_label("Cancel deep scan");
+    deep_scan_cancel.set_halign(gtk::Align::Start);
+    deep_scan_cancel.add_css_class("destructive-action");
+    content.append(&deep_scan_cancel);
+
+    let deep_scan_results = gtk::ListBox::new();
+    deep_scan_results.add_css_class("boxed-list");
+    deep_scan_results.set_selection_mode(gtk::SelectionMode::None);
+    content.append(&deep_scan_results);
+
+    start_device_deep_scan(
+        device.address,
+        scanner::DEEP_SCAN_TCP_PORTS.to_vec(),
+        &deep_scan_progress,
+        &deep_scan_status,
+        &deep_scan_cancel,
+        &deep_scan_results,
+        active_device_scan,
+    );
 
     if !device.mdns_services.is_empty() {
         let heading = gtk::Label::new(Some("Advertised mDNS services"));
@@ -1075,6 +1133,120 @@ fn device_detail_page(
         .title(format!("Device {}", device.address))
         .child(&page_content)
         .build()
+}
+
+fn start_device_deep_scan(
+    address: std::net::Ipv4Addr,
+    ports: Vec<u16>,
+    progress: &gtk::ProgressBar,
+    status: &gtk::Label,
+    cancel_button: &gtk::Button,
+    results: &gtk::ListBox,
+    active_scan: Rc<RefCell<Option<ScanHandle>>>,
+) {
+    if let Some(previous) = active_scan.borrow_mut().take() {
+        previous.cancel();
+    }
+    clear_list(results);
+    progress.set_fraction(0.0);
+    progress.set_text(Some("0 ports checked"));
+    status.set_text("Scanning the standard common TCP port list…");
+    cancel_button.set_sensitive(true);
+
+    match scanner::start_device_deep_scan(
+        address,
+        ports,
+        scanner::DEFAULT_TCP_TIMEOUT,
+    ) {
+        Ok((handle, events)) => {
+            *active_scan.borrow_mut() = Some(handle);
+
+            let active_for_cancel = Rc::clone(&active_scan);
+            let status_for_cancel = status.clone();
+            cancel_button.connect_clicked(move |button| {
+                if let Some(handle) = active_for_cancel.borrow().as_ref() {
+                    handle.cancel();
+                    button.set_sensitive(false);
+                    status_for_cancel.set_text("Cancellation requested; waiting for in-flight connections to finish…");
+                }
+            });
+
+            let progress_for_events = progress.clone();
+            let status_for_events = status.clone();
+            let cancel_for_events = cancel_button.clone();
+            let results_for_events = results.clone();
+            let active_for_events = Rc::clone(&active_scan);
+            let total_ports = scanner::DEEP_SCAN_TCP_PORTS.len();
+            let started = Instant::now();
+            let mut completed_ports = 0usize;
+            let mut open_ports = 0usize;
+
+            glib::timeout_add_local(Duration::from_millis(80), move || {
+                while let Ok(event) = events.try_recv() {
+                    match event {
+                        DeepScanEvent::PortCompleted {
+                            port,
+                            open,
+                            tcp_responded: _,
+                        } => {
+                            completed_ports = completed_ports.saturating_add(1);
+                            if open {
+                                open_ports = open_ports.saturating_add(1);
+                                let service = scanner::service_name(port)
+                                    .unwrap_or("Unknown service");
+                                append_detail_row(
+                                    &results_for_events,
+                                    &format!("TCP {port}"),
+                                    service,
+                                );
+                            }
+                            let fraction = completed_ports as f64 / total_ports.max(1) as f64;
+                            progress_for_events.set_fraction(fraction);
+                            progress_for_events.set_text(Some(&format!(
+                                "{completed_ports}/{total_ports} ports checked"
+                            )));
+                            status_for_events.set_text(&format!(
+                                "Checked {completed_ports} of {total_ports} ports · {open_ports} open"
+                            ));
+                        }
+                        DeepScanEvent::Finished {
+                            total,
+                            completed,
+                            cancelled,
+                        } => {
+                            active_for_events.borrow_mut().take();
+                            cancel_for_events.set_sensitive(false);
+                            progress_for_events.set_fraction(1.0);
+                            progress_for_events.set_text(Some(if cancelled {
+                                "Cancelled"
+                            } else {
+                                "Complete"
+                            }));
+                            if open_ports == 0 && !cancelled {
+                                append_detail_row(
+                                    &results_for_events,
+                                    "No open TCP ports found",
+                                    "None of the scanned common TCP ports accepted a connection.",
+                                );
+                            }
+                            let state = if cancelled { "cancelled" } else { "completed" };
+                            status_for_events.set_text(&format!(
+                                "Deep scan {state}: {completed}/{total} ports checked, {open_ports} open · {:.2}s",
+                                started.elapsed().as_secs_f64()
+                            ));
+                            return glib::ControlFlow::Break;
+                        }
+                    }
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+        Err(error) => {
+            cancel_button.set_sensitive(false);
+            progress.set_text(Some("Could not start"));
+            status.set_text(&format!("Deep scan could not start: {error}"));
+        }
+    }
 }
 
 fn append_detail_row(list: &gtk::ListBox, title: &str, subtitle: &str) {
