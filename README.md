@@ -29,7 +29,7 @@ The current branch contains these source-level features:
 - TCP connect checks with editable comma-separated ports and conservative port-number service hints.
 - Opt-in mDNS/DNS-SD service discovery, restricted to the selected interface and IPv4 subnet, with a five-second default window, cancellation, and bounded results.
 - Opt-in SSDP/UPnP M-SEARCH discovery with selected-interface binding, bounded response parsing, and no automatic fetching of advertised URLs.
-- An initial unified device list that merges TCP, mDNS, SSDP, NetBIOS, and read-only MAC evidence by IPv4 address; a partial device-detail page with local device-name/icon editing, Settings and Custom TCP Ports pages, and local persistence for theme/auto-scan/custom ports/device customizations exist but remain unverified.
+- An initial unified device list that merges TCP, mDNS, SSDP, NetBIOS, and read-only MAC evidence by IPv4 address; a current-device-first list with numeric IPv4 ordering, a partial device-detail page with local device-name/icon editing, Settings and Custom TCP Ports pages, and local persistence for theme/auto-scan/custom ports/device customizations exist but remain unverified.
 - Limits of 1024 TCP targets, 256 unique TCP ports, 8192 total TCP connection attempts, and 32 concurrent TCP workers.
 - Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
 
