@@ -151,18 +151,7 @@ impl ScanHandle {
     }
 }
 
-/// Start a bounded scan of the supplied IPv4 addresses.
-///
-/// This function never opens raw sockets or requests elevated capabilities.
-/// The default entry point probes common TCP ports; custom scans are separately bounded.
-/// All scans run at most 32 workers and enforce a total probe budget.
-pub fn start_tcp_discovery(
-    hosts: Vec<Ipv4Addr>,
-    timeout: Duration,
-) -> Result<(ScanHandle, mpsc::Receiver<ScanEvent>), ScanStartError> {
-    start_tcp_discovery_with_ports(hosts, DEFAULT_TCP_PORTS.to_vec(), timeout)
-}
-
+/// Start a bounded TCP-connect scan using a caller-supplied port list.
 /// Start a bounded TCP-connect scan using a caller-supplied port list.
 pub fn start_tcp_discovery_with_ports(
     hosts: Vec<Ipv4Addr>,
@@ -328,8 +317,8 @@ fn is_connection_refused(error: &io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_connection_refused, probe_ports, start_tcp_discovery, start_tcp_discovery_with_ports,
-        ScanEvent, ScanStartError, MAX_SCAN_TARGETS, MAX_TCP_PORTS,
+        is_connection_refused, probe_ports, start_tcp_discovery_with_ports, ScanEvent,
+        ScanStartError, DEFAULT_TCP_PORTS, MAX_SCAN_TARGETS, MAX_TCP_PORTS,
     };
     use std::io;
     use std::net::{Ipv4Addr, TcpListener};
@@ -435,7 +424,7 @@ mod tests {
     fn rejects_target_lists_above_the_safety_limit() {
         let hosts = vec![Ipv4Addr::LOCALHOST; MAX_SCAN_TARGETS + 1];
         assert_eq!(
-            start_tcp_discovery(hosts, Duration::from_millis(100)).err(),
+            start_tcp_discovery_with_ports(hosts, DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100)).err(),
             Some(ScanStartError::TooManyTargets {
                 requested: MAX_SCAN_TARGETS + 1,
                 limit: MAX_SCAN_TARGETS,
@@ -518,14 +507,14 @@ mod tests {
     #[test]
     fn rejects_zero_timeout() {
         assert_eq!(
-            start_tcp_discovery(vec![Ipv4Addr::LOCALHOST], Duration::ZERO).err(),
+            start_tcp_discovery_with_ports(vec![Ipv4Addr::LOCALHOST], DEFAULT_TCP_PORTS.to_vec(), Duration::ZERO).err(),
             Some(ScanStartError::InvalidTimeout)
         );
     }
 
     #[test]
     fn empty_scan_finishes_without_network_activity() {
-        let (_handle, events) = start_tcp_discovery(Vec::new(), Duration::from_millis(100))
+        let (_handle, events) = start_tcp_discovery_with_ports(Vec::new(), DEFAULT_TCP_PORTS.to_vec(), Duration::from_millis(100))
             .expect("an empty scan is valid");
         assert!(matches!(
             events.recv_timeout(Duration::from_secs(1)),
