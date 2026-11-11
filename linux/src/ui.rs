@@ -482,7 +482,7 @@ pub fn build_ui(application: &adw::Application) {
                                     result.tcp_responded,
                                     result.open_ports.iter().copied(),
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
                                 completed += 1;
                                 if result.tcp_responded {
                                     responsive += 1;
@@ -526,7 +526,7 @@ pub fn build_ui(application: &adw::Application) {
                                         for (address, mac) in &mac_by_address {
                                             catalog_for_events.borrow_mut().set_mac_address(*address, mac.clone());
                                         }
-                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
+                                        refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
                                         let mut enriched = 0usize;
                                         for (address, row, details) in &result_rows {
                                             if let Some(mac) = mac_by_address.get(address) {
@@ -672,7 +672,7 @@ pub fn build_ui(application: &adw::Application) {
                                         port: service.port,
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
                                 let details = format!(
                                     "{}  ·  {}:{}  ·  {}",
                                     service.hostname,
@@ -862,7 +862,7 @@ pub fn build_ui(application: &adw::Application) {
                                         location: device.location.clone(),
                                     },
                                 );
-                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events);
+                                refresh_device_list(&devices_for_events, &catalog_for_events.borrow(), &navigation_for_events, &active_device_scan_for_events, &catalog_for_events);
                                 let server = device.server.as_deref().unwrap_or("server header not supplied");
                                 let location = device.location.as_deref().unwrap_or("location not supplied");
                                 let details = format!(
@@ -1030,6 +1030,7 @@ pub fn build_ui(application: &adw::Application) {
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
                                     &active_device_scan_for_events,
+                                    &catalog_for_events,
                                 );
                             }
                             NetbiosEvent::Finished { total, completed, cancelled } => {
@@ -1200,6 +1201,7 @@ pub fn build_ui(application: &adw::Application) {
                                     &catalog_for_events.borrow(),
                                     &navigation_for_events,
                                     &active_device_scan_for_events,
+                                    &catalog_for_events,
                                 );
                                 active_icmp_for_events.borrow_mut().take();
                                 icmp_button_for_events.set_label("Check ICMP reachability");
@@ -1324,6 +1326,7 @@ fn refresh_device_list(
     catalog: &DeviceCatalog,
     navigation: &adw::NavigationView,
     active_device_scan: &Rc<RefCell<Option<ScanHandle>>>,
+    catalog_handle: &Rc<RefCell<DeviceCatalog>>,
 ) {
     clear_list(list);
 
@@ -1460,15 +1463,15 @@ fn refresh_device_list(
         let navigation_for_row = navigation.clone();
         let active_scan_for_row = Rc::clone(active_device_scan);
         let selected_device = device.clone();
-        let selected_row = row.clone();
-        let selected_icon = device_icon.clone();
+        let devices_list_for_row = list.clone();
+        let catalog_for_row = Rc::clone(catalog_handle);
         row.connect_activated(move |_| {
             let page = device_detail_page(
                 &selected_device,
                 &navigation_for_row,
                 Rc::clone(&active_scan_for_row),
-                selected_row.clone(),
-                selected_icon.clone(),
+                devices_list_for_row.clone(),
+                Rc::clone(&catalog_for_row),
             );
             navigation_for_row.push(&page);
         });
@@ -1481,8 +1484,8 @@ fn device_detail_page(
     device: &DeviceRecord,
     navigation: &adw::NavigationView,
     active_device_scan: Rc<RefCell<Option<ScanHandle>>>,
-    device_row: adw::ActionRow,
-    device_icon: gtk::Image,
+    devices_list: gtk::ListBox,
+    catalog: Rc<RefCell<DeviceCatalog>>,
 ) -> adw::NavigationPage {
     let preferences = Rc::new(RefCell::new(AppPreferences::load()));
     let customization = preferences
@@ -1622,8 +1625,11 @@ fn device_detail_page(
     let preferences_for_name = Rc::clone(&preferences);
     let name_entry_for_save = name_entry.clone();
     let name_status_for_save = customization_status.clone();
-    let row_for_name = device_row.clone();
     let title_for_name = title.clone();
+    let devices_list_for_name = devices_list.clone();
+    let catalog_for_name = Rc::clone(&catalog);
+    let navigation_for_name = navigation.clone();
+    let active_scan_for_name = Rc::clone(&active_device_scan);
     let address_for_name = device.address;
     save_name_button.connect_clicked(move |_| {
         let custom_name = name_entry_for_save.text().to_string();
@@ -1645,8 +1651,14 @@ fn device_detail_page(
                     } else {
                         custom_name.trim().to_owned()
                     };
-                    row_for_name.set_title(&label);
                     title_for_name.set_title(&label);
+                    refresh_device_list(
+                        &devices_list_for_name,
+                        &catalog_for_name.borrow(),
+                        &navigation_for_name,
+                        &active_scan_for_name,
+                        &catalog_for_name,
+                    );
                     name_status_for_save.set_text("Device name saved locally.");
                 }
                 Err(error) => name_status_for_save
@@ -1667,8 +1679,11 @@ fn device_detail_page(
     let name_entry_for_icon = name_entry.clone();
     let icon_dropdown_for_save = icon_dropdown.clone();
     let icon_status_for_save = customization_status.clone();
-    let icon_for_save = device_icon.clone();
     let address_for_icon = device.address;
+    let devices_list_for_icon = devices_list.clone();
+    let catalog_for_icon = Rc::clone(&catalog);
+    let navigation_for_icon = navigation.clone();
+    let active_scan_for_icon = Rc::clone(&active_device_scan);
     save_icon_button.connect_clicked(move |_| {
         let icon_key = match icon_dropdown_for_save.selected() {
             1 => Some("computer"),
@@ -1694,7 +1709,13 @@ fn device_detail_page(
                     let icon_name = icon_key
                         .map(icon_name_for_key)
                         .unwrap_or("network-server-symbolic");
-                    icon_for_save.set_icon_name(Some(icon_name));
+                    refresh_device_list(
+                        &devices_list_for_icon,
+                        &catalog_for_icon.borrow(),
+                        &navigation_for_icon,
+                        &active_scan_for_icon,
+                        &catalog_for_icon,
+                    );
                     icon_status_for_save.set_text("Device icon preference saved locally.");
                 }
                 Err(error) => icon_status_for_save
