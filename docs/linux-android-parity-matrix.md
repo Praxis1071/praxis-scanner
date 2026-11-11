@@ -31,7 +31,7 @@ No item is complete until the Android reference has been examined, the Linux beh
 | `HomeScreen.kt` | Main screen with app title and settings action | **Partial** — settings action now opens a native settings page; home information hierarchy still differs | Match home header/actions and screen spacing |
 | `HomeScreen.kt` auto-scan preference | Automatically start a scan on launch when enabled (Android default: enabled) | **Implemented in source / unverified** — persisted toggle; disabled by default as a deliberate Linux safety difference; when enabled selects default-route interface and starts bounded scan | Verify startup selection, no-route fallback, persistence and cancellation |
 | `NetworkInfoBar.kt` | Show current network information and selectable interfaces | **Partial** — interface list/selection and route summary exist | Match information fields, selection presentation, unavailable states |
-| `DeviceList.kt`, `DeviceCard.kt` | Separate online/offline devices; readable identity/type/IP/status; custom icon; current-device marker | **Partial** — basic unified rows show IP/MAC/TCP/mDNS/SSDP evidence | Add online/offline semantics, device type/name/icon, current-device indication, card/list visual parity |
+| `DeviceList.kt`, `DeviceCard.kt` | Separate online/offline devices; readable identity/type/IP/status; custom icon; current-device marker | **Partial** — responsive and unverified observations are grouped without falsely claiming offline; saved custom names/icons appear in rows; local IP is shown in interface status | Add dedicated current-device card, automatic type classification and visual card/list parity |
 | `EmptyState.kt` | Distinct idle, no Wi-Fi, and no-results states | **Partial** — status text only | Implement equivalent empty/no-interface/no-result/error states |
 | `ScanProgressCard.kt` | Visible progress, phase/message, found-device count, cancel action | **Partial** — scan status/progress and cancellation exist in source; UI needs parity review | Match phases, progress semantics, counters, cancellation feedback |
 | Snackbar/error flow in `HomeScreen.kt` | Surface errors and useful recovery guidance | **Partial** — status labels are used | Add consistent error presentation and actionable recovery |
@@ -44,9 +44,9 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 | Expected behavior | Linux branch status | Remaining work |
 |---|---|---|
 | Open detail view for a selected device | **Partial — source committed, CI pending** | An initial Adw NavigationView detail page opens from device rows and displays currently collected evidence; complete identity, status, customization, deep-scan workflow, and visual parity remain missing |
-| Device header with icon, display name, type, online/offline and current-device badges | **Missing** | Implement visual and semantic equivalent |
-| Edit custom device name and restore default | **Missing** | Implement validated name editor and persistence |
-| Choose a custom device icon and restore automatic icon | **Missing** | Implement icon chooser, mapping, and persistence |
+| Device header with icon, display name, type, online/offline and current-device badges | **Partial / source implemented** — custom display name and icon are shown; type, online/offline and current-device badges remain missing | Add confidence-scored type and evidence-based reachability/current-device badges |
+| Edit custom device name and restore default | **Implemented in source / unverified** — validated local name editor, reset action and list/header update; key is IPv4 address | Verify persistence and DHCP address-change behavior |
+| Choose a custom device icon and restore automatic icon | **Implemented in source / unverified** — icon chooser includes automatic plus eight local icon mappings | Verify icon theme availability, restart persistence and visual parity |
 | Identity/network information (IP, MAC, vendor, hostname, device type) | **Partial** — raw IP/MAC and evidence summary only | Add structured fields and clear unavailable/unknown states |
 | Latency and TTL/OS hint | **Missing** — TCP response is not equivalent to ICMP latency/TTL | Implement only if safe Linux method is verified; never mislabel TCP timing as ping latency |
 | Discovery method, UPnP metadata, NetBIOS workgroup, mDNS services | **Partial** — mDNS, SSDP and NetBIOS evidence are displayed; identity remains unverified and presentation is incomplete | Complete evidence sections and verify on real devices |
@@ -94,7 +94,7 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 | Privacy dialog/policy | **Implemented in source / unverified** — describes local-only behavior, explicit scan initiation and untrusted SSDP data | Review every statement against final implementation and verify dialog behavior |
 | GitHub project link | **Implemented in source / unverified** — opens the project repository through a user-activated link | Verify launch behavior and accessibility |
 | Settings persistence | **Partial / implemented in source** — versioned local INI storage for theme, auto-scan and custom ports; no migration beyond version 1 yet | Verify corruption handling, permissions, atomic replacement and future migrations |
-| Custom device names/icons persistence | **Missing** | Implement versioned persistence and stable identity strategy |
+| Custom device names/icons persistence | **Partial / source implemented** — versioned local preferences store name/icon by IPv4 address | Verify on restart and consider MAC-based identity for DHCP changes |
 
 ## 6. Quality, security, packaging, and parity verification
 
@@ -118,7 +118,7 @@ The Linux UI currently has a main page containing interface selection, route/nei
 
 The Android source tree clearly defines four primary destinations: Home, Device Detail, Settings, and Custom Ports. The Linux implementation now has native navigation for all four destinations, but Settings and Custom Ports are early source implementations and Device Detail remains partial. The Android home flow also has auto-scan preference, online/offline device grouping, rich device cards, current-device indication, empty states and a scan progress card. The Android detail flow includes automatic per-device deep scanning, full-scan confirmation, device identity/customization, network/protocol evidence and detailed results. Android settings include theme, language, auto-scan, neighbour source, custom ports, about, privacy and project link.
 
-The largest current parity gaps are **home-screen visual/state parity, device identity and customization, language selection, dynamic colors, neighbour-source selection, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and a safe reviewed full-scan equivalent**. Settings and custom-port workflows now have initial source implementations but still require automated, host, Flatpak and visual verification.
+The largest current parity gaps are **home-screen visual/state parity, a dedicated current-device card, language selection, dynamic colors, neighbour-source selection, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and a safe reviewed full-scan equivalent**. Settings, custom-port management and basic per-device name/icon customization now have initial source implementations but still require automated, host, Flatpak and visual verification.
 
 ## 8. Verification record
 
