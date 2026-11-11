@@ -33,9 +33,10 @@ Source currently includes:
 - Opt-in, cancellable, interface-scoped IPv4 mDNS/DNS-SD service discovery.
 - Opt-in, cancellable SSDP/UPnP M-SEARCH discovery with selected-interface binding and bounded untrusted-response parsing.
 - Bounded background worker threads and UI progress/result reporting.
+- An initial unified device list that merges TCP responses, open ports, mDNS services, SSDP advertisements, and read-only MAC evidence by IPv4 address.
 - Unit tests for CIDR calculations, procfs parsers, port-list parsing, service hints, scan limits, cancellation, loopback TCP behavior, mDNS service-type/interface/scope validation, and SSDP response parsing, header validation, packet limits, and IPv4 scope validation.
 
-**This remains a development build, not a complete or release-ready network scanner.** The full CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The current CI run is validating the newer SSDP backend, its UI integration, and the latest Clippy refactor. No controlled-network test or Flatpak runtime test has been completed. NetBIOS, reverse DNS, banners, unified device details, persistence/preferences, and Flatpak packaging remain outstanding.
+**This remains a development build, not a complete or release-ready network scanner.** The most recent unified-device-list CI run passed formatting and tests but failed strict Clippy on one needless borrow in the new device-row renderer. That exact lint was corrected in commit `141e45c`; a fresh CI run is queued. The device list is only a basic summary, not a complete device detail experience. No controlled-network test or Flatpak runtime test has been completed. NetBIOS, reverse DNS, banners, detailed device pages, sorting/filtering, rename/icon customization, persistence/preferences, and verified Flatpak packaging remain outstanding.
 
 ## Build prerequisites
 
@@ -51,8 +52,8 @@ cargo build --release
 cargo run
 ```
 
-A committed Cargo.lock and a verified offline Flatpak dependency source bundle are still required before reproducible packaging can be claimed.
+The CI workflow generates Cargo.lock and the offline Cargo source manifest as build inputs, but they are not yet verified in a completed Flatpak build. Reproducible packaging cannot be claimed until the full Flatpak job succeeds.
 
 ## Next steps
 
-Follow the root [ROADMAP.md](../ROADMAP.md). Priority order: pass the current SSDP CI run; run controlled TCP, mDNS and SSDP tests on the host; validate exact Flatpak network/multicast permissions; then continue device details, preferences, and reproducible packaging.
+Follow the root [ROADMAP.md](../ROADMAP.md). Priority order: pass the fresh CI run; complete device details, sorting/filtering and preferences; validate TCP/mDNS/SSDP on a controlled host network; then build and test the Flatpak sandbox and its multicast/network permissions.
