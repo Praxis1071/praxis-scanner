@@ -14,6 +14,21 @@ pub const MAX_CONCURRENT_WORKERS: usize = 32;
 pub const DEFAULT_TCP_TIMEOUT: Duration = Duration::from_millis(450);
 pub const DEFAULT_TCP_PORTS: [u16; 7] = [22, 53, 80, 139, 443, 445, 3389];
 pub const MAX_TCP_PORTS: usize = 256;
+
+/// Return a conventional service label for a TCP port, not a verified service identity.
+pub fn service_name(port: u16) -> Option<&'static str> {
+    match port {
+        22 => Some("SSH"),
+        53 => Some("DNS"),
+        80 => Some("HTTP"),
+        139 => Some("NetBIOS"),
+        443 => Some("HTTPS"),
+        445 => Some("SMB"),
+        3389 => Some("RDP"),
+        _ => None,
+    }
+}
+
 const MAX_TCP_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -306,6 +321,13 @@ mod tests {
     use std::net::{Ipv4Addr, TcpListener};
     use std::sync::atomic::AtomicBool;
     use std::time::Duration;
+
+    #[test]
+    fn service_names_are_conservative_port_number_hints() {
+        assert_eq!(super::service_name(22), Some("SSH"));
+        assert_eq!(super::service_name(445), Some("SMB"));
+        assert_eq!(super::service_name(12345), None);
+    }
 
     #[test]
     fn parses_port_lists_and_removes_duplicates() {
