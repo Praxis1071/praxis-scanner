@@ -21,7 +21,7 @@ Do not move, rename, or delete Android source files as part of the Linux port. S
 4. **Platform information** — read-only interface, address, route and neighbor-table queries.
 5. **Persistence** — user preferences and device customizations, with explicit schema/version handling.
 
-The current implementation includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded IPv4 target generation, explicit user-triggered TCP-connect discovery, and opt-in mDNS/DNS-SD discovery. The full CI pipeline passed on commit `b6d808a`; later mDNS validation and UI wording refinements are awaiting CI. Controlled-network and Flatpak runtime verification remain outstanding.
+The current implementation includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded IPv4 target generation, explicit user-triggered TCP-connect discovery, and opt-in mDNS/DNS-SD discovery. The full CI pipeline passed on commit `09320a1`; the latest mDNS result-deduplication refinement is awaiting CI. Controlled-network and Flatpak runtime verification remain outstanding.
 
 ## Security invariants
 
