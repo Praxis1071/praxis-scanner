@@ -628,7 +628,6 @@ fn icmp_checksum(packet: &[u8]) -> u16 {
 }
 
 /// Start a bounded TCP-connect scan using a caller-supplied port list.
-/// Start a bounded TCP-connect scan using a caller-supplied port list.
 pub fn start_tcp_discovery_with_ports(
     source_address: Ipv4Addr,
     hosts: Vec<Ipv4Addr>,
