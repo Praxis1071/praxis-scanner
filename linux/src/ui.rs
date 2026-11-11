@@ -102,6 +102,21 @@ pub fn build_ui(application: &adw::Application) {
     netbios_button.set_margin_start(18);
     netbios_button.set_margin_top(8);
 
+    let icmp_button = gtk::Button::with_label("Check ICMP reachability");
+    icmp_button.set_sensitive(false);
+    icmp_button.set_halign(gtk::Align::Start);
+    icmp_button.set_margin_start(18);
+    icmp_button.set_margin_top(8);
+
+    let icmp_note = gtk::Label::new(Some(
+        "Uses Linux datagram ICMP ping sockets only. Availability depends on the kernel ping_group_range policy. No raw sockets, root privileges, or sysctl changes are used; no reply does not prove a device is offline.",
+    ));
+    icmp_note.set_halign(gtk::Align::Start);
+    icmp_note.set_wrap(true);
+    icmp_note.set_margin_start(18);
+    icmp_note.set_margin_end(18);
+    icmp_note.add_css_class("dim-label");
+
     let netbios_note = gtk::Label::new(Some(
         "Queries NBSTAT names only from devices already discovered on the selected local network. Names and workgroups are unverified network-provided data.",
     ));
@@ -203,6 +218,8 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&ssdp_note);
     content.append(&netbios_button);
     content.append(&netbios_note);
+    content.append(&icmp_button);
+    content.append(&icmp_note);
     content.append(&scope_note);
     content.append(&results_heading);
     content.append(&results_list);
@@ -254,6 +271,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns = Rc::new(RefCell::new(None::<MdnsHandle>));
     let active_ssdp = Rc::new(RefCell::new(None::<SsdpHandle>));
     let active_netbios = Rc::new(RefCell::new(None::<NetbiosHandle>));
+    let active_icmp = Rc::new(RefCell::new(None::<ScanHandle>));
     let device_catalog = Rc::new(RefCell::new(DeviceCatalog::default()));
 
     let interfaces_for_selection = Rc::clone(&interfaces);
@@ -264,6 +282,7 @@ pub fn build_ui(application: &adw::Application) {
     let mdns_button_for_selection = mdns_button.clone();
     let ssdp_button_for_selection = ssdp_button.clone();
     let netbios_button_for_selection = netbios_button.clone();
+    let icmp_button_for_selection = icmp_button.clone();
     let status_for_selection = status.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
@@ -284,6 +303,7 @@ pub fn build_ui(application: &adw::Application) {
         mdns_button_for_selection.set_sensitive(can_scan);
         ssdp_button_for_selection.set_sensitive(can_scan);
         netbios_button_for_selection.set_sensitive(can_scan);
+        icmp_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
                 "Selected {} ({}/{}). This is this device's local IPv4 address. Automatic scanning on launch is controlled in Settings.",
@@ -304,6 +324,7 @@ pub fn build_ui(application: &adw::Application) {
     let mdns_button_for_refresh = mdns_button.clone();
     let ssdp_button_for_refresh = ssdp_button.clone();
     let netbios_button_for_refresh = netbios_button.clone();
+    let icmp_button_for_refresh = icmp_button.clone();
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
             RefreshWidgets {
@@ -314,6 +335,7 @@ pub fn build_ui(application: &adw::Application) {
                 mdns_button: &mdns_button_for_refresh,
                 ssdp_button: &ssdp_button_for_refresh,
                 netbios_button: &netbios_button_for_refresh,
+                icmp_button: &icmp_button_for_refresh,
             },
             &interfaces_for_refresh,
             &selected_for_refresh,
@@ -1026,6 +1048,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_device_for_close = Rc::clone(&active_device_scan);
     let active_ssdp_for_close = Rc::clone(&active_ssdp);
     let active_netbios_for_close = Rc::clone(&active_netbios);
+    let active_icmp_for_close = Rc::clone(&active_icmp);
     let active_mdns_for_close = Rc::clone(&active_mdns);
     window.connect_close_request(move |_| {
         if let Some(handle) = active_for_close.borrow().as_ref() {
@@ -1043,6 +1066,9 @@ pub fn build_ui(application: &adw::Application) {
         if let Some(handle) = active_netbios_for_close.borrow().as_ref() {
             handle.cancel();
         }
+        if let Some(handle) = active_icmp_for_close.borrow().as_ref() {
+            handle.cancel();
+        }
         glib::Propagation::Proceed
     });
 
@@ -1055,6 +1081,7 @@ pub fn build_ui(application: &adw::Application) {
             mdns_button: &mdns_button,
             ssdp_button: &ssdp_button,
             netbios_button: &netbios_button,
+            icmp_button: &icmp_button,
         },
         &interfaces,
         &selected_interface,
@@ -1759,6 +1786,7 @@ struct RefreshWidgets<'a> {
     mdns_button: &'a gtk::Button,
     ssdp_button: &'a gtk::Button,
     netbios_button: &'a gtk::Button,
+    icmp_button: &'a gtk::Button,
 }
 
 fn refresh_interfaces(
@@ -1774,6 +1802,7 @@ fn refresh_interfaces(
         mdns_button,
         ssdp_button,
         netbios_button,
+        icmp_button,
     } = widgets;
 
     while let Some(child) = list.first_child() {
@@ -1784,6 +1813,7 @@ fn refresh_interfaces(
     mdns_button.set_sensitive(false);
     ssdp_button.set_sensitive(false);
     netbios_button.set_sensitive(false);
+    icmp_button.set_sensitive(false);
 
     match network::ipv4_interfaces() {
         Ok(interfaces) => {
