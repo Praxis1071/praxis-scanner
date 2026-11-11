@@ -350,7 +350,8 @@ fn is_safe_location(value: &str) -> bool {
     !authority.is_empty()
         && !authority.starts_with(':')
         && !authority.ends_with(':')
-        && !authority.contains(['?', '#'])
+        && !authority.contains('?')
+        && !authority.contains('#')
         && !value.chars().any(char::is_whitespace)
         && !value.contains('@')
         && value.len() <= 512
