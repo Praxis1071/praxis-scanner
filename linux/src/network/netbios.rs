@@ -38,6 +38,7 @@ pub enum NetbiosEvent {
 pub enum NetbiosStartError {
     TooManyTargets { requested: usize, limit: usize },
     InvalidTimeout,
+    InvalidSourceAddress,
 }
 
 impl std::fmt::Display for NetbiosStartError {
@@ -49,6 +50,9 @@ impl std::fmt::Display for NetbiosStartError {
             ),
             Self::InvalidTimeout => formatter.write_str(
                 "NetBIOS timeout must be greater than zero and no longer than two seconds",
+            ),
+            Self::InvalidSourceAddress => formatter.write_str(
+                "NetBIOS discovery requires a specific local IPv4 source address",
             ),
         }
     }
@@ -68,9 +72,13 @@ impl NetbiosHandle {
 
 /// Start bounded NBSTAT queries against a caller-selected list of discovered devices.
 pub fn start_discovery(
+    source_address: Ipv4Addr,
     mut targets: Vec<Ipv4Addr>,
     timeout: Duration,
 ) -> Result<(NetbiosHandle, mpsc::Receiver<NetbiosEvent>), NetbiosStartError> {
+    if source_address.is_unspecified() || source_address.is_multicast() {
+        return Err(NetbiosStartError::InvalidSourceAddress);
+    }
     if timeout.is_zero() || timeout > MAX_TIMEOUT {
         return Err(NetbiosStartError::InvalidTimeout);
     }
@@ -109,6 +117,7 @@ pub fn start_discovery(
             let sender = event_sender.clone();
             let worker_cancelled = Arc::clone(&worker_cancelled);
             let worker_completed = Arc::clone(&completed);
+            let worker_source_address = source_address;
 
             workers.push(thread::spawn(move || loop {
                 let next_target = receiver
@@ -123,7 +132,7 @@ pub fn start_discovery(
                     continue;
                 }
 
-                if let Some(info) = query_device(address, timeout) {
+                if let Some(info) = query_device(worker_source_address, address, timeout) {
                     if sender
                         .send(NetbiosEvent::DeviceFound { address, info })
                         .is_err()
@@ -157,8 +166,12 @@ pub fn start_discovery(
     Ok((NetbiosHandle { cancelled }, event_receiver))
 }
 
-fn query_device(address: Ipv4Addr, timeout: Duration) -> Option<NetbiosInfo> {
-    let socket = UdpSocket::bind(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)).ok()?;
+fn query_device(
+    source_address: Ipv4Addr,
+    address: Ipv4Addr,
+    timeout: Duration,
+) -> Option<NetbiosInfo> {
+    let socket = UdpSocket::bind(SocketAddrV4::new(source_address, 0)).ok()?;
     socket.set_read_timeout(Some(timeout)).ok()?;
     let target = SocketAddr::V4(SocketAddrV4::new(address, 137));
     let request = build_nbstat_request();
@@ -362,7 +375,7 @@ mod tests {
 
     #[test]
     fn empty_target_list_finishes_without_network_activity() {
-        let (_handle, events) = start_discovery(Vec::new(), Duration::from_millis(100))
+        let (_handle, events) = start_discovery(Ipv4Addr::LOCALHOST, Vec::new(), Duration::from_millis(100))
             .expect("empty target list is valid");
         assert!(matches!(
             events.recv_timeout(Duration::from_secs(1)),
@@ -376,8 +389,9 @@ mod tests {
 
     #[test]
     fn rejects_invalid_timeout_and_oversized_target_lists() {
-        assert!(start_discovery(vec![Ipv4Addr::LOCALHOST], Duration::ZERO).is_err());
+        assert!(start_discovery(Ipv4Addr::LOCALHOST, vec![Ipv4Addr::LOCALHOST], Duration::ZERO).is_err());
         assert!(start_discovery(
+            Ipv4Addr::LOCALHOST,
             vec![Ipv4Addr::LOCALHOST; super::MAX_TARGETS + 1],
             Duration::from_millis(100)
         )

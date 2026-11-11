@@ -290,5 +290,5 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 - Added a bounded, parallel single-device TCP deep-scan engine using the Android app's standard common-port list, with per-port progress, cancellation, and conservative service labels.
 - Added safe service-banner collection for plain TCP services: one bounded 512-byte read, a short read timeout, no plaintext probing of TLS ports, and only an HTTP HEAD request for plain HTTP endpoints.
-- Added a bounded UDP NetBIOS NBSTAT implementation with strict response parsing, source validation, cancellation, and hostname/workgroup evidence integration.
+- Added a bounded UDP NetBIOS NBSTAT implementation with strict response parsing, selected-interface source binding, response-source validation, cancellation, and hostname/workgroup evidence integration.
 - These changes are **source implemented, not yet CI/host/Flatpak verified**. The Android app's full 1–65535 scan, ICMP latency/TTL, OS detection, persistent settings/customizations, and remaining screens are still open parity work.

@@ -894,7 +894,7 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
-        match netbios::start_discovery(targets.clone(), netbios::DEFAULT_TIMEOUT) {
+        match netbios::start_discovery(interface.address, targets.clone(), netbios::DEFAULT_TIMEOUT) {
             Ok((handle, events)) => {
                 *active_netbios_for_scan.borrow_mut() = Some(handle);
                 netbios_button_for_scan.set_label("Cancel NetBIOS discovery");

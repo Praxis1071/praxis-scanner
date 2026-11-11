@@ -69,7 +69,7 @@ Android references: `NetworkScanner.kt`, `ArpReader.kt`, `DnsLookup.kt`, `Networ
 | Read-only ARP/neighbour MAC enrichment | **Partial / unverified** | Verify permissions and correct interface-scoped lookup; do not add privileged fallback |
 | mDNS/DNS-SD service discovery | **Implemented / unverified** | Verify protocol coverage, host and Flatpak multicast behavior, parsing, bounds, and service presentation |
 | SSDP/UPnP discovery | **Implemented / unverified** | Verify response parsing, bounds and sandbox behavior; treat all advertisements/URLs as untrusted |
-| NetBIOS NBSTAT name/workgroup discovery | **Implemented in source; CI/runtime pending** | Bounded UDP NBSTAT query/parser with response-source validation, cancellation, hostname/workgroup merge, and detail presentation; verify on host and in Flatpak |
+| NetBIOS NBSTAT name/workgroup discovery | **Implemented in source; CI/runtime pending** | Bounded UDP NBSTAT query/parser with selected-interface source binding, response-source validation, cancellation, hostname/workgroup merge, and detail presentation; verify on host and in Flatpak |
 | Reverse DNS/PTR hostname resolution, including gateway DNS behavior | **Missing** | Implement bounded resolver strategy with clear timeout and privacy behavior |
 | MAC vendor/OUI lookup | **Missing** | Audit upstream database source/license/update strategy before bundling; support unknown/randomized MACs |
 | Device type classification from hostname/vendor/mDNS/SSDP/NetBIOS/ports | **Missing / partial** — conventional TCP port labels only | Implement explainable heuristic classification with confidence/uncertainty; never present guesses as facts |
