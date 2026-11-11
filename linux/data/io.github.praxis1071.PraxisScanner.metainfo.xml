@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.praxis1071.PraxisScanner</id>
+  <name>Praxis Scanner</name>
+  <summary>Discover devices on your local network</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description>
+    <p>Praxis Scanner is a native Linux desktop application for discovering devices and advertised services on a local IPv4 network.</p>
+    <p>It provides explicit, bounded TCP connection scans, read-only local route and neighbour information, and optional mDNS/DNS-SD and SSDP/UPnP discovery.</p>
+    <p>Network discovery is best-effort. Responses may be filtered or spoofed, and a missing response does not prove that a device is offline.</p>
+  </description>
+  <launchable type="desktop-id">io.github.praxis1071.PraxisScanner.desktop</launchable>
+  <url type="homepage">https://github.com/Praxis1071/praxis-scanner</url>
+  <url type="vcs-browser">https://github.com/Praxis1071/praxis-scanner/tree/linux/gtk4-port-planning/linux</url>
+  <developer id="io.github.praxis1071">
+    <name>Praxis1071</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>praxis-scanner</binary>
+  </provides>
+</component>
