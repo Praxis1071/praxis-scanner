@@ -1769,6 +1769,7 @@ fn settings_page(
     appearance_list.add_css_class("boxed-list");
     appearance_list.append(&theme_row);
     content.append(&appearance_list);
+    content.append(&theme_status);
 
     let scanning_heading = gtk::Label::new(Some("Scanning"));
     scanning_heading.add_css_class("title-2");
@@ -1799,6 +1800,7 @@ fn settings_page(
     scanning_list.add_css_class("boxed-list");
     scanning_list.append(&auto_scan_row);
     content.append(&scanning_list);
+    content.append(&auto_scan_status);
 
     let custom_ports_heading = gtk::Label::new(Some("Custom TCP ports"));
     custom_ports_heading.add_css_class("title-2");
@@ -2054,14 +2056,30 @@ fn show_information_dialog(
     title: &str,
     message: &str,
 ) {
-    let dialog = gtk::MessageDialog::builder()
+    let dialog = adw::Window::builder()
+        .title(title)
         .transient_for(window)
         .modal(true)
-        .message_type(gtk::MessageType::Info)
-        .buttons(gtk::ButtonsType::Close)
-        .text(title)
-        .secondary_text(message)
+        .default_width(480)
         .build();
-    dialog.connect_response(|dialog, _| dialog.close());
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 16);
+    content.set_margin_top(24);
+    content.set_margin_bottom(24);
+    content.set_margin_start(24);
+    content.set_margin_end(24);
+    let heading = gtk::Label::new(Some(title));
+    heading.add_css_class("title-2");
+    heading.set_halign(gtk::Align::Start);
+    let description = gtk::Label::new(Some(message));
+    description.set_wrap(true);
+    description.set_halign(gtk::Align::Start);
+    let close_button = gtk::Button::with_label("Close");
+    close_button.set_halign(gtk::Align::End);
+    let dialog_for_close = dialog.clone();
+    close_button.connect_clicked(move |_| dialog_for_close.close());
+    content.append(&heading);
+    content.append(&description);
+    content.append(&close_button);
+    dialog.set_content(Some(&content));
     dialog.present();
 }
