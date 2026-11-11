@@ -275,7 +275,7 @@ impl std::fmt::Display for ScanStartError {
                 "scan would perform {requested} TCP connection attempts; the configured limit is {limit}"
             ),
             Self::InvalidPort(port) => write!(formatter, "TCP port {port} is invalid; port zero is not allowed"),
-            Self::InvalidSourceAddress => formatter.write_str("ICMP source address must be a non-unspecified IPv4 address"),
+            Self::InvalidSourceAddress => formatter.write_str("source address must be a non-unspecified IPv4 address"),
         }
     }
 }
@@ -627,10 +627,14 @@ fn icmp_checksum(packet: &[u8]) -> u16 {
 /// Start a bounded TCP-connect scan using a caller-supplied port list.
 /// Start a bounded TCP-connect scan using a caller-supplied port list.
 pub fn start_tcp_discovery_with_ports(
+    source_address: Ipv4Addr,
     hosts: Vec<Ipv4Addr>,
     mut ports: Vec<u16>,
     timeout: Duration,
 ) -> Result<(ScanHandle, mpsc::Receiver<ScanEvent>), ScanStartError> {
+    if source_address.is_unspecified() {
+        return Err(ScanStartError::InvalidSourceAddress);
+    }
     if hosts.len() > MAX_SCAN_TARGETS {
         return Err(ScanStartError::TooManyTargets {
             requested: hosts.len(),
@@ -738,12 +742,14 @@ pub fn start_tcp_discovery_with_ports(
 }
 
 fn scan_host(
+    source_address: Ipv4Addr,
     address: Ipv4Addr,
     timeout: Duration,
     ports: &[u16],
     cancelled: &AtomicBool,
 ) -> HostScanResult {
-    let (open_ports, tcp_responded) = probe_ports(address, timeout, ports, cancelled);
+    let (open_ports, tcp_responded) =
+        probe_ports(source_address, address, timeout, ports, cancelled);
 
     HostScanResult {
         address,
@@ -752,7 +758,22 @@ fn scan_host(
     }
 }
 
+fn connect_tcp_from_source(
+    source_address: Ipv4Addr,
+    target: Ipv4Addr,
+    port: u16,
+    timeout: Duration,
+) -> io::Result<TcpStream> {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))?;
+    let source = SockAddr::from(SocketAddrV4::new(source_address, 0));
+    socket.bind(&source)?;
+    let destination = SockAddr::from(SocketAddrV4::new(target, port));
+    socket.connect_timeout(&destination, timeout)?;
+    Ok(socket.into())
+}
+
 fn probe_ports(
+    source_address: Ipv4Addr,
     address: Ipv4Addr,
     timeout: Duration,
     ports: &[u16],
@@ -766,8 +787,7 @@ fn probe_ports(
             break;
         }
 
-        let socket = SocketAddr::V4(SocketAddrV4::new(address, *port));
-        match TcpStream::connect_timeout(&socket, timeout) {
+        match connect_tcp_from_source(source_address, address, *port, timeout) {
             Ok(stream) => {
                 tcp_responded = true;
                 open_ports.push(*port);
