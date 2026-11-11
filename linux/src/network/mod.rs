@@ -4,6 +4,7 @@
 //! system settings, or require elevated capabilities.
 
 pub mod cidr;
+pub mod scanner;
 
 use std::net::Ipv4Addr;
 
