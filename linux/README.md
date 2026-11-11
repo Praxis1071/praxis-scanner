@@ -21,8 +21,9 @@ The first foundation milestone provides:
 - Read-only IPv4 interface enumeration.
 - Interface name, address, prefix, and UP/loopback state presentation.
 - Unit tests for IPv4 netmask-prefix parsing.
+- A bounded IPv4 subnet-range model that rejects networks above a caller-supplied host ceiling before allocating candidate addresses.
 
-This is an initial development milestone, **not a complete network scanner**. Host discovery, TCP connection checks, protocol discovery, device details, persistence, and Flatpak packaging remain future roadmap work. No runtime test on the maintainer's CachyOS machine or inside Flatpak has been claimed.
+This is an initial development milestone, **not a complete network scanner**. Active host discovery, TCP connection checks, protocol discovery, device details, persistence, and Flatpak packaging remain future roadmap work. The subnet-range module currently calculates candidate addresses only; it sends no packets. No runtime test on the maintainer's CachyOS machine or inside Flatpak has been claimed.
 
 ## Build prerequisites
 
@@ -41,4 +42,4 @@ The first Cargo run will resolve dependencies and create `Cargo.lock`. Commit th
 
 ## Next steps
 
-Follow the root `ROADMAP.md`. The next implementation work must add tested interface/route models and a safe, bounded TCP-connect discovery engine before any broader discovery protocols are added.
+Follow the root `ROADMAP.md`. The next implementation work is to verify the current Rust build, then add tested read-only route/interface models and a safe, cancellable, bounded TCP-connect discovery engine before any broader discovery protocols are added.
