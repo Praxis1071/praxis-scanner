@@ -632,9 +632,7 @@ pub fn start_tcp_discovery_with_ports(
     mut ports: Vec<u16>,
     timeout: Duration,
 ) -> Result<(ScanHandle, mpsc::Receiver<ScanEvent>), ScanStartError> {
-    if source_address.is_unspecified() {
-        return Err(ScanStartError::InvalidSourceAddress);
-    }
+    validate_tcp_source_address(source_address)?;
     if hosts.len() > MAX_SCAN_TARGETS {
         return Err(ScanStartError::TooManyTargets {
             requested: hosts.len(),
