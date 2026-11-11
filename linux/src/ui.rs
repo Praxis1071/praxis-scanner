@@ -296,6 +296,7 @@ pub fn build_ui(application: &adw::Application) {
     let netbios_button_for_selection = netbios_button.clone();
     let icmp_button_for_selection = icmp_button.clone();
     let status_for_selection = status.clone();
+    let progress_for_selection = scan_progress.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
             interfaces_for_selection
@@ -308,6 +309,8 @@ pub fn build_ui(application: &adw::Application) {
             != selected.as_ref().map(|item| (item.name.as_str(), item.address));
         if changed {
             catalog_for_selection.borrow_mut().clear();
+            progress_for_selection.set_fraction(0.0);
+            progress_for_selection.set_text(Some("Idle"));
         }
         let can_scan = selected.as_ref().is_some_and(is_scannable_interface);
         scan_button_for_selection.set_sensitive(can_scan);
