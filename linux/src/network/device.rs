@@ -237,6 +237,7 @@ fn is_valid_unicast_mac(value: &str) -> bool {
 mod tests {
     use super::{DeviceCatalog, MdnsEvidence, NetbiosEvidence, SsdpEvidence, MAX_MDNS_EVIDENCE_PER_DEVICE};
     use std::net::Ipv4Addr;
+    use std::time::Duration;
 
     fn address() -> Ipv4Addr {
         Ipv4Addr::new(192, 168, 1, 20)
