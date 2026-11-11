@@ -42,7 +42,7 @@ The following are targets, not claims of current implementation. Each feature mu
 - Local network host discovery using unprivileged methods.
 - TCP-based reachability checks and fallback discovery.
 - Read-only use of the system neighbor table where available.
-- mDNS / Bonjour discovery.
+- mDNS / DNS-SD service discovery (source implementation present; host and Flatpak runtime verification pending).
 - SSDP / UPnP discovery.
 - NetBIOS name and workgroup discovery.
 - Network interface selection where supported by the sandbox.
