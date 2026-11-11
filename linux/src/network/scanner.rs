@@ -2,7 +2,7 @@
 //!
 //! A timeout is deliberately not treated as proof that a host is offline.
 
-use std::io;
+use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
@@ -103,6 +103,7 @@ pub enum DeepScanEvent {
         port: u16,
         open: bool,
         tcp_responded: bool,
+        banner: Option<String>,
     },
     Finished {
         total: usize,
@@ -174,14 +175,15 @@ pub fn start_device_deep_scan(
                 }
 
                 let socket = SocketAddr::V4(SocketAddrV4::new(address, port));
-                let (open, tcp_responded) = match TcpStream::connect_timeout(&socket, timeout) {
-                    Ok(stream) => {
-                        drop(stream);
-                        (true, true)
-                    }
-                    Err(error) if is_connection_refused(&error) => (false, true),
-                    Err(_) => (false, false),
-                };
+                let (open, tcp_responded, banner) =
+                    match TcpStream::connect_timeout(&socket, timeout) {
+                        Ok(mut stream) => {
+                            let banner = collect_service_banner(address, port, &mut stream);
+                            (true, true, banner)
+                        }
+                        Err(error) if is_connection_refused(&error) => (false, true, None),
+                        Err(_) => (false, false, None),
+                    };
                 worker_completed.fetch_add(1, Ordering::Relaxed);
 
                 if sender
@@ -189,6 +191,7 @@ pub fn start_device_deep_scan(
                         port,
                         open,
                         tcp_responded,
+                        banner,
                     })
                     .is_err()
                 {
@@ -485,6 +488,49 @@ fn probe_ports(
     (open_ports, tcp_responded)
 }
 
+fn collect_service_banner(
+    address: Ipv4Addr,
+    port: u16,
+    stream: &mut TcpStream,
+) -> Option<String> {
+    // Never speak plaintext to TLS services. For plain HTTP, issue only a harmless
+    // HEAD request; other services are inspected passively for their initial greeting.
+    if matches!(port, 443 | 465 | 993 | 995 | 8443) {
+        return None;
+    }
+    stream
+        .set_read_timeout(Some(Duration::from_millis(350)))
+        .ok()?;
+
+    if matches!(port, 80 | 8000 | 8008 | 8080 | 8081 | 8888) {
+        let request = format!(
+            "HEAD / HTTP/1.0\\r\\nHost: {address}\\r\\nConnection: close\\r\\n\\r\\n"
+        );
+        stream.write_all(request.as_bytes()).ok()?;
+    }
+
+    let mut buffer = [0_u8; 512];
+    let read = stream.read(&mut buffer).ok()?;
+    if read == 0 {
+        return None;
+    }
+    sanitize_service_banner(&buffer[..read])
+}
+
+fn sanitize_service_banner(bytes: &[u8]) -> Option<String> {
+    let decoded = String::from_utf8_lossy(bytes);
+    let first_line = decoded.lines().find(|line| !line.trim().is_empty())?;
+    let sanitized = first_line
+        .chars()
+        .filter(|character| !character.is_control() || *character == '\\t')
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let banner = sanitized.chars().take(240).collect::<String>();
+    (!banner.is_empty()).then_some(banner)
+}
+
 fn is_connection_refused(error: &io::Error) -> bool {
     error.kind() == io::ErrorKind::ConnectionRefused
 }
@@ -601,6 +647,16 @@ mod tests {
             super::parse_tcp_ports(&input),
             Err(super::PortListError::TooMany { .. })
         ));
+    }
+
+    #[test]
+    fn service_banner_sanitizer_keeps_one_bounded_printable_line() {
+        let banner = super::sanitize_service_banner(
+            b"SSH-2.0-OpenSSH_9.8\\r\\nignored second line\\n",
+        )
+        .expect("valid banner");
+        assert_eq!(banner, "SSH-2.0-OpenSSH_9.8");
+        assert!(super::sanitize_service_banner(b"\\0\\r\\n").is_none());
     }
 
     #[test]
