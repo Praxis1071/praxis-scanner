@@ -328,8 +328,8 @@ fn is_connection_refused(error: &io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_connection_refused, probe_ports, start_tcp_discovery, ScanEvent, ScanStartError,
-        MAX_SCAN_TARGETS,
+        is_connection_refused, probe_ports, start_tcp_discovery, start_tcp_discovery_with_ports,
+        ScanEvent, ScanStartError, MAX_SCAN_TARGETS, MAX_TCP_PORTS,
     };
     use std::io;
     use std::net::{Ipv4Addr, TcpListener};
@@ -441,6 +441,78 @@ mod tests {
                 limit: MAX_SCAN_TARGETS,
             })
         );
+    }
+
+    #[test]
+    fn full_custom_port_scan_reports_an_open_loopback_listener() {
+        let listener =
+            TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind an ephemeral loopback port");
+        let port = listener
+            .local_addr()
+            .expect("read the loopback listener address")
+            .port();
+
+        let (_handle, events) = start_tcp_discovery_with_ports(
+            vec![Ipv4Addr::LOCALHOST],
+            vec![port],
+            Duration::from_millis(500),
+        )
+        .expect("start a valid custom-port scan");
+
+        match events.recv_timeout(Duration::from_secs(2)) {
+            Ok(ScanEvent::HostCompleted(result)) => {
+                assert_eq!(result.address, Ipv4Addr::LOCALHOST);
+                assert_eq!(result.open_ports, vec![port]);
+                assert!(result.tcp_responded);
+            }
+            event => panic!("expected host result, received {event:?}"),
+        }
+
+        assert!(matches!(
+            events.recv_timeout(Duration::from_secs(2)),
+            Ok(ScanEvent::Finished {
+                total: 1,
+                completed: 1,
+                cancelled: false,
+            })
+        ));
+    }
+
+    #[test]
+    fn rejects_empty_and_zero_port_lists() {
+        assert_eq!(
+            start_tcp_discovery_with_ports(
+                vec![Ipv4Addr::LOCALHOST],
+                Vec::new(),
+                Duration::from_millis(100),
+            )
+            .err(),
+            Some(ScanStartError::EmptyPortList)
+        );
+        assert_eq!(
+            start_tcp_discovery_with_ports(
+                vec![Ipv4Addr::LOCALHOST],
+                vec![0],
+                Duration::from_millis(100),
+            )
+            .err(),
+            Some(ScanStartError::InvalidPort(0))
+        );
+    }
+
+    #[test]
+    fn rejects_custom_port_lists_above_the_limit() {
+        let ports = (1..=MAX_TCP_PORTS + 1)
+            .map(|port| port as u16)
+            .collect();
+        assert!(matches!(
+            start_tcp_discovery_with_ports(
+                vec![Ipv4Addr::LOCALHOST],
+                ports,
+                Duration::from_millis(100),
+            ),
+            Err(ScanStartError::TooManyPorts { .. })
+        ));
     }
 
     #[test]
