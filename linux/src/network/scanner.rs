@@ -403,7 +403,7 @@ pub fn start_icmp_discovery(
     let completed = Arc::new(AtomicUsize::new(0));
     let unavailable_reported = Arc::new(AtomicBool::new(false));
     let worker_count = total.min(MAX_CONCURRENT_WORKERS);
-    let worker_timeout = timeout.min(DEFAULT_TCP_TIMEOUT);
+    let worker_timeout = timeout;
 
     thread::spawn(move || {
         let workers = (0..worker_count)
@@ -503,7 +503,7 @@ fn create_datagram_icmp_socket(
     source_address: Ipv4Addr,
     timeout: Duration,
 ) -> io::Result<(Socket, u16)> {
-    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMP))?;
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMPV4))?;
     let source = SockAddr::from(SocketAddrV4::new(source_address, 0));
     socket.bind(&source)?;
     socket.set_read_timeout(Some(timeout))?;
