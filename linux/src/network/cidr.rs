@@ -93,10 +93,6 @@ impl Ipv4Network {
         self.prefix
     }
 
-    pub fn host_count(&self) -> u32 {
-        self.host_count
-    }
-
     /// Return the bounded candidate host list in ascending address order.
     pub fn hosts(&self) -> Vec<Ipv4Addr> {
         (0..self.host_count)
