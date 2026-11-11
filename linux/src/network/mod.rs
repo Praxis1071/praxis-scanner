@@ -6,6 +6,7 @@
 pub mod cidr;
 pub mod device;
 pub mod mdns;
+pub mod netbios;
 pub mod scanner;
 pub mod ssdp;
 pub mod system;

@@ -55,7 +55,7 @@ Android references: `DeviceDetailScreen.kt`, `DeviceInfoCard.kt`, `DetailSection
 | Standard deep scan: common ports plus enabled custom ports | **Partial** — current network scan accepts a bounded custom comma-separated list but is not the detail-screen deep scan workflow | Reproduce the Android standard scan's target/port behavior within safe limits |
 | Full TCP port scan (1–65535) with explicit confirmation | **Missing** — current global scan has strict target/probe limits | Design a safe, rate-limited, cancellable full-scan equivalent; explain limits and require explicit confirmation |
 | Deep scan results: open ports, service labels, duration, detected OS/confidence | **Missing / partial** — simple conventional labels exist for a small port set; no OS result or detail page | Implement structured result model and conservative, confidence-labelled identification |
-| Deep scan idle/scanning/completed/error states and cancellation | **Missing** as a per-device workflow | Implement all states and regression tests |
+| Deep scan idle/scanning/completed/error states and cancellation | **Partial — automatic common-port scan added** | Bounded parallel per-device scan now reports port progress, cancellation, port labels, and capped service banners; add error/empty states, richer result model, and full parity review |
 
 ## 4. Network discovery and enrichment
 
@@ -69,12 +69,12 @@ Android references: `NetworkScanner.kt`, `ArpReader.kt`, `DnsLookup.kt`, `Networ
 | Read-only ARP/neighbour MAC enrichment | **Partial / unverified** | Verify permissions and correct interface-scoped lookup; do not add privileged fallback |
 | mDNS/DNS-SD service discovery | **Implemented / unverified** | Verify protocol coverage, host and Flatpak multicast behavior, parsing, bounds, and service presentation |
 | SSDP/UPnP discovery | **Implemented / unverified** | Verify response parsing, bounds and sandbox behavior; treat all advertisements/URLs as untrusted |
-| NetBIOS NBSTAT name/workgroup discovery | **Missing** | Port bounded UDP NBSTAT behavior with robust parser tests and cancellation |
+| NetBIOS NBSTAT name/workgroup discovery | **Implemented in source; CI/runtime pending** | Bounded UDP NBSTAT query/parser with response-source validation, cancellation, hostname/workgroup merge, and detail presentation; verify on host and in Flatpak |
 | Reverse DNS/PTR hostname resolution, including gateway DNS behavior | **Missing** | Implement bounded resolver strategy with clear timeout and privacy behavior |
 | MAC vendor/OUI lookup | **Missing** | Audit upstream database source/license/update strategy before bundling; support unknown/randomized MACs |
 | Device type classification from hostname/vendor/mDNS/SSDP/NetBIOS/ports | **Missing / partial** — conventional TCP port labels only | Implement explainable heuristic classification with confidence/uncertainty; never present guesses as facts |
 | Port-based device heuristics | **Missing** | Audit source rules; implement safe bounded probes and tests, avoid overclaiming device identity |
-| Banner collection and service/version hints | **Missing** | Reproduce only with strict size/time limits, safe parsing and no exploit payloads |
+| Banner collection and service/version hints | **Partial — bounded plain-protocol banner collection** | Initial greeting / HTTP HEAD response is read with a 350 ms timeout and 512-byte cap; no TLS banner support, service-version extraction or OS inference yet |
 | Current-device identification | **Missing** | Identify local interface address safely and mark it consistently |
 | Device cache/last-seen/first-seen state | **Missing / partial** | Define scan-session and persistence semantics; avoid falsely marking unresponsive devices offline |
 
@@ -114,11 +114,11 @@ Android references: `SettingsScreen.kt`, `SettingsViewModel.kt`, `CustomPortsScr
 
 ## 7. Immediate audit findings (2026-11-11)
 
-The Linux UI currently has a main page containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS and SSDP actions, separate result lists, and status text. Device rows now have an initial navigation action that opens a partial evidence-detail page; CI is pending for this change. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
+The Linux UI currently has a main page containing interface selection, route/neighbour summary, a basic discovered-device list, manual TCP port entry and scan action, optional mDNS, SSDP and NetBIOS actions, separate result lists, and status text. Device rows open a partial evidence-detail page; it automatically runs a bounded common-port scan with progress/cancellation and displays limited service banners. CI/runtime verification is pending. It is a useful technical foundation, but it is **not yet a clone of the Android application**.
 
 The Android source tree clearly defines four primary destinations: Home, Device Detail, Settings, and Custom Ports. The Linux implementation currently lacks the latter three. The Android home flow also has auto-scan preference, online/offline device grouping, rich device cards, current-device indication, empty states and a scan progress card. The Android detail flow includes automatic per-device deep scanning, full-scan confirmation, device identity/customization, network/protocol evidence and detailed results. Android settings include theme, language, auto-scan, neighbour source, custom ports, about, privacy and project link.
 
-The largest current parity gaps are therefore **navigation/screens, device detail/deep scan, persistent preferences/customizations, custom-port management, device classification/enrichment, and the home screen's visual/state behavior**. The next implementation milestone must start with a complete visual/source reference audit and architecture for these screens, not add unrelated discovery features ahead of core product parity.
+The largest current parity gaps are therefore **navigation/screens, full device identity and detail parity, persistent preferences/customizations, custom-port management, ICMP reachability/latency/TTL, MAC vendor enrichment, DNS/reverse DNS, device classification/OS inference, and the home screen's visual/state behavior**. The next implementation milestone must start with a complete visual/source reference audit and architecture for these screens, not add unrelated discovery features ahead of core product parity.
 
 ## 8. Verification record
 
@@ -128,3 +128,11 @@ Record each verification run with commit SHA, date, environment, command, result
 |---|---|---|---|---|
 | 2026-11-11 | Initial audit | Android source tree + primary navigation/screens inspected; Linux UI and TCP scanner inspected | GitHub source review | Four Android routes confirmed; major Linux parity gaps documented above. No runtime claim. |\n| 2026-11-11 | `6bcf9fa` | Initial device detail navigation and evidence page added; libadwaita NavigationView enabled | CI run `43092906677` | Pending. Do not treat as build/test verified until CI completes. |
 
+
+
+### 2026-11-11 — follow-up implementation
+
+- Added a parallel, bounded single-device deep-scan engine using the Android standard common-port set; progress and cancellation are surfaced in the detail view.
+- Added capped, sanitized initial service banners for plain TCP services; TLS endpoints are not probed with plaintext.
+- Added bounded NetBIOS NBSTAT query/parser code and merged hostname/workgroup evidence into the device catalog and detail view.
+- Automated parser/engine tests are present in source. CI, host behavior, Flatpak behavior, and visual parity are still unverified.

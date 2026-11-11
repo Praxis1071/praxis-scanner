@@ -7,8 +7,9 @@ use adw::prelude::*;
 use gtk::glib;
 
 use crate::network::cidr::Ipv4Network;
-use crate::network::device::{DeviceCatalog, DeviceRecord, MdnsEvidence, SsdpEvidence};
+use crate::network::device::{DeviceCatalog, DeviceRecord, MdnsEvidence, NetbiosEvidence, SsdpEvidence};
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
+use crate::network::netbios::{self, NetbiosEvent, NetbiosHandle};
 use crate::network::ssdp::{self, SsdpEvent, SsdpHandle};
 use crate::network::scanner::{
     self, HostScanResult, ScanEvent, ScanHandle, MAX_SCAN_TARGETS,
@@ -87,9 +88,25 @@ pub fn build_ui(application: &adw::Application) {
 
     let ssdp_button = gtk::Button::with_label("Discover UPnP devices (SSDP)");
     ssdp_button.set_sensitive(false);
+    netbios_button.set_sensitive(false);
     ssdp_button.set_halign(gtk::Align::Start);
     ssdp_button.set_margin_start(18);
     ssdp_button.set_margin_top(8);
+
+    let netbios_button = gtk::Button::with_label("Discover NetBIOS names");
+    netbios_button.set_sensitive(false);
+    netbios_button.set_halign(gtk::Align::Start);
+    netbios_button.set_margin_start(18);
+    netbios_button.set_margin_top(8);
+
+    let netbios_note = gtk::Label::new(Some(
+        "Queries NBSTAT names only from devices already discovered on the selected local network. Names and workgroups are unverified network-provided data.",
+    ));
+    netbios_note.set_halign(gtk::Align::Start);
+    netbios_note.set_wrap(true);
+    netbios_note.set_margin_start(18);
+    netbios_note.set_margin_end(18);
+    netbios_note.add_css_class("dim-label");
 
     let ssdp_note = gtk::Label::new(Some(
         "Sends one SSDP M-SEARCH multicast query on the selected IPv4 interface. Responses are unauthenticated; device-description URLs are shown only as untrusted text and are never downloaded.",
@@ -181,6 +198,8 @@ pub fn build_ui(application: &adw::Application) {
     content.append(&mdns_note);
     content.append(&ssdp_button);
     content.append(&ssdp_note);
+    content.append(&netbios_button);
+    content.append(&netbios_note);
     content.append(&scope_note);
     content.append(&results_heading);
     content.append(&results_list);
@@ -216,6 +235,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_device_scan = Rc::new(RefCell::new(None::<ScanHandle>));
     let active_mdns = Rc::new(RefCell::new(None::<MdnsHandle>));
     let active_ssdp = Rc::new(RefCell::new(None::<SsdpHandle>));
+    let active_netbios = Rc::new(RefCell::new(None::<NetbiosHandle>));
     let device_catalog = Rc::new(RefCell::new(DeviceCatalog::default()));
 
     let interfaces_for_selection = Rc::clone(&interfaces);
@@ -225,6 +245,7 @@ pub fn build_ui(application: &adw::Application) {
     let scan_button_for_selection = scan_button.clone();
     let mdns_button_for_selection = mdns_button.clone();
     let ssdp_button_for_selection = ssdp_button.clone();
+    let netbios_button_for_selection = netbios_button.clone();
     let status_for_selection = status.clone();
     list.connect_row_selected(move |_, row| {
         let selected = row.and_then(|row| {
@@ -244,6 +265,7 @@ pub fn build_ui(application: &adw::Application) {
         scan_button_for_selection.set_sensitive(can_scan);
         mdns_button_for_selection.set_sensitive(can_scan);
         ssdp_button_for_selection.set_sensitive(can_scan);
+        netbios_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
                 "Selected {} ({}/{}). Press Scan selected network to begin; no scan starts automatically.",
@@ -263,6 +285,7 @@ pub fn build_ui(application: &adw::Application) {
     let scan_button_for_refresh = scan_button.clone();
     let mdns_button_for_refresh = mdns_button.clone();
     let ssdp_button_for_refresh = ssdp_button.clone();
+    let netbios_button_for_refresh = netbios_button.clone();
     refresh_button.connect_clicked(move |_| {
         refresh_interfaces(
             RefreshWidgets {
@@ -272,6 +295,7 @@ pub fn build_ui(application: &adw::Application) {
                 scan_button: &scan_button_for_refresh,
                 mdns_button: &mdns_button_for_refresh,
                 ssdp_button: &ssdp_button_for_refresh,
+                netbios_button: &netbios_button_for_refresh,
             },
             &interfaces_for_refresh,
             &selected_for_refresh,
@@ -293,6 +317,7 @@ pub fn build_ui(application: &adw::Application) {
     let ssdp_button_for_tcp = ssdp_button.clone();
     let active_mdns_for_tcp = Rc::clone(&active_mdns);
     let active_ssdp_for_tcp = Rc::clone(&active_ssdp);
+    let active_netbios_for_tcp = Rc::clone(&active_netbios);
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -303,7 +328,7 @@ pub fn build_ui(application: &adw::Application) {
             return;
         }
 
-        if active_mdns_for_tcp.borrow().is_some() || active_ssdp_for_tcp.borrow().is_some() {
+        if active_mdns_for_tcp.borrow().is_some() || active_ssdp_for_tcp.borrow().is_some() || active_netbios_for_tcp.borrow().is_some() {
             status_for_scan.set_text("Wait for the active service-discovery operation to finish first.");
             return;
         }
@@ -481,6 +506,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_mdns_for_scan = Rc::clone(&active_mdns);
     let active_tcp_for_mdns = Rc::clone(&active_scan);
     let active_ssdp_for_mdns = Rc::clone(&active_ssdp);
+    let active_netbios_for_mdns = Rc::clone(&active_netbios);
     let ssdp_button_for_mdns = ssdp_button.clone();
     let refresh_for_mdns = refresh_button.clone();
     let interface_list_for_mdns = list.clone();
@@ -496,7 +522,7 @@ pub fn build_ui(application: &adw::Application) {
             status_for_mdns.set_text("mDNS cancellation requested; waiting for the discovery worker to stop.");
             return;
         }
-        if active_tcp_for_mdns.borrow().is_some() || active_ssdp_for_mdns.borrow().is_some() {
+        if active_tcp_for_mdns.borrow().is_some() || active_ssdp_for_mdns.borrow().is_some() || active_netbios_for_mdns.borrow().is_some() {
             status_for_mdns.set_text("Wait for the active scan or SSDP discovery to finish before starting mDNS discovery.");
             return;
         }
@@ -654,6 +680,7 @@ pub fn build_ui(application: &adw::Application) {
     let active_ssdp_for_scan = Rc::clone(&active_ssdp);
     let active_tcp_for_ssdp = Rc::clone(&active_scan);
     let active_mdns_for_ssdp = Rc::clone(&active_mdns);
+    let active_netbios_for_ssdp = Rc::clone(&active_netbios);
     let refresh_for_ssdp = refresh_button.clone();
     let interface_list_for_ssdp = list.clone();
     let port_entry_for_ssdp = port_entry.clone();
@@ -669,7 +696,7 @@ pub fn build_ui(application: &adw::Application) {
             status_for_ssdp.set_text("SSDP cancellation requested; waiting for the discovery worker to stop.");
             return;
         }
-        if active_tcp_for_ssdp.borrow().is_some() || active_mdns_for_ssdp.borrow().is_some() {
+        if active_tcp_for_ssdp.borrow().is_some() || active_mdns_for_ssdp.borrow().is_some() || active_netbios_for_ssdp.borrow().is_some() {
             status_for_ssdp.set_text("Wait for the active scan to finish before starting SSDP discovery.");
             return;
         }
@@ -821,9 +848,116 @@ pub fn build_ui(application: &adw::Application) {
         }
     });
 
+    let status_for_netbios = status.clone();
+    let netbios_button_for_scan = netbios_button.clone();
+    let selected_for_netbios = Rc::clone(&selected_interface);
+    let catalog_for_netbios = Rc::clone(&device_catalog);
+    let devices_for_netbios = devices_list.clone();
+    let navigation_for_netbios = navigation_view.clone();
+    let active_netbios_for_scan = Rc::clone(&active_netbios);
+    let active_tcp_for_netbios = Rc::clone(&active_scan);
+    let active_mdns_for_netbios = Rc::clone(&active_mdns);
+    let active_ssdp_for_netbios = Rc::clone(&active_ssdp);
+    let interface_list_for_netbios = list.clone();
+    netbios_button.connect_clicked(move |_| {
+        if let Some(handle) = active_netbios_for_scan.borrow().as_ref() {
+            handle.cancel();
+            netbios_button_for_scan.set_label("Cancelling NetBIOS discovery…");
+            status_for_netbios.set_text("NetBIOS cancellation requested; waiting for outstanding UDP queries to finish.");
+            return;
+        }
+        if active_tcp_for_netbios.borrow().is_some()
+            || active_mdns_for_netbios.borrow().is_some()
+            || active_ssdp_for_netbios.borrow().is_some()
+        {
+            status_for_netbios.set_text("Wait for the active scan or service-discovery operation to finish first.");
+            return;
+        }
+        let Some(interface) = selected_for_netbios.borrow().clone() else {
+            status_for_netbios.set_text("Select an eligible IPv4 interface first.");
+            return;
+        };
+        if !is_scannable_interface(&interface) {
+            status_for_netbios.set_text("Select an active private or link-local IPv4 interface first.");
+            return;
+        }
+
+        let targets = catalog_for_netbios
+            .borrow()
+            .iter()
+            .filter(|device| device.has_discovery_evidence())
+            .map(|device| device.address)
+            .filter(|address| *address != interface.address)
+            .collect::<Vec<_>>();
+        if targets.is_empty() {
+            status_for_netbios.set_text("No other discovered devices are available. Run a TCP, mDNS, or SSDP discovery first.");
+            return;
+        }
+
+        match netbios::start_discovery(targets.clone(), netbios::DEFAULT_TIMEOUT) {
+            Ok((handle, events)) => {
+                *active_netbios_for_scan.borrow_mut() = Some(handle);
+                netbios_button_for_scan.set_label("Cancel NetBIOS discovery");
+                interface_list_for_netbios.set_sensitive(false);
+                status_for_netbios.set_text(&format!(
+                    "Querying NetBIOS NBSTAT names for {} previously discovered device(s)…",
+                    targets.len()
+                ));
+
+                let status_for_events = status_for_netbios.clone();
+                let button_for_events = netbios_button_for_scan.clone();
+                let selected_for_events = Rc::clone(&selected_for_netbios);
+                let interface_list_for_events = interface_list_for_netbios.clone();
+                let active_for_events = Rc::clone(&active_netbios_for_scan);
+                let catalog_for_events = Rc::clone(&catalog_for_netbios);
+                let devices_for_events = devices_for_netbios.clone();
+                let navigation_for_events = navigation_for_netbios.clone();
+
+                glib::timeout_add_local(Duration::from_millis(80), move || {
+                    while let Ok(event) = events.try_recv() {
+                        match event {
+                            NetbiosEvent::DeviceFound { address, info } => {
+                                catalog_for_events.borrow_mut().record_netbios(
+                                    address,
+                                    NetbiosEvidence {
+                                        hostname: info.hostname.clone(),
+                                        workgroup: info.workgroup.clone(),
+                                    },
+                                );
+                                refresh_device_list(
+                                    &devices_for_events,
+                                    &catalog_for_events.borrow(),
+                                    &navigation_for_events,
+                                );
+                            }
+                            NetbiosEvent::Finished { total, completed, cancelled } => {
+                                active_for_events.borrow_mut().take();
+                                button_for_events.set_label("Discover NetBIOS names");
+                                button_for_events.set_sensitive(
+                                    selected_for_events.borrow().as_ref().is_some_and(is_scannable_interface),
+                                );
+                                interface_list_for_events.set_sensitive(true);
+                                let state = if cancelled { "cancelled" } else { "finished" };
+                                status_for_events.set_text(&format!(
+                                    "NetBIOS discovery {state}: queried {completed}/{total} device(s). Names are unverified."
+                                ));
+                                return glib::ControlFlow::Break;
+                            }
+                        }
+                    }
+                    glib::ControlFlow::Continue
+                });
+            }
+            Err(error) => {
+                status_for_netbios.set_text(&format!("Could not start NetBIOS discovery: {error}"));
+            }
+        }
+    });
+
     let active_for_close = Rc::clone(&active_scan);
     let active_device_for_close = Rc::clone(&active_device_scan);
     let active_ssdp_for_close = Rc::clone(&active_ssdp);
+    let active_netbios_for_close = Rc::clone(&active_netbios);
     let active_mdns_for_close = Rc::clone(&active_mdns);
     window.connect_close_request(move |_| {
         if let Some(handle) = active_for_close.borrow().as_ref() {
@@ -838,6 +972,9 @@ pub fn build_ui(application: &adw::Application) {
         if let Some(handle) = active_ssdp_for_close.borrow().as_ref() {
             handle.cancel();
         }
+        if let Some(handle) = active_netbios_for_close.borrow().as_ref() {
+            handle.cancel();
+        }
         glib::Propagation::Proceed
     });
 
@@ -849,6 +986,7 @@ pub fn build_ui(application: &adw::Application) {
             scan_button: &scan_button,
             mdns_button: &mdns_button,
             ssdp_button: &ssdp_button,
+            netbios_button: &netbios_button,
         },
         &interfaces,
         &selected_interface,
@@ -933,6 +1071,9 @@ fn refresh_device_list(
                 device.ssdp_advertisements.len()
             ));
         }
+        if let Some(netbios) = device.netbios_info.as_ref() {
+            details.push(format!("NetBIOS: {}", netbios.hostname));
+        }
 
         let row = adw::ActionRow::builder()
             .title(device.address.to_string())
@@ -1002,6 +1143,12 @@ fn device_detail_page(
     );
     if let Some(mac) = device.mac_address.as_deref() {
         append_detail_row(&identity, "MAC address", mac);
+    }
+    if let Some(netbios) = device.netbios_info.as_ref() {
+        append_detail_row(&identity, "NetBIOS hostname", &netbios.hostname);
+        if let Some(workgroup) = netbios.workgroup.as_deref() {
+            append_detail_row(&identity, "NetBIOS workgroup", workgroup);
+        }
     }
     content.append(&identity);
 
@@ -1282,6 +1429,7 @@ struct RefreshWidgets<'a> {
     scan_button: &'a gtk::Button,
     mdns_button: &'a gtk::Button,
     ssdp_button: &'a gtk::Button,
+    netbios_button: &'a gtk::Button,
 }
 
 fn refresh_interfaces(
@@ -1296,6 +1444,7 @@ fn refresh_interfaces(
         scan_button,
         mdns_button,
         ssdp_button,
+        netbios_button,
     } = widgets;
 
     while let Some(child) = list.first_child() {

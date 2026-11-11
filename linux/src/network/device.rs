@@ -27,6 +27,12 @@ pub struct SsdpEvidence {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NetbiosEvidence {
+    pub hostname: String,
+    pub workgroup: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DeviceRecord {
     pub address: Ipv4Addr,
     pub mac_address: Option<String>,
@@ -35,6 +41,7 @@ pub struct DeviceRecord {
     pub open_tcp_ports: BTreeSet<u16>,
     pub mdns_services: Vec<MdnsEvidence>,
     pub ssdp_advertisements: Vec<SsdpEvidence>,
+    pub netbios_info: Option<NetbiosEvidence>,
 }
 
 impl DeviceRecord {
@@ -46,6 +53,7 @@ impl DeviceRecord {
             open_tcp_ports: BTreeSet::new(),
             mdns_services: Vec::new(),
             ssdp_advertisements: Vec::new(),
+            netbios_info: None,
         }
     }
 
@@ -82,6 +90,29 @@ impl DeviceRecord {
         }
     }
 
+    pub fn record_netbios(&mut self, evidence: NetbiosEvidence) {
+        let hostname = evidence.hostname.trim();
+        if hostname.is_empty()
+            || hostname.len() > 15
+            || !hostname.chars().all(|character| {
+                character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | ' ')
+            })
+        {
+            return;
+        }
+        let workgroup = evidence.workgroup.as_deref().map(str::trim).filter(|value| {
+            !value.is_empty()
+                && value.len() <= 15
+                && value.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | ' ')
+                })
+        }).map(str::to_owned);
+        self.netbios_info = Some(NetbiosEvidence {
+            hostname: hostname.to_ascii_uppercase(),
+            workgroup,
+        });
+    }
+
     pub fn set_mac_address(&mut self, mac_address: String) -> bool {
         if !is_valid_unicast_mac(&mac_address) {
             return false;
@@ -95,6 +126,7 @@ impl DeviceRecord {
             || !self.open_tcp_ports.is_empty()
             || !self.mdns_services.is_empty()
             || !self.ssdp_advertisements.is_empty()
+            || self.netbios_info.is_some()
             || self.mac_address.is_some()
     }
 }
@@ -130,6 +162,13 @@ impl DeviceCatalog {
             .entry(address)
             .or_insert_with(|| DeviceRecord::new(address))
             .record_ssdp(evidence);
+    }
+
+    pub fn record_netbios(&mut self, address: Ipv4Addr, evidence: NetbiosEvidence) {
+        self.devices
+            .entry(address)
+            .or_insert_with(|| DeviceRecord::new(address))
+            .record_netbios(evidence);
     }
 
     pub fn set_mac_address(&mut self, address: Ipv4Addr, mac_address: String) -> bool {
@@ -172,7 +211,7 @@ fn is_valid_unicast_mac(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{DeviceCatalog, MdnsEvidence, SsdpEvidence, MAX_MDNS_EVIDENCE_PER_DEVICE};
+    use super::{DeviceCatalog, MdnsEvidence, NetbiosEvidence, SsdpEvidence, MAX_MDNS_EVIDENCE_PER_DEVICE};
     use std::net::Ipv4Addr;
 
     fn address() -> Ipv4Addr {
@@ -236,6 +275,34 @@ mod tests {
         assert_eq!(first.address, address());
         assert_eq!(first.open_tcp_ports.len(), 2);
         assert_eq!(first.mdns_services.len(), 1);
+    }
+
+    #[test]
+    fn stores_sanitized_netbios_identity_as_unverified_evidence() {
+        let mut catalog = DeviceCatalog::default();
+        catalog.record_netbios(
+            address(),
+            NetbiosEvidence {
+                hostname: "desktop-test".to_owned(),
+                workgroup: Some("workgroup".to_owned()),
+            },
+        );
+        let device = catalog.iter().next().expect("device exists");
+        let info = device.netbios_info.as_ref().expect("NetBIOS evidence exists");
+        assert_eq!(info.hostname, "DESKTOP-TEST");
+        assert_eq!(info.workgroup.as_deref(), Some("workgroup"));
+
+        catalog.record_netbios(
+            address(),
+            NetbiosEvidence {
+                hostname: "invalid\\nname".to_owned(),
+                workgroup: None,
+            },
+        );
+        assert_eq!(
+            catalog.iter().next().unwrap().netbios_info.as_ref().unwrap().hostname,
+            "DESKTOP-TEST"
+        );
     }
 
     #[test]

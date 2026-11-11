@@ -284,3 +284,11 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 ---
 
 **Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the latest branch comparison reports 141 commits ahead of `main` and 0 behind. The Android project remains present; the branch diff adds Linux source/docs and adjusts root documentation, not Android implementation files. Linux source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, progress, mDNS, SSDP, and a basic unified device summary list with an initial navigable device-detail page (IP, MAC, TCP evidence/open ports, mDNS and SSDP evidence only). This is an early partial implementation, not Android detail-screen parity. TCP scan bounds are 1024 target addresses, 256 unique ports, 8192 connection attempts, and 32 workers; UI TCP timeout is 450 ms. The latest UI/navigation change is commit `6bcf9fa`; CI run `43092906677` is pending, so compilation, tests, Clippy, and Flatpak status for this change are not yet verified. The Flatpak manifest exists, but its build job has not succeeded. Host and Flatpak runtime tests, device detail screens, sorting/filtering, rename/icon customization, NetBIOS, reverse DNS, banners, and persistent preferences remain incomplete. The application is not ready for maintainer testing.
+
+
+## Latest parity implementation update (2026-11-11)
+
+- Added a bounded, parallel single-device TCP deep-scan engine using the Android app's standard common-port list, with per-port progress, cancellation, and conservative service labels.
+- Added safe service-banner collection for plain TCP services: one bounded 512-byte read, a short read timeout, no plaintext probing of TLS ports, and only an HTTP HEAD request for plain HTTP endpoints.
+- Added a bounded UDP NetBIOS NBSTAT implementation with strict response parsing, source validation, cancellation, and hostname/workgroup evidence integration.
+- These changes are **source implemented, not yet CI/host/Flatpak verified**. The Android app's full 1–65535 scan, ICMP latency/TTL, OS detection, persistent settings/customizations, and remaining screens are still open parity work.
