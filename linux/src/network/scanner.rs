@@ -521,6 +521,7 @@ fn create_datagram_icmp_socket(
                 "kernel did not assign an ICMP ping identifier",
             )
         })?;
+    // Keep receive-buffer handling safe while retaining the ICMP datagram protocol.
     let socket: UdpSocket = raw_socket.into();
 
     Ok((socket, identifier))
