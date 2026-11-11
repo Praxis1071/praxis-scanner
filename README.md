@@ -2,9 +2,9 @@
 
 A Linux desktop network scanner in active development in the **Praxis Scanner** project family, built with **Rust**, **GTK4**, and **libadwaita**. It is a Linux-native companion to the Android Network Scanner codebase, not an Android build.
 
-> **Project status: Early implementation**
+> **Project status: Active implementation — not yet test-ready**
 >
-> The native Linux application now has a Rust/GTK4/libadwaita shell, read-only IPv4 interface listing, bounded subnet calculation, and an explicit, bounded TCP-connect scan for a selected private or link-local subnet under [`linux/`](linux/). This is still early implementation and has not yet passed CI or runtime verification. The Android Gradle project remains present and unchanged; `main` is not modified.
+> The Linux branch currently contains a GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, and explicit TCP-connect discovery with custom ports, cancellation, service-name hints, and workload limits. These source changes are not yet verified by a successful CI run or runtime testing. The Android Gradle project remains present and unchanged; the Linux work stays isolated on `linux/gtk4-port-planning`.
 
 ## Project goals
 
@@ -19,6 +19,18 @@ The Linux application will:
 - Remain licensed under GNU GPL-3.0, while preserving applicable upstream copyright and license notices.
 - Perform all supported operations without root, sudo, administrator passwords, setuid helpers, privileged services, or capabilities such as `CAP_NET_RAW`.
 - Request only the minimum Flatpak permissions needed for its documented features.
+
+## Current Linux implementation (unverified)
+
+The current development branch includes the following source-level functionality:
+
+- Read-only IPv4 interface, default-route, and complete ARP-neighbour information.
+- User-selected private/link-local IPv4 subnet discovery.
+- TCP connect checks with editable comma-separated ports and common service-name hints.
+- Limits of 1024 target addresses, 256 unique ports, 8192 total connection attempts, and 32 concurrent workers.
+- Explicit start/cancel controls and inconclusive handling for hosts that do not respond.
+
+These are implementation details, not release claims: compilation, automated checks, host behavior, and Flatpak sandbox behavior still need to pass before the features are considered verified.
 
 ## Planned features
 
