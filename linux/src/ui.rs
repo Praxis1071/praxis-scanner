@@ -398,19 +398,22 @@ fn interface_row(interface: &NetworkInterface) -> adw::ActionRow {
 fn result_row(result: &HostScanResult) -> adw::ActionRow {
     let details = if result.open_ports.is_empty() {
         if result.tcp_responded {
-            "TCP response received; no common scanned port was open".to_owned()
+            "TCP response received; none of the configured ports was open".to_owned()
         } else {
             "No TCP response observed; this does not prove the host is offline".to_owned()
         }
     } else {
+        let ports = result
+            .open_ports
+            .iter()
+            .map(|port| match scanner::service_name(*port) {
+                Some(service) => format!("{port} ({service})"),
+                None => port.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
         format!(
-            "Open TCP ports: {}",
-            result
-                .open_ports
-                .iter()
-                .map(u16::to_string)
-                .collect::<Vec<_>>()
-                .join(", ")
+            "Open TCP ports: {ports}. Service names are port-based hints, not verified identities."
         )
     };
 
