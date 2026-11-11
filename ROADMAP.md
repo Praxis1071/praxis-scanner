@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, opt-in interface-scoped mDNS/DNS-SD, and bounded SSDP/UPnP discovery are present in source. Full CI passed on `09320a1`; SSDP implementation and UI changes are awaiting CI. Host and Flatpak runtime verification remain pending  
+> **Implementation status:** GTK4/libadwaita shell, bounded configurable TCP discovery, read-only route/ARP summaries, opt-in interface-scoped mDNS/DNS-SD, bounded SSDP/UPnP discovery, and an initial unified device summary list are present in source. The latest CI run passed formatting and tests but failed strict Clippy on one needless borrow; commit `141e45c` fixes it and a fresh run is queued. Host and Flatpak runtime verification remain pending  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -132,7 +132,7 @@ The Linux edition is a separate platform implementation, not a Kotlin-to-Rust li
 
 Implementation is authorized and active on this branch. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit configurable TCP-connect discovery, conservative service hints, cancellation, opt-in interface-scoped IPv4 mDNS/DNS-SD, and bounded SSDP/UPnP discovery. The complete CI pipeline (formatting, tests, Clippy, and release build) passed on commit `09320a1`. The SSDP engine and its UI integration are awaiting their own CI run. No host-network or Flatpak runtime behavior has been verified, so no feature is considered release-complete.
 
-**Current milestone:** consolidate TCP, mDNS, SSDP, and neighbour-table evidence into one device model; finish reproducible Flatpak inputs; then validate host and sandboxed network behavior. No user-side testing is requested until the application is feature-complete.
+**Current milestone:** finish the unified device experience (details, sorting/filtering, rename/icon preferences), close the CI lint failure, validate reproducible Flatpak inputs and build, then perform controlled host and sandboxed network checks. No user-side testing is requested until the application is feature-complete.
 
 ### 5.1 Foundation and application shell
 
@@ -240,4 +240,4 @@ If a feature cannot satisfy the security policy or cannot be reliably tested, it
 
 ---
 
-**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`. Source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, and UI progress. The scanner caps each run at 1024 target addresses, 256 unique ports, 8192 total connection attempts, and 32 workers; the UI uses a 450 ms per-connection timeout. These changes have not yet passed CI. The most recent previously observed workflow was cancelled during dependency installation, so it provides no build/test evidence. Host and Flatpak feasibility tests have not been run. The application is not ready for maintainer testing.
+**Current state (2026-11-11):** Linux implementation is active on `linux/gtk4-port-planning`; the branch is 137 commits ahead of `main` and 0 behind at the latest comparison. The Android project remains present; the branch diff adds Linux source/docs and adjusts root documentation, not Android implementation files. Linux source includes the GTK4/libadwaita shell, read-only IPv4 interface/route/ARP summaries, bounded subnet calculation, explicit TCP-connect scanning, configurable comma-separated TCP ports, conservative port-number service hints, cancellation, progress, mDNS, SSDP, and a basic unified device summary list. TCP scan bounds are 1024 target addresses, 256 unique ports, 8192 connection attempts, and 32 workers; UI TCP timeout is 450 ms. Latest CI passed formatting and tests but failed Clippy on one needless borrow; commit `141e45c` fixes that lint and a new CI run is queued. The Flatpak manifest exists, but its build job has not succeeded. Host and Flatpak runtime tests, device detail screens, sorting/filtering, rename/icon customization, NetBIOS, reverse DNS, banners, and persistent preferences remain incomplete. The application is not ready for maintainer testing.
