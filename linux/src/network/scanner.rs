@@ -154,7 +154,8 @@ impl ScanHandle {
 /// Start a bounded scan of the supplied IPv4 addresses.
 ///
 /// This function never opens raw sockets or requests elevated capabilities.
-/// It probes a small fixed set of common TCP ports and runs at most 32 workers.
+/// The default entry point probes common TCP ports; custom scans are separately bounded.
+/// All scans run at most 32 workers and enforce a total probe budget.
 pub fn start_tcp_discovery(
     hosts: Vec<Ipv4Addr>,
     timeout: Duration,
