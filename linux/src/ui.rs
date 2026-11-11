@@ -45,7 +45,12 @@ pub fn build_ui(application: &adw::Application) {
     ports_heading.set_margin_top(12);
 
     let port_entry = gtk::Entry::new();
-    port_entry.set_text("22,53,80,139,443,445,3389");
+    let default_ports = scanner::DEFAULT_TCP_PORTS
+        .iter()
+        .map(u16::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
+    port_entry.set_text(&default_ports);
     port_entry.set_placeholder_text(Some("22, 53, 80, 443"));
     port_entry.set_max_length(1024);
     port_entry.set_margin_start(18);
