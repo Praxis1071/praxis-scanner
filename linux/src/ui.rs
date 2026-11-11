@@ -1706,9 +1706,6 @@ fn device_detail_page(
             Ok(()) => match updated.save() {
                 Ok(()) => {
                     *preferences_for_icon.borrow_mut() = updated;
-                    let icon_name = icon_key
-                        .map(icon_name_for_key)
-                        .unwrap_or("network-server-symbolic");
                     refresh_device_list(
                         &devices_list_for_icon,
                         &catalog_for_icon.borrow(),
