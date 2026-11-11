@@ -173,6 +173,7 @@ pub fn build_ui(application: &adw::Application) {
     let refresh_button_for_scan = refresh_button.clone();
     let port_entry_for_scan = port_entry.clone();
     let interface_list_for_scan = list.clone();
+    let port_entry_for_sensitivity = port_entry.clone();
     scan_button.connect_clicked(move |_| {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
@@ -247,6 +248,7 @@ pub fn build_ui(application: &adw::Application) {
                 button_for_scan.set_label("Cancel scan");
                 refresh_button_for_scan.set_sensitive(false);
                 interface_list_for_scan.set_sensitive(false);
+                port_entry_for_sensitivity.set_sensitive(false);
                 status_for_scan.set_text(&format!(
                     "Scanning {target_count} target(s) across {port_count} TCP port(s) on {}/{} using unprivileged TCP connections…",
                     network.address(),
@@ -258,6 +260,7 @@ pub fn build_ui(application: &adw::Application) {
                 let button_for_events = button_for_scan.clone();
                 let refresh_for_events = refresh_button_for_scan.clone();
                 let interface_list_for_events = interface_list_for_scan.clone();
+                let port_entry_for_events = port_entry_for_sensitivity.clone();
                 let active_for_events = Rc::clone(&active_for_scan);
                 let mut completed = 0usize;
                 let mut responsive = 0usize;
@@ -286,6 +289,7 @@ pub fn build_ui(application: &adw::Application) {
                                 button_for_events.set_label("Scan selected network");
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
+                                port_entry_for_events.set_sensitive(true);
                                 let state = if cancelled { "cancelled" } else { "finished" };
                                 status_for_events.set_text(&format!(
                                     "Scan {state}: {finished_count} of {total} checked; {responsive} TCP responders; {inconclusive} without a response (not proof they are offline)."
