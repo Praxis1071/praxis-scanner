@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use adw::prelude::*;
 use gtk::glib;
 
-use crate::preferences::{AppPreferences, ThemeMode};
+use crate::preferences::{AppPreferences, LanguageMode, ThemeMode};
 use crate::network::cidr::Ipv4Network;
 use crate::network::device::{DeviceCatalog, DeviceRecord, MdnsEvidence, NetbiosEvidence, SsdpEvidence};
 use crate::network::mdns::{self, MdnsEvent, MdnsHandle};
@@ -19,15 +19,19 @@ use crate::network::scanner::{
 use crate::network::{self, NetworkInterface};
 
 pub fn build_ui(application: &adw::Application) {
+    let preferences = Rc::new(RefCell::new(AppPreferences::load()));
+    let language = preferences.borrow().language;
+    apply_theme(preferences.borrow().theme);
+
     let header = adw::HeaderBar::new();
-    let refresh_button = gtk::Button::with_label("Refresh");
-    refresh_button.set_tooltip_text(Some("Refresh local network interfaces"));
+    let refresh_button = gtk::Button::with_label(localized(language, "Refresh", "Yenile"));
+    refresh_button.set_tooltip_text(Some(localized(language, "Refresh local network interfaces", "Yerel ağ arayüzlerini yenile")));
     header.pack_end(&refresh_button);
     let settings_button = gtk::Button::from_icon_name("emblem-system-symbolic");
-    settings_button.set_tooltip_text(Some("Settings"));
+    settings_button.set_tooltip_text(Some(localized(language, "Settings", "Ayarlar")));
     header.pack_end(&settings_button);
 
-    let heading = gtk::Label::new(Some("Local network interfaces"));
+    let heading = gtk::Label::new(Some(localized(language, "Your network", "Ağınız")));
     heading.add_css_class("title-2");
     heading.set_halign(gtk::Align::Start);
     heading.set_margin_start(18);
@@ -40,7 +44,7 @@ pub fn build_ui(application: &adw::Application) {
     list.set_margin_start(18);
     list.set_margin_end(18);
 
-    let system_info = gtk::Label::new(Some("Reading route and neighbour information…"));
+    let system_info = gtk::Label::new(Some(localized(language, "Reading local network information…", "Yerel ağ bilgileri okunuyor…")));
     system_info.set_halign(gtk::Align::Start);
     system_info.set_wrap(true);
     system_info.set_margin_start(18);
@@ -48,7 +52,7 @@ pub fn build_ui(application: &adw::Application) {
     system_info.set_margin_top(8);
     system_info.add_css_class("dim-label");
 
-    let devices_heading = gtk::Label::new(Some("Discovered devices"));
+    let devices_heading = gtk::Label::new(Some(localized(language, "Devices", "Cihazlar")));
     devices_heading.add_css_class("title-2");
     devices_heading.set_halign(gtk::Align::Start);
     devices_heading.set_margin_start(18);
@@ -61,7 +65,7 @@ pub fn build_ui(application: &adw::Application) {
     devices_list.set_margin_start(18);
     devices_list.set_margin_end(18);
 
-    let ports_heading = gtk::Label::new(Some("TCP ports (comma-separated)"));
+    let ports_heading = gtk::Label::new(Some(localized(language, "TCP ports (comma-separated)", "TCP bağlantı noktaları (virgülle ayırın)")));
     ports_heading.set_halign(gtk::Align::Start);
     ports_heading.set_margin_start(18);
     ports_heading.set_margin_top(12);
@@ -78,32 +82,32 @@ pub fn build_ui(application: &adw::Application) {
     port_entry.set_margin_start(18);
     port_entry.set_margin_end(18);
 
-    let scan_button = gtk::Button::with_label("Scan selected network");
+    let scan_button = gtk::Button::with_label(localized(language, "Scan network", "Ağı tara"));
     scan_button.add_css_class("suggested-action");
     scan_button.set_sensitive(false);
     scan_button.set_halign(gtk::Align::Start);
     scan_button.set_margin_start(18);
     scan_button.set_margin_top(12);
 
-    let mdns_button = gtk::Button::with_label("Discover advertised services (mDNS)");
+    let mdns_button = gtk::Button::with_label(localized(language, "Find local services (mDNS)", "Yerel servisleri bul (mDNS)"));
     mdns_button.set_sensitive(false);
     mdns_button.set_halign(gtk::Align::Start);
     mdns_button.set_margin_start(18);
     mdns_button.set_margin_top(8);
 
-    let ssdp_button = gtk::Button::with_label("Discover UPnP devices (SSDP)");
+    let ssdp_button = gtk::Button::with_label(localized(language, "Find UPnP devices (SSDP)", "UPnP cihazlarını bul (SSDP)"));
     ssdp_button.set_sensitive(false);
     ssdp_button.set_halign(gtk::Align::Start);
     ssdp_button.set_margin_start(18);
     ssdp_button.set_margin_top(8);
 
-    let netbios_button = gtk::Button::with_label("Discover NetBIOS names");
+    let netbios_button = gtk::Button::with_label(localized(language, "Find device names (NetBIOS)", "Cihaz adlarını bul (NetBIOS)"));
     netbios_button.set_sensitive(false);
     netbios_button.set_halign(gtk::Align::Start);
     netbios_button.set_margin_start(18);
     netbios_button.set_margin_top(8);
 
-    let icmp_button = gtk::Button::with_label("Discover ICMP responders");
+    let icmp_button = gtk::Button::with_label(localized(language, "Check ICMP responses", "ICMP yanıtlarını kontrol et"));
     icmp_button.set_sensitive(false);
     icmp_button.set_halign(gtk::Align::Start);
     icmp_button.set_margin_start(18);
@@ -155,7 +159,7 @@ pub fn build_ui(application: &adw::Application) {
     scope_note.set_margin_top(6);
     scope_note.add_css_class("dim-label");
 
-    let results_heading = gtk::Label::new(Some("Scan results"));
+    let results_heading = gtk::Label::new(Some(localized(language, "TCP scan results", "TCP tarama sonuçları")));
     results_heading.add_css_class("title-2");
     results_heading.set_halign(gtk::Align::Start);
     results_heading.set_margin_start(18);
@@ -168,7 +172,7 @@ pub fn build_ui(application: &adw::Application) {
     results_list.set_margin_start(18);
     results_list.set_margin_end(18);
 
-    let mdns_results_heading = gtk::Label::new(Some("Advertised mDNS services"));
+    let mdns_results_heading = gtk::Label::new(Some(localized(language, "mDNS services", "mDNS servisleri")));
     mdns_results_heading.add_css_class("title-2");
     mdns_results_heading.set_halign(gtk::Align::Start);
     mdns_results_heading.set_margin_start(18);
@@ -181,7 +185,7 @@ pub fn build_ui(application: &adw::Application) {
     mdns_results_list.set_margin_start(18);
     mdns_results_list.set_margin_end(18);
 
-    let ssdp_results_heading = gtk::Label::new(Some("Discovered UPnP devices (SSDP)"));
+    let ssdp_results_heading = gtk::Label::new(Some(localized(language, "UPnP devices (SSDP)", "UPnP cihazları (SSDP)")));
     ssdp_results_heading.add_css_class("title-2");
     ssdp_results_heading.set_halign(gtk::Align::Start);
     ssdp_results_heading.set_margin_start(18);
@@ -194,7 +198,7 @@ pub fn build_ui(application: &adw::Application) {
     ssdp_results_list.set_margin_start(18);
     ssdp_results_list.set_margin_end(18);
 
-    let status = gtk::Label::new(Some("Reading local interface information…"));
+    let status = gtk::Label::new(Some(localized(language, "Select a network interface to get started.", "Başlamak için bir ağ arayüzü seçin.")));
     status.set_halign(gtk::Align::Start);
     status.set_wrap(true);
     status.set_margin_start(18);
@@ -205,40 +209,56 @@ pub fn build_ui(application: &adw::Application) {
 
     let scan_progress = gtk::ProgressBar::new();
     scan_progress.set_show_text(true);
-    scan_progress.set_text(Some("Idle"));
+    scan_progress.set_text(Some(localized(language, "Ready", "Hazır")));
     scan_progress.set_fraction(0.0);
     scan_progress.set_hexpand(true);
     scan_progress.set_margin_start(18);
     scan_progress.set_margin_end(18);
     scan_progress.set_margin_bottom(12);
 
+    // Keep the home screen focused on the three things users need most:
+    // choose a network, start a scan, and inspect discovered devices.
+    let advanced_content = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    advanced_content.set_margin_top(12);
+    advanced_content.set_margin_bottom(12);
+    advanced_content.set_margin_start(12);
+    advanced_content.set_margin_end(12);
+    advanced_content.append(&ports_heading);
+    advanced_content.append(&port_entry);
+    advanced_content.append(&mdns_button);
+    advanced_content.append(&mdns_note);
+    advanced_content.append(&ssdp_button);
+    advanced_content.append(&ssdp_note);
+    advanced_content.append(&netbios_button);
+    advanced_content.append(&netbios_note);
+    advanced_content.append(&icmp_button);
+    advanced_content.append(&icmp_note);
+    advanced_content.append(&scope_note);
+    advanced_content.append(&results_heading);
+    advanced_content.append(&results_list);
+    advanced_content.append(&mdns_results_heading);
+    advanced_content.append(&mdns_results_list);
+    advanced_content.append(&ssdp_results_heading);
+    advanced_content.append(&ssdp_results_list);
+
+    let advanced_expander = gtk::Expander::new(Some(localized(
+        language,
+        "Advanced discovery and scan results",
+        "Gelişmiş keşif ve tarama sonuçları",
+    )));
+    advanced_expander.set_child(Some(&advanced_content));
+
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.append(&header);
     content.append(&heading);
     content.append(&list);
     content.append(&system_info);
+    content.append(&scan_button);
     content.append(&scan_progress);
     content.append(&devices_heading);
     content.append(&devices_list);
-    content.append(&ports_heading);
-    content.append(&port_entry);
-    content.append(&scan_button);
-    content.append(&mdns_button);
-    content.append(&mdns_note);
-    content.append(&ssdp_button);
-    content.append(&ssdp_note);
-    content.append(&netbios_button);
-    content.append(&netbios_note);
-    content.append(&icmp_button);
-    content.append(&icmp_note);
-    content.append(&scope_note);
-    content.append(&results_heading);
-    content.append(&results_list);
-    content.append(&mdns_results_heading);
-    content.append(&mdns_results_list);
-    content.append(&ssdp_results_heading);
-    content.append(&ssdp_results_list);
     content.append(&status);
+    content.append(&advanced_expander);
 
     let scrolled = gtk::ScrolledWindow::builder()
         .vexpand(true)
@@ -251,9 +271,6 @@ pub fn build_ui(application: &adw::Application) {
         .child(&scrolled)
         .build();
     navigation_view.push(&home_page);
-
-    let preferences = Rc::new(RefCell::new(AppPreferences::load()));
-    apply_theme(preferences.borrow().theme);
 
     let window = adw::ApplicationWindow::builder()
         .application(application)
@@ -2481,6 +2498,13 @@ fn result_row(result: &HostScanResult, details: &str) -> adw::ActionRow {
 }
 
 
+fn localized(language: LanguageMode, english: &'static str, turkish: &'static str) -> &'static str {
+    match language {
+        LanguageMode::English => english,
+        LanguageMode::Turkish => turkish,
+    }
+}
+
 fn apply_theme(theme: ThemeMode) {
     let color_scheme = match theme {
         ThemeMode::System => adw::ColorScheme::Default,
@@ -2503,7 +2527,10 @@ fn settings_page(
         navigation_for_back.pop();
     });
     header.pack_start(&back_button);
-    let title = adw::WindowTitle::new("Settings", "Application preferences");
+    let title = adw::WindowTitle::new(
+        localized(language, "Settings", "Ayarlar"),
+        localized(language, "Application preferences", "Uygulama tercihleri"),
+    );
     header.set_title_widget(Some(&title));
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -2512,16 +2539,21 @@ fn settings_page(
     content.set_margin_start(18);
     content.set_margin_end(18);
 
-    let appearance_heading = gtk::Label::new(Some("Appearance"));
+    let appearance_heading = gtk::Label::new(Some(localized(language, "Appearance", "Görünüm")));
     appearance_heading.add_css_class("title-2");
     appearance_heading.set_halign(gtk::Align::Start);
     content.append(&appearance_heading);
 
+    let language = preferences.borrow().language;
     let theme_row = adw::ActionRow::builder()
-        .title("Theme")
-        .subtitle("Follow the desktop theme or choose a fixed appearance")
+        .title(localized(language, "Theme", "Tema"))
+        .subtitle(localized(language, "Follow the desktop theme or choose a fixed appearance", "Sistem temasını takip edin veya görünümü kendiniz seçin"))
         .build();
-    let theme_dropdown = gtk::DropDown::from_strings(&["System", "Light", "Dark"]);
+    let theme_dropdown = gtk::DropDown::from_strings(&[
+        localized(language, "System", "Sistem"),
+        localized(language, "Light", "Açık"),
+        localized(language, "Dark", "Koyu"),
+    ]);
     theme_dropdown.set_selected(match preferences.borrow().theme {
         ThemeMode::System => 0,
         ThemeMode::Light => 1,
@@ -2549,20 +2581,58 @@ fn settings_page(
             Err(error) => theme_status_for_callback.set_text(&format!("Could not save theme preference: {error}")),
         }
     });
+    let language_row = adw::ActionRow::builder()
+        .title(localized(language, "Language", "Dil"))
+        .subtitle(localized(language, "Choose the application language", "Uygulamanın dilini seçin"))
+        .build();
+    let language_dropdown = gtk::DropDown::from_strings(&["English", "Türkçe"]);
+    language_dropdown.set_selected(match language {
+        LanguageMode::English => 0,
+        LanguageMode::Turkish => 1,
+    });
+    language_row.add_suffix(&language_dropdown);
+    let language_status = gtk::Label::new(None);
+    language_status.set_halign(gtk::Align::Start);
+    language_status.add_css_class("dim-label");
+    let preferences_for_language = Rc::clone(&preferences);
+    let language_status_for_callback = language_status.clone();
+    language_dropdown.connect_selected_notify(move |dropdown| {
+        let selected = if dropdown.selected() == 1 {
+            LanguageMode::Turkish
+        } else {
+            LanguageMode::English
+        };
+        let mut updated = preferences_for_language.borrow().clone();
+        updated.language = selected;
+        match updated.save() {
+            Ok(()) => {
+                *preferences_for_language.borrow_mut() = updated;
+                language_status_for_callback.set_text(localized(
+                    selected,
+                    "Language saved. Restart Praxis Scanner to apply it everywhere.",
+                    "Dil kaydedildi. Değişikliğin tamamını uygulamak için Praxis Scanner'ı yeniden başlatın.",
+                ));
+            }
+            Err(error) => language_status_for_callback.set_text(&format!("Could not save language preference: {error}")),
+        }
+    });
+
     let appearance_list = gtk::ListBox::new();
     appearance_list.add_css_class("boxed-list");
     appearance_list.append(&theme_row);
+    appearance_list.append(&language_row);
     content.append(&appearance_list);
     content.append(&theme_status);
+    content.append(&language_status);
 
-    let scanning_heading = gtk::Label::new(Some("Scanning"));
+    let scanning_heading = gtk::Label::new(Some(localized(language, "Scanning", "Tarama")));
     scanning_heading.add_css_class("title-2");
     scanning_heading.set_halign(gtk::Align::Start);
     content.append(&scanning_heading);
 
     let auto_scan_row = adw::ActionRow::builder()
-        .title("Scan automatically on launch")
-        .subtitle("When enabled, the app selects the default-route interface and starts a bounded scan")
+        .title(localized(language, "Scan automatically on launch", "Açılışta otomatik tara"))
+        .subtitle(localized(language, "When enabled, the app selects the default-route interface and starts a bounded scan", "Etkinleştirildiğinde varsayılan ağ arayüzü seçilir ve sınırlı bir tarama başlatılır"))
         .build();
     let auto_scan_switch = gtk::Switch::new();
     auto_scan_switch.set_valign(gtk::Align::Center);
@@ -2587,18 +2657,18 @@ fn settings_page(
     content.append(&scanning_list);
     content.append(&auto_scan_status);
 
-    let custom_ports_heading = gtk::Label::new(Some("Custom TCP ports"));
+    let custom_ports_heading = gtk::Label::new(Some(localized(language, "Custom TCP ports", "Özel TCP bağlantı noktaları")));
     custom_ports_heading.add_css_class("title-2");
     custom_ports_heading.set_halign(gtk::Align::Start);
     content.append(&custom_ports_heading);
 
     let custom_ports_row = adw::ActionRow::builder()
-        .title("Manage custom ports")
-        .subtitle("Add, enable, disable, and remove ports used by device deep scans")
+        .title(localized(language, "Manage custom ports", "Özel bağlantı noktalarını yönet"))
+        .subtitle(localized(language, "Add, enable, disable, and remove ports used by device deep scans", "Cihaz ayrıntılı taramalarında kullanılacak bağlantı noktalarını ekleyin, etkinleştirin veya kaldırın"))
         .activatable(true)
         .build();
     let custom_ports_button = gtk::Button::from_icon_name("go-next-symbolic");
-    custom_ports_button.set_tooltip_text(Some("Manage custom ports"));
+    custom_ports_button.set_tooltip_text(Some(localized(language, "Manage custom ports", "Özel bağlantı noktalarını yönet")));
     custom_ports_row.add_suffix(&custom_ports_button);
     let navigation_for_ports = navigation.clone();
     let preferences_for_ports = Rc::clone(&preferences);
@@ -2614,12 +2684,12 @@ fn settings_page(
     custom_ports_list.append(&custom_ports_row);
     content.append(&custom_ports_list);
 
-    let about_heading = gtk::Label::new(Some("About"));
+    let about_heading = gtk::Label::new(Some(localized(language, "About", "Hakkında")));
     about_heading.add_css_class("title-2");
     about_heading.set_halign(gtk::Align::Start);
     content.append(&about_heading);
 
-    let about_button = gtk::Button::with_label("About Praxis Scanner");
+    let about_button = gtk::Button::with_label(localized(language, "About Praxis Scanner", "Praxis Scanner hakkında"));
     let window_for_about = window.clone();
     about_button.connect_clicked(move |_| {
         show_information_dialog(
@@ -2630,7 +2700,7 @@ fn settings_page(
     });
     content.append(&about_button);
 
-    let privacy_button = gtk::Button::with_label("Privacy and network behavior");
+    let privacy_button = gtk::Button::with_label(localized(language, "Privacy and network behavior", "Gizlilik ve ağ davranışı"));
     let window_for_privacy = window.clone();
     privacy_button.connect_clicked(move |_| {
         show_information_dialog(
@@ -2643,7 +2713,7 @@ fn settings_page(
 
     let github_link = gtk::LinkButton::with_label(
         "https://github.com/Praxis1071/praxis-scanner",
-        "Praxis Scanner on GitHub",
+        localized(language, "Praxis Scanner on GitHub", "GitHub'da Praxis Scanner"),
     );
     content.append(&github_link);
 
@@ -2656,7 +2726,7 @@ fn settings_page(
     page_content.append(&scrolled);
 
     adw::NavigationPage::builder()
-        .title("Settings")
+        .title(localized(language, "Settings", "Ayarlar"))
         .child(&page_content)
         .build()
 }
