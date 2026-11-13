@@ -9,6 +9,75 @@ This roadmap is the source of truth for the Linux edition and the governing exec
 
 Update checkboxes only after the corresponding work has been completed and verified. Planning and research are not implementation. The maintainer explicitly authorized implementation on 2026-11-08; continue only within the documented security and scope constraints.
 
+## Approved development strategy (maintainer approval — 2026-11-13)
+
+The maintainer approved the research-backed strategy below on 2026-11-13. This section is an execution decision, not a replacement for the Android parity matrix or the security constraints above. Follow it in order while continuing the mandatory control → error detection → repair → re-control loop.
+
+### Product and UX direction
+
+- Preserve the Android app's recognizable information hierarchy, terminology, workflows, result semantics, and useful functionality; adapt interaction patterns to a native desktop rather than copying mobile layouts literally.
+- Home: selected network interface and concise network summary, one prominent scan action, clear progress/cancel feedback, and a readable discovered-device list. Keep infrequent/advanced discovery controls out of the primary flow without removing their functionality.
+- Device list: readable identity, IP address, evidence-based reachability, device hints, and custom identity; never label an unresponsive host definitively offline.
+- Device details: structured network identity, discovery evidence, services, open ports, deep-scan progress/results, and device customization.
+- Settings: system/light/dark appearance, complete Turkish/English localization, startup-scan behavior, and custom TCP ports.
+- Implement distinct idle, no-interface, scanning, empty-result, partial-result, error, and completed states. Provide keyboard navigation, accessible labels, responsive layouts, and clear recovery guidance.
+- Use GTK4/libadwaita-native navigation and adaptive components. Evaluate AdwNavigationView, AdwNavigationSplitView, AdwBreakpoint, and appropriate list/row widgets against the actual screen flows; do not add components solely for fashion.
+- Keep visual parity evidence: compare each Android screen/state with the Linux equivalent and record meaningful differences and reasons.
+
+### Architecture direction
+
+Keep the current implementation working while incrementally moving toward clear boundaries. Do not perform a risky big-bang rewrite.
+
+- **core/domain:** platform-neutral device, network, scan, port, service, evidence, and preference models.
+- **network/platform:** Linux interface/route/neighbor access and ordinary unprivileged socket operations.
+- **discovery/protocols:** independently testable TCP, ICMP datagram, mDNS, SSDP, NetBIOS, and DNS implementations.
+- **scanner/application services:** scan orchestration, bounded concurrency, timeouts, progress events, cancellation, and result aggregation.
+- **storage:** versioned XDG-compliant preferences and device customizations, with safe migration behavior.
+- **ui:** GTK4/libadwaita pages and reusable presentation components; UI must not perform network I/O.
+- **i18n:** centralized translation resources, complete string coverage, and a defined language-change lifecycle.
+- Keep protocol/domain modules free of GTK types. Communicate typed events/results to the UI main context; all GTK object access remains on the GTK main thread.
+- Extract modules only when doing so improves ownership, testability, or responsibility boundaries. Avoid unnecessary abstraction and dependency growth.
+
+### Networking, security, and reliability direction
+
+- Ordinary-user operation is mandatory. No root/sudo, raw sockets, CAP_NET_RAW, CAP_NET_ADMIN, setuid helpers, privileged daemons, or sysctl changes.
+- Prefer bounded TCP connect checks and supported datagram sockets. ICMP is optional and must degrade gracefully when ping sockets are unavailable.
+- Treat neighbor-table entries as cache evidence, not a complete host inventory. Treat multicast discovery as best-effort and interface-dependent.
+- Bound every scan by explicit target/probe limits, worker limits, per-operation timeouts, response sizes, and cancellation. Exhaustive scans require explicit user intent and clear scope/duration warnings.
+- Treat all network-originated names, banners, XML, URLs, and service metadata as untrusted. Validate and size-limit them; do not fetch arbitrary SSDP-provided URLs without a separately reviewed, user-initiated safe design.
+- Keep uncertainty explicit: TCP/ICMP responses, protocol observations, service guesses, and device-type hints must not be conflated.
+- Flatpak permissions must be minimal, documented, and experimentally verified. Host success does not imply sandbox success.
+
+### Quality and delivery gates
+
+A feature is not complete merely because source code exists or the application compiles. Track these independently:
+1. source implementation,
+2. formatting and static analysis,
+3. automated unit/integration tests,
+4. host runtime verification as an ordinary user,
+5. Flatpak runtime verification,
+6. Android behavior and visual-parity review,
+7. accessibility/localization review.
+
+Required quality loop: inspect Android and Linux behavior → identify the highest-impact defect/gap → implement a focused change → run formatting, tests, Clippy and release build → validate relevant host/Flatpak behavior → compare parity → update the matrix and roadmap with evidence. Never mark a gate passed without an observed result.
+
+### Execution order approved by the maintainer
+
+1. **Stabilize the current branch:** resolve the existing CI formatting failure first; run the complete CI sequence and repair all failures before broad refactoring.
+2. **Establish an evidence baseline:** capture current branch/CI state, map all Rust modules and UI pages, inspect the Android screen sources/screenshots, and record the most important parity gaps.
+3. **Close the UX specification:** define and review the screen/state/navigation behavior against Android, including desktop adaptations and accessibility.
+4. **Refactor incrementally:** improve domain/protocol/service/storage/UI boundaries without changing scan semantics; add tests before moving behavior.
+5. **Complete feature parity:** prioritize device details, reachability/evidence semantics, service/port results, scan states/cancellation, preferences, and full localization according to the parity matrix.
+6. **Verify networking and sandboxing:** test each protocol on a controlled LAN as an ordinary user, then repeat inside Flatpak and document per-feature limitations.
+7. **Polish and release:** resolve visual/accessibility/localization gaps, run regression and packaging checks, prepare a release candidate, and request maintainer acceptance only when major gaps are closed.
+
+### Immediate next actions
+
+- Fix cargo fmt --check on the current branch before further feature work. Format all Linux Rust sources consistently, inspect the resulting diff for formatting-only changes, and rerun the CI workflow.
+- Once CI passes, inspect the current GTK page construction and device-detail flow against the Android source and parity matrix; select one high-impact, testable gap for the next implementation change.
+- Keep all work on linux/gtk4-port-planning; do not change Android source or merge into main without explicit approval.
+- Update this roadmap and docs/linux-android-parity-matrix.md whenever implementation or verification status changes.
+
 ## Governing objective and execution method (maintainer clarification — 2026-11-11)
 
 The maintainer has explicitly clarified that **full Android-to-Linux product parity is the central goal**. Keep the Android implementation and Kotlin files; do not treat their presence or GitHub's language statistics as a problem. Build the Linux implementation alongside them.
