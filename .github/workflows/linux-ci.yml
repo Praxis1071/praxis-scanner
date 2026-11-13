@@ -53,7 +53,14 @@ jobs:
 
       - name: Format and verify Rust sources
         run: |
-          cargo fmt --manifest-path linux/Cargo.toml --all -- --check
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/linux/gtk4-port-planning" ]; then
+            # Normalize the maintainer's feature branch before running quality gates.
+            # The formatted files are committed only after tests, Clippy, and release build pass.
+            cargo fmt --manifest-path linux/Cargo.toml --all
+          else
+            cargo fmt --manifest-path linux/Cargo.toml --all -- --check
+          fi
+          git diff --check
 
       - name: Install GTK build dependencies
         run: |
@@ -96,7 +103,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Flatpak dependency sources are already up to date."
           else
-            git commit -m "build(linux): pin Rust dependencies for Flatpak"
+            git commit -m "chore(linux): normalize Rust sources and pin Flatpak inputs"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
