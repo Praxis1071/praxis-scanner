@@ -210,6 +210,11 @@ impl DeviceCatalog {
         self.devices.values()
     }
 
+    /// Return the number of unique devices collected across discovery sources.
+    pub fn len(&self) -> usize {
+        self.devices.len()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.devices.is_empty()
     }
