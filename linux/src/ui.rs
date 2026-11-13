@@ -1807,6 +1807,7 @@ fn device_detail_page(
     refresh_button: gtk::Button,
 ) -> adw::NavigationPage {
     let preferences = Rc::new(RefCell::new(AppPreferences::load()));
+    let language = preferences.borrow().language;
     let customization = preferences
         .borrow()
         .customization_for(device.address)
@@ -1817,7 +1818,7 @@ fn device_detail_page(
         .unwrap_or("");
     let display_name = if display_name.is_empty() {
         if Some(device.address) == current_address {
-            "This device".to_owned()
+            localized(language, "This device", "Bu cihaz").to_owned()
         } else {
             device.address.to_string()
         }
@@ -1827,7 +1828,7 @@ fn device_detail_page(
 
     let header = adw::HeaderBar::new();
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
-    back_button.set_tooltip_text(Some("Back to discovered devices"));
+    back_button.set_tooltip_text(Some(localized(language, "Back to devices", "Cihazlara dön")));
     let navigation_for_back = navigation.clone();
     let active_scan_for_back = Rc::clone(&active_device_scan);
     back_button.connect_clicked(move |_| {
@@ -1845,49 +1846,49 @@ fn device_detail_page(
     content.set_margin_start(18);
     content.set_margin_end(18);
 
-    let identity_heading = gtk::Label::new(Some("Device identity"));
+    let identity_heading = gtk::Label::new(Some(localized(language, "Device details", "Cihaz ayrıntıları")));
     identity_heading.add_css_class("title-2");
     identity_heading.set_halign(gtk::Align::Start);
     content.append(&identity_heading);
 
     let identity = gtk::ListBox::new();
     identity.add_css_class("boxed-list");
-    append_detail_row(&identity, "IPv4 address", &device.address.to_string());
+    append_detail_row(&identity, localized(language, "IPv4 address", "IPv4 adresi"), &device.address.to_string());
     append_detail_row(
         &identity,
-        "TCP reachability",
+        localized(language, "TCP response", "TCP yanıtı"),
         if device.tcp_responded {
-            "A TCP response was observed"
+            localized(language, "A TCP response was observed", "TCP yanıtı alındı")
         } else {
-            "No TCP response observed; this does not prove the device is offline"
+            localized(language, "No TCP response; the device may still be online", "TCP yanıtı alınmadı; cihaz yine de çevrimiçi olabilir")
         },
     );
     if let Some(mac) = device.mac_address.as_deref() {
-        append_detail_row(&identity, "MAC address", mac);
+        append_detail_row(&identity, localized(language, "MAC address", "MAC adresi"), mac);
     }
     if device.icmp_checked {
         let icmp_result = device
             .icmp_round_trip_time
             .map(|rtt| format!("{:.2} ms", rtt.as_secs_f64() * 1000.0))
-            .unwrap_or_else(|| "No echo reply (inconclusive)".to_owned());
-        append_detail_row(&identity, "ICMP echo", &icmp_result);
+            .unwrap_or_else(|| localized(language, "No reply (inconclusive)", "Yanıt yok (kesin sonuç değil)").to_owned());
+        append_detail_row(&identity, localized(language, "ICMP check", "ICMP kontrolü"), &icmp_result);
     }
     if let Some(netbios) = device.netbios_info.as_ref() {
-        append_detail_row(&identity, "NetBIOS hostname", &netbios.hostname);
+        append_detail_row(&identity, localized(language, "Device name", "Cihaz adı"), &netbios.hostname);
         if let Some(workgroup) = netbios.workgroup.as_deref() {
-            append_detail_row(&identity, "NetBIOS workgroup", workgroup);
+            append_detail_row(&identity, localized(language, "Workgroup", "Çalışma grubu"), workgroup);
         }
     }
     content.append(&identity);
 
-    let customization_heading = gtk::Label::new(Some("Device customization"));
+    let customization_heading = gtk::Label::new(Some(localized(language, "Customize device", "Cihazı özelleştir")));
     customization_heading.add_css_class("title-2");
     customization_heading.set_halign(gtk::Align::Start);
     content.append(&customization_heading);
 
     let name_form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let name_entry = gtk::Entry::new();
-    name_entry.set_placeholder_text(Some("Custom device name"));
+    name_entry.set_placeholder_text(Some(localized(language, "Device name", "Cihaz adı")));
     name_entry.set_max_length(48);
     name_entry.set_hexpand(true);
     if let Some(name) = customization
@@ -1896,9 +1897,9 @@ fn device_detail_page(
     {
         name_entry.set_text(name);
     }
-    let save_name_button = gtk::Button::with_label("Save name");
+    let save_name_button = gtk::Button::with_label(localized(language, "Save name", "Adı kaydet"));
     save_name_button.add_css_class("suggested-action");
-    let reset_name_button = gtk::Button::with_label("Reset");
+    let reset_name_button = gtk::Button::with_label(localized(language, "Reset", "Sıfırla"));
     name_form.append(&name_entry);
     name_form.append(&save_name_button);
     name_form.append(&reset_name_button);
@@ -1906,15 +1907,15 @@ fn device_detail_page(
 
     let icon_form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let icon_dropdown = gtk::DropDown::from_strings(&[
-        "Default",
-        "Computer",
-        "Phone",
-        "Tablet",
-        "Printer",
-        "Router",
-        "Server",
-        "Network",
-        "Other",
+        localized(language, "Default", "Varsayılan"),
+        localized(language, "Computer", "Bilgisayar"),
+        localized(language, "Phone", "Telefon"),
+        localized(language, "Tablet", "Tablet"),
+        localized(language, "Printer", "Yazıcı"),
+        localized(language, "Router", "Yönlendirici"),
+        localized(language, "Server", "Sunucu"),
+        localized(language, "Network", "Ağ"),
+        localized(language, "Other", "Diğer"),
     ]);
     let selected_icon = customization
         .as_ref()
@@ -1932,13 +1933,13 @@ fn device_detail_page(
         _ => 0,
     });
     icon_dropdown.set_hexpand(true);
-    let save_icon_button = gtk::Button::with_label("Save icon");
+    let save_icon_button = gtk::Button::with_label(localized(language, "Save icon", "Simgeyi kaydet"));
     icon_form.append(&icon_dropdown);
     icon_form.append(&save_icon_button);
     content.append(&icon_form);
 
     let customization_status = gtk::Label::new(Some(
-        "Names and icon choices are saved locally for this IPv4 address.",
+        localized(language, "Names and icons are saved locally for this IPv4 address.", "Adlar ve simgeler bu IPv4 adresi için yerel olarak kaydedilir."),
     ));
     customization_status.set_wrap(true);
     customization_status.set_halign(gtk::Align::Start);
@@ -2735,15 +2736,19 @@ fn custom_ports_page(
     navigation: &adw::NavigationView,
     preferences: Rc<RefCell<AppPreferences>>,
 ) -> adw::NavigationPage {
+    let language = preferences.borrow().language;
     let header = adw::HeaderBar::new();
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
-    back_button.set_tooltip_text(Some("Back to settings"));
+    back_button.set_tooltip_text(Some(localized(language, "Back to settings", "Ayarlara dön")));
     let navigation_for_back = navigation.clone();
     back_button.connect_clicked(move |_| {
         navigation_for_back.pop();
     });
     header.pack_start(&back_button);
-    let title = adw::WindowTitle::new("Custom TCP ports", "Device deep-scan configuration");
+    let title = adw::WindowTitle::new(
+        localized(language, "Custom TCP ports", "Özel TCP bağlantı noktaları"),
+        localized(language, "Device scan settings", "Cihaz tarama ayarları"),
+    );
     header.set_title_widget(Some(&title));
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -2753,41 +2758,41 @@ fn custom_ports_page(
     content.set_margin_end(18);
 
     let note = gtk::Label::new(Some(
-        "Up to 128 custom ports can be saved. Enabled ports are added to the standard per-device deep scan and remain subject to the application's scan limits.",
+        localized(language, "Save up to 128 custom ports. Enabled ports are included in device scans.", "En fazla 128 özel bağlantı noktası kaydedebilirsiniz. Etkin olanlar cihaz taramalarına eklenir."),
     ));
     note.set_wrap(true);
     note.set_halign(gtk::Align::Start);
     note.add_css_class("dim-label");
     content.append(&note);
 
-    let form_heading = gtk::Label::new(Some("Add a port"));
+    let form_heading = gtk::Label::new(Some(localized(language, "Add a port", "Bağlantı noktası ekle")));
     form_heading.add_css_class("title-2");
     form_heading.set_halign(gtk::Align::Start);
     content.append(&form_heading);
 
     let form = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let port_entry = gtk::Entry::new();
-    port_entry.set_placeholder_text(Some("Port"));
+    port_entry.set_placeholder_text(Some(localized(language, "Port", "Bağlantı noktası")));
     port_entry.set_max_length(5);
     port_entry.set_input_purpose(gtk::InputPurpose::Digits);
     port_entry.set_width_chars(7);
     let service_entry = gtk::Entry::new();
-    service_entry.set_placeholder_text(Some("Service name"));
+    service_entry.set_placeholder_text(Some(localized(language, "Service name", "Servis adı")));
     service_entry.set_hexpand(true);
-    let add_button = gtk::Button::with_label("Add");
+    let add_button = gtk::Button::with_label(localized(language, "Add", "Ekle"));
     add_button.add_css_class("suggested-action");
     form.append(&port_entry);
     form.append(&service_entry);
     form.append(&add_button);
     content.append(&form);
 
-    let status = gtk::Label::new(Some("Port numbers must be between 1 and 65535. Service names are local labels."));
+    let status = gtk::Label::new(Some(localized(language, "Port numbers must be between 1 and 65535. Service names are local labels.", "Bağlantı noktası 1 ile 65535 arasında olmalıdır. Servis adları yalnızca yerel etiketlerdir.")));
     status.set_wrap(true);
     status.set_halign(gtk::Align::Start);
     status.add_css_class("dim-label");
     content.append(&status);
 
-    let ports_heading = gtk::Label::new(Some("Saved custom ports"));
+    let ports_heading = gtk::Label::new(Some(localized(language, "Saved custom ports", "Kaydedilmiş özel bağlantı noktaları")));
     ports_heading.add_css_class("title-2");
     ports_heading.set_halign(gtk::Align::Start);
     content.append(&ports_heading);
