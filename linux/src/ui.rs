@@ -2519,9 +2519,10 @@ fn settings_page(
     window: &adw::ApplicationWindow,
     preferences: Rc<RefCell<AppPreferences>>,
 ) -> adw::NavigationPage {
+    let language = preferences.borrow().language;
     let header = adw::HeaderBar::new();
     let back_button = gtk::Button::from_icon_name("go-previous-symbolic");
-    back_button.set_tooltip_text(Some("Back"));
+    back_button.set_tooltip_text(Some(localized(language, "Back", "Geri")));
     let navigation_for_back = navigation.clone();
     back_button.connect_clicked(move |_| {
         navigation_for_back.pop();
@@ -2544,7 +2545,6 @@ fn settings_page(
     appearance_heading.set_halign(gtk::Align::Start);
     content.append(&appearance_heading);
 
-    let language = preferences.borrow().language;
     let theme_row = adw::ActionRow::builder()
         .title(localized(language, "Theme", "Tema"))
         .subtitle(localized(language, "Follow the desktop theme or choose a fixed appearance", "Sistem temasını takip edin veya görünümü kendiniz seçin"))
