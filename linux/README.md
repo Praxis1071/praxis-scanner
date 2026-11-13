@@ -45,7 +45,8 @@ Source currently includes:
 - Opt-in, cancellable NetBIOS hostname/workgroup discovery.
 - A unified device catalog merging TCP, ICMP, mDNS, SSDP, NetBIOS, and read-only MAC evidence.
 - A partial device-detail page with automatic bounded common-port deep scans, progress, cancellation, and capped plain-protocol banners.
-- Native Settings and Custom TCP Ports pages.
+- Native Settings and Custom TCP Ports pages, with persistent system/light/dark theme and English/Turkish language preferences. The initial home, settings, device-detail and custom-port labels are localized; restarting the application is currently required after changing language, and full translation coverage remains in progress.
+- A simplified home layout focused on network-interface selection, one primary scan action, scan progress and the discovered-device list; advanced discovery controls and detailed results are grouped in a collapsed expander.
 - Local versioned preferences for theme, opt-in startup scanning, custom TCP ports, and per-device custom names/icons. Device customizations are currently keyed by IPv4 address, so DHCP address changes can require reapplying them.
 - A responsive, current-device-first list with numeric IPv4 ordering; it separates TCP/ICMP responders from observations with unknown reachability. A home progress bar reports TCP/ICMP completion and discovery phase states without falsely labelling missing responses as offline.
 - Unit tests for CIDR calculations, procfs parsers, port-list parsing, service hints, scan limits, cancellation, loopback TCP behavior, mDNS scope/type validation, SSDP response parsing, NetBIOS packet parsing, preference persistence, device customizations, ICMP packet validation, and deep-scan banner sanitization.
