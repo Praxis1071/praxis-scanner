@@ -31,6 +31,23 @@ mod preferences {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+    pub enum LanguageMode {
+        #[default]
+        English,
+        Turkish,
+    }
+
+    impl LanguageMode {
+        pub fn as_str(self) -> &'static str {
+            match self { Self::English => "en", Self::Turkish => "tr" }
+        }
+
+        fn parse(value: &str) -> Option<Self> {
+            match value { "en" => Some(Self::English), "tr" => Some(Self::Turkish), _ => None }
+        }
+    }
+
     pub const MAX_CUSTOM_PORTS: usize = 128;
     pub const MAX_DEVICE_CUSTOMIZATIONS: usize = 1024;
 
@@ -52,6 +69,7 @@ mod preferences {
     pub struct AppPreferences {
         pub auto_scan_on_start: bool,
         pub theme: ThemeMode,
+        pub language: LanguageMode,
         pub custom_ports: Vec<CustomPort>,
         pub device_customizations: Vec<DeviceCustomization>,
     }
@@ -62,6 +80,7 @@ mod preferences {
                 // Network activity remains opt-in until the user enables this preference.
                 auto_scan_on_start: false,
                 theme: ThemeMode::System,
+                language: LanguageMode::English,
                 custom_ports: Vec::new(),
                 device_customizations: Vec::new(),
             }
@@ -210,6 +229,11 @@ mod preferences {
                             preferences.theme = theme;
                         }
                     }
+                    "language" => {
+                        if let Some(language) = LanguageMode::parse(value.trim()) {
+                            preferences.language = language;
+                        }
+                    }
                     "port" => {
                         let mut fields = value.splitn(3, '|');
                         let Some(port) = fields.next().and_then(|item| item.parse::<u16>().ok()) else {
@@ -299,9 +323,10 @@ mod preferences {
             fs::create_dir_all(parent)?;
 
             let mut contents = format!(
-                "version=1\nauto_scan={}\ntheme={}\n",
+                "version=1\nauto_scan={}\ntheme={}\nlanguage={}\n",
                 self.auto_scan_on_start,
-                self.theme.as_str()
+                self.theme.as_str(),
+                self.language.as_str()
             );
             for item in &self.custom_ports {
                 if item.port == 0 || !valid_service_name(&item.service_name) {
@@ -387,7 +412,7 @@ mod preferences {
 
     #[cfg(test)]
     mod tests {
-        use super::{AppPreferences, ThemeMode};
+        use super::{AppPreferences, LanguageMode, ThemeMode};
         use std::fs;
 
         #[test]
@@ -399,6 +424,7 @@ mod preferences {
             let mut expected = AppPreferences {
                 auto_scan_on_start: true,
                 theme: ThemeMode::Dark,
+                language: LanguageMode::Turkish,
                 custom_ports: Vec::new(),
                 device_customizations: Vec::new(),
             };
