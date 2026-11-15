@@ -1959,6 +1959,8 @@ fn device_detail_page(
     let display_name = if display_name.is_empty() {
         if Some(device.address) == current_address {
             localized(language, "This device", "Bu cihaz").to_owned()
+        } else if let Some(info) = device.netbios_info.as_ref() {
+            info.hostname.clone()
         } else {
             device.address.to_string()
         }
@@ -2207,7 +2209,7 @@ fn device_detail_page(
     deep_scan_ports.sort_unstable();
     deep_scan_ports.dedup();
 
-    let ports_heading = gtk::Label::new(Some("Open TCP ports"));
+    let ports_heading = gtk::Label::new(Some(localized(language, "Open TCP ports", "Açık TCP portları")));
     ports_heading.add_css_class("title-2");
     ports_heading.set_halign(gtk::Align::Start);
     content.append(&ports_heading);
@@ -2215,7 +2217,7 @@ fn device_detail_page(
     let ports = gtk::ListBox::new();
     ports.add_css_class("boxed-list");
     if device.open_tcp_ports.is_empty() {
-        append_detail_row(&ports, "No open ports recorded", "No configured TCP probe found an open port.");
+        append_detail_row(&ports, localized(language, "No open ports recorded", "Açık port kaydı yok"), localized(language, "No configured TCP probe found an open port.", "Yapılandırılmış TCP kontrollerinde açık port bulunamadı."));
     } else {
         for port in &device.open_tcp_ports {
             let service = custom_service_names
@@ -2230,10 +2232,8 @@ fn device_detail_page(
 
     let deep_scan_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
     deep_scan_section.add_css_class("card");
-    deep_scan_section.set_margin_top(4);
-    deep_scan_section.set_margin_bottom(4);
-    deep_scan_section.set_margin_start(16);
-    deep_scan_section.set_margin_end(16);
+    deep_scan_section.set_margin_top(0);
+    deep_scan_section.set_margin_bottom(0);
 
     let deep_scan_heading = gtk::Label::new(Some(localized(language, "Port scan", "Port taraması")));
     deep_scan_heading.add_css_class("title-2");
@@ -2298,7 +2298,7 @@ fn device_detail_page(
     );
 
     if !device.mdns_services.is_empty() {
-        let heading = gtk::Label::new(Some("Advertised mDNS services"));
+        let heading = gtk::Label::new(Some(localized(language, "Advertised mDNS services", "Duyurulan mDNS servisleri")));
         heading.add_css_class("title-2");
         heading.set_halign(gtk::Align::Start);
         content.append(&heading);
@@ -2316,7 +2316,7 @@ fn device_detail_page(
     }
 
     if !device.ssdp_advertisements.is_empty() {
-        let heading = gtk::Label::new(Some("UPnP / SSDP advertisements"));
+        let heading = gtk::Label::new(Some(localized(language, "UPnP / SSDP advertisements", "UPnP / SSDP duyuruları")));
         heading.add_css_class("title-2");
         heading.set_halign(gtk::Align::Start);
         content.append(&heading);
@@ -2345,7 +2345,7 @@ fn device_detail_page(
     }
 
     let note = gtk::Label::new(Some(
-        "Network-advertised names and service details are unverified claims. Missing information does not mean the device lacks that capability.",
+        localized(language, "Network-advertised names and service details are unverified claims. Missing information does not mean the device lacks that capability.", "Ağ üzerinden duyurulan adlar ve servis ayrıntıları doğrulanmamış bilgilerdir. Bilginin bulunmaması, cihazın ilgili özelliğe sahip olmadığı anlamına gelmez."),
     ));
     note.add_css_class("dim-label");
     note.set_wrap(true);
