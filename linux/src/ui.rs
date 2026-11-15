@@ -265,25 +265,25 @@ pub fn build_ui(application: &adw::Application) {
 
     let network_section = gtk::Box::new(gtk::Orientation::Vertical, 10);
     network_section.add_css_class("card");
-    network_section.set_margin_start(0);
-    network_section.set_margin_end(0);
-    network_section.set_margin_top(0);
-    network_section.set_margin_bottom(0);
     network_section.set_spacing(10);
-    network_section.set_margin_start(16);
-    network_section.set_margin_end(16);
-    network_section.set_margin_top(14);
-    network_section.set_margin_bottom(14);
+    heading.set_margin_start(16);
+    heading.set_margin_end(16);
+    heading.set_margin_top(14);
+    list.set_margin_start(16);
+    list.set_margin_end(16);
+    system_info.set_margin_start(16);
+    system_info.set_margin_end(16);
+    system_info.set_margin_bottom(14);
     network_section.append(&heading);
     network_section.append(&list);
     network_section.append(&system_info);
 
     let scan_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
     scan_section.add_css_class("card");
-    scan_section.set_margin_start(16);
-    scan_section.set_margin_end(16);
-    scan_section.set_margin_top(14);
-    scan_section.set_margin_bottom(14);
+    scan_section.set_margin_start(0);
+    scan_section.set_margin_end(0);
+    scan_section.set_margin_top(0);
+    scan_section.set_margin_bottom(0);
     let scan_title = gtk::Label::new(Some(localized(
         language,
         "Discover your local network",
@@ -299,10 +299,22 @@ pub fn build_ui(application: &adw::Application) {
     scan_description.add_css_class("dim-label");
     scan_description.set_halign(gtk::Align::Start);
     scan_description.set_wrap(true);
+    scan_title.set_margin_start(16);
+    scan_title.set_margin_end(16);
+    scan_title.set_margin_top(14);
+    scan_description.set_margin_start(16);
+    scan_description.set_margin_end(16);
     scan_button.set_halign(gtk::Align::Fill);
     scan_button.set_hexpand(true);
     scan_button.set_size_request(-1, 48);
+    scan_button.set_margin_start(16);
+    scan_button.set_margin_end(16);
     scan_button.add_css_class("pill");
+    scan_progress.set_margin_start(16);
+    scan_progress.set_margin_end(16);
+    status.set_margin_start(16);
+    status.set_margin_end(16);
+    status.set_margin_bottom(14);
     scan_section.append(&scan_title);
     scan_section.append(&scan_description);
     scan_section.append(&scan_button);
