@@ -118,45 +118,55 @@ pub fn build_ui(application: &adw::Application) {
     icmp_button.set_margin_start(18);
     icmp_button.set_margin_top(8);
 
-    let icmp_note = gtk::Label::new(Some(
+    let icmp_note = gtk::Label::new(Some(localized(
+        language,
         "Checks up to 1024 addresses on the selected IPv4 subnet using Linux datagram ICMP ping sockets only. Availability depends on ping_group_range; no raw sockets, root privileges, or sysctl changes are used. No reply is inconclusive.",
-    ));
+        "Seçili IPv4 alt ağında en fazla 1024 adresi yalnızca Linux datagram ICMP ping soketleriyle kontrol eder. Kullanılabilirlik ping_group_range ayarına bağlıdır; raw socket, root yetkisi veya sysctl değişikliği kullanılmaz. Yanıt alınmaması kesin sonuç değildir."
+    )));
     icmp_note.set_halign(gtk::Align::Start);
     icmp_note.set_wrap(true);
     icmp_note.set_margin_start(18);
     icmp_note.set_margin_end(18);
     icmp_note.add_css_class("dim-label");
 
-    let netbios_note = gtk::Label::new(Some(
+    let netbios_note = gtk::Label::new(Some(localized(
+        language,
         "Queries NBSTAT names only from devices already discovered on the selected local network. Names and workgroups are unverified network-provided data.",
-    ));
+        "NBSTAT ad sorgularını yalnızca seçili yerel ağda daha önce keşfedilmiş cihazlara gönderir. Adlar ve çalışma grupları doğrulanmamış ağ verileridir."
+    )));
     netbios_note.set_halign(gtk::Align::Start);
     netbios_note.set_wrap(true);
     netbios_note.set_margin_start(18);
     netbios_note.set_margin_end(18);
     netbios_note.add_css_class("dim-label");
 
-    let ssdp_note = gtk::Label::new(Some(
+    let ssdp_note = gtk::Label::new(Some(localized(
+        language,
         "Sends one SSDP M-SEARCH multicast query on the selected IPv4 interface. Responses are unauthenticated; device-description URLs are shown only as untrusted text and are never downloaded.",
-    ));
+        "Seçili IPv4 arayüzünde bir SSDP M-SEARCH çok noktaya yayın sorgusu gönderir. Yanıtlar doğrulanmamıştır; cihaz açıklama URL'leri yalnızca güvenilmeyen metin olarak gösterilir ve indirilmez."
+    )));
     ssdp_note.set_halign(gtk::Align::Start);
     ssdp_note.set_wrap(true);
     ssdp_note.set_margin_start(18);
     ssdp_note.set_margin_end(18);
     ssdp_note.add_css_class("dim-label");
 
-    let mdns_note = gtk::Label::new(Some(
+    let mdns_note = gtk::Label::new(Some(localized(
+        language,
         "mDNS/DNS-SD sends multicast queries on the selected interface only. Responses are unauthenticated and may be spoofed; use on trusted local networks. It does not identify every device.",
-    ));
+        "mDNS/DNS-SD sorgularını yalnızca seçili arayüzde çok noktaya yayınla gönderir. Yanıtlar doğrulanmamıştır ve taklit edilebilir; güvenilir yerel ağlarda kullanın. Her cihazı tanımlamaz."
+    )));
     mdns_note.set_halign(gtk::Align::Start);
     mdns_note.set_wrap(true);
     mdns_note.set_margin_start(18);
     mdns_note.set_margin_end(18);
     mdns_note.add_css_class("dim-label");
 
-    let scope_note = gtk::Label::new(Some(
+    let scope_note = gtk::Label::new(Some(localized(
+        language,
         "Scans use ordinary TCP connections on the selected private or link-local subnet. Up to 256 unique ports and 1024 addresses are allowed; timeouts do not prove a device is offline.",
-    ));
+        "Taramalar seçili özel veya link-local alt ağında normal TCP bağlantıları kullanır. En fazla 256 benzersiz port ve 1024 adres taranabilir; zaman aşımı cihazın çevrimdışı olduğunu kanıtlamaz."
+    )));
     scope_note.set_halign(gtk::Align::Start);
     scope_note.set_wrap(true);
     scope_note.set_margin_start(18);
