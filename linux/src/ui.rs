@@ -24,6 +24,11 @@ pub fn build_ui(application: &adw::Application) {
     apply_theme(preferences.borrow().theme);
 
     let header = adw::HeaderBar::new();
+    let app_title = adw::WindowTitle::new(
+        "Praxis Scanner",
+        localized(language, "Local network discovery", "Yerel ağ keşfi"),
+    );
+    header.set_title_widget(Some(&app_title));
     let refresh_button = gtk::Button::with_label(localized(language, "Refresh", "Yenile"));
     refresh_button.set_tooltip_text(Some(localized(language, "Refresh local network interfaces", "Yerel ağ arayüzlerini yenile")));
     header.pack_end(&refresh_button);
