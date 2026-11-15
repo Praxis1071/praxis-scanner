@@ -433,10 +433,12 @@ pub fn build_ui(application: &adw::Application) {
         icmp_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
-                localized(language, "Ready to scan the local network through {} ({}/{}).", "Yerel ağı {} ({}/{}) üzerinden taramaya hazır."),
-                interface.name,
-                interface.address,
-                interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
+                "{}",
+                localized(
+                    language,
+                    "Ready to scan the local network through the selected interface.",
+                    "Seçilen ağ arayüzü üzerinden yerel ağı taramaya hazır."
+                )
             ));
         }
         *selected_for_selection.borrow_mut() = selected.clone();
