@@ -428,7 +428,7 @@ pub fn build_ui(application: &adw::Application) {
         icmp_button_for_selection.set_sensitive(can_scan);
         if let Some(interface) = selected.as_ref() {
             status_for_selection.set_text(&format!(
-                "Selected {} ({}/{}). This is this device's local IPv4 address. Automatic scanning on launch is controlled in Settings.",
+                localized(language, "Ready to scan the local network through {} ({}/{}).", "Yerel ağı {} ({}/{}) üzerinden taramaya hazır."),
                 interface.name,
                 interface.address,
                 interface.prefix.map_or_else(|| "?".to_owned(), |prefix| prefix.to_string())
@@ -1675,6 +1675,7 @@ fn refresh_device_list(
     clear_list(list);
 
     let preferences = AppPreferences::load();
+    let language = preferences.language;
 
     if let Some(address) = current_address {
         let current_device = catalog
@@ -1703,7 +1704,7 @@ fn refresh_device_list(
 
         let scan_ports_button = gtk::Button::from_icon_name("network-transmit-receive-symbolic");
         scan_ports_button.add_css_class("flat");
-        scan_ports_button.set_tooltip_text(Some("Scan this device's TCP ports"));
+        scan_ports_button.set_tooltip_text(Some(localized(language, "Scan this device's TCP ports", "Bu cihazın TCP portlarını tara")));
         row.add_suffix(&scan_ports_button);
 
         let current_device_for_port_scan = current_device.clone();
@@ -1890,7 +1891,7 @@ fn refresh_device_list(
         row.add_prefix(&device_icon);
         let scan_ports_button = gtk::Button::from_icon_name("network-transmit-receive-symbolic");
         scan_ports_button.add_css_class("flat");
-        scan_ports_button.set_tooltip_text(Some("Scan this device's TCP ports"));
+        scan_ports_button.set_tooltip_text(Some(localized(language, "Scan this device's TCP ports", "Bu cihazın TCP portlarını tara")));
         row.add_suffix(&scan_ports_button);
 
         let navigation_for_port_scan = navigation.clone();
