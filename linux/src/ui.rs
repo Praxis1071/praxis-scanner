@@ -430,11 +430,16 @@ pub fn build_ui(application: &adw::Application) {
         ssdp_button_for_selection.set_sensitive(can_scan);
         netbios_button_for_selection.set_sensitive(can_scan);
         icmp_button_for_selection.set_sensitive(can_scan);
-        if selected.is_some() {
-            status_for_selection.set_text(localized(
-                language,
-                "Ready to scan the local network through the selected interface.",
-                "Seçilen ağ arayüzü üzerinden yerel ağı taramaya hazır."
+        if let Some(interface) = selected.as_ref() {
+            status_for_selection.set_text(&format!(
+                "{} · {} · {}",
+                localized(
+                    language,
+                    "Ready to scan",
+                    "Taramaya hazır"
+                ),
+                interface.name,
+                interface.address
             ));
         }
         *selected_for_selection.borrow_mut() = selected.clone();
