@@ -1916,11 +1916,11 @@ fn device_detail_page(
     header.pack_start(&back_button);
     let title = adw::WindowTitle::new(&display_name, &device.address.to_string());
     header.set_title_widget(Some(&title));
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    content.set_margin_top(18);
-    content.set_margin_bottom(24);
-    content.set_margin_start(18);
-    content.set_margin_end(18);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
+    content.set_margin_top(24);
+    content.set_margin_bottom(28);
+    content.set_margin_start(24);
+    content.set_margin_end(24);
 
     let identity_heading = gtk::Label::new(Some(localized(language, "Device details", "Cihaz ayrıntıları")));
     identity_heading.add_css_class("title-2");
@@ -2164,38 +2164,59 @@ fn device_detail_page(
     }
     content.append(&ports);
 
-    let deep_scan_heading = gtk::Label::new(Some("Deep scan results"));
+    let deep_scan_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    deep_scan_section.add_css_class("card");
+    deep_scan_section.set_margin_top(4);
+    deep_scan_section.set_margin_bottom(4);
+    deep_scan_section.set_margin_start(16);
+    deep_scan_section.set_margin_end(16);
+
+    let deep_scan_heading = gtk::Label::new(Some(localized(language, "Port scan", "Port taraması")));
     deep_scan_heading.add_css_class("title-2");
     deep_scan_heading.set_halign(gtk::Align::Start);
-    content.append(&deep_scan_heading);
+    deep_scan_section.append(&deep_scan_heading);
+
+    let deep_scan_target = gtk::Label::new(Some(&format!(
+        "{} · {}",
+        localized(language, "Target", "Hedef"),
+        device.address
+    )));
+    deep_scan_target.add_css_class("title-3");
+    deep_scan_target.set_halign(gtk::Align::Start);
+    deep_scan_section.append(&deep_scan_target);
 
     let deep_scan_note = gtk::Label::new(Some(
-        "Automatically checks the Android app's standard common TCP ports plus enabled custom ports. Timeouts are inconclusive; service names are port-based hints. A full 1–65535 scan is not available in this Linux build because scans are deliberately bounded.",
+        localized(
+            language,
+            "Checks common TCP ports and your enabled custom ports. This scan uses ordinary TCP connections and does not require root privileges.",
+            "Yaygın TCP portlarını ve etkin özel portlarınızı kontrol eder. Normal TCP bağlantıları kullanır ve root yetkisi gerektirmez.",
+        ),
     ));
     deep_scan_note.add_css_class("dim-label");
     deep_scan_note.set_wrap(true);
     deep_scan_note.set_halign(gtk::Align::Start);
-    content.append(&deep_scan_note);
+    deep_scan_section.append(&deep_scan_note);
 
     let deep_scan_progress = gtk::ProgressBar::new();
     deep_scan_progress.set_show_text(true);
     deep_scan_progress.set_text(Some("Preparing scan…"));
-    content.append(&deep_scan_progress);
+    deep_scan_section.append(&deep_scan_progress);
 
     let deep_scan_status = gtk::Label::new(Some("Starting standard port scan…"));
     deep_scan_status.set_halign(gtk::Align::Start);
     deep_scan_status.set_wrap(true);
-    content.append(&deep_scan_status);
+    deep_scan_section.append(&deep_scan_status);
 
-    let deep_scan_cancel = gtk::Button::with_label("Cancel deep scan");
+    let deep_scan_cancel = gtk::Button::with_label(localized(language, "Cancel scan", "Taramayı iptal et"));
     deep_scan_cancel.set_halign(gtk::Align::Start);
     deep_scan_cancel.add_css_class("destructive-action");
-    content.append(&deep_scan_cancel);
+    deep_scan_section.append(&deep_scan_cancel);
 
     let deep_scan_results = gtk::ListBox::new();
     deep_scan_results.add_css_class("boxed-list");
     deep_scan_results.set_selection_mode(gtk::SelectionMode::None);
-    content.append(&deep_scan_results);
+    deep_scan_section.append(&deep_scan_results);
+    content.append(&deep_scan_section);
 
     start_device_deep_scan(
         current_address.unwrap_or(device.address),
@@ -2267,9 +2288,13 @@ fn device_detail_page(
     note.set_halign(gtk::Align::Start);
     content.append(&note);
 
+    let clamp = adw::Clamp::new();
+    clamp.set_maximum_size(820);
+    clamp.set_tightening_threshold(640);
+    clamp.set_child(Some(&content));
     let scrolled = gtk::ScrolledWindow::builder()
         .vexpand(true)
-        .child(&content)
+        .child(&clamp)
         .build();
     let page_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     page_content.append(&header);
