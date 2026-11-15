@@ -13,6 +13,18 @@ Update checkboxes only after the corresponding work has been completed and verif
 
 The maintainer approved the research-backed strategy below on 2026-11-13. This section is an execution decision, not a replacement for the Android parity matrix or the security constraints above. Follow it in order while continuing the mandatory control → error detection → repair → re-control loop.
 
+### Praxis Scanner design system
+
+The detailed, application-specific design specification is maintained in the repository root at [design.md](design.md). It is the source of truth for visual hierarchy, GTK/libadwaita patterns, Material 3-inspired quality goals, localization, accessibility, scan states, and visual acceptance.
+
+Current implementation progress (2026-11-15):
+- Added the design system and research references.
+- Home screen uses a constrained content width, native Adwaita surfaces, a prominent local scan action, and a preselected default-route interface.
+- Device rows now prioritize hostname/name and IP, show concise reachability/port/MAC evidence, and move verbose discovery details to the device page.
+- Empty states and major device-list labels have English/Turkish localization.
+- Device details now prefer a discovered NetBIOS hostname when no custom name exists, use a more restrained port-scan surface, and localize key section/empty-state labels.
+- Visual runtime verification remains pending. Do not mark the design acceptance checklist complete based on source inspection alone.
+
 ### Product and UX direction
 
 #### Visual design system — maintainer priority (2026-11-15)
