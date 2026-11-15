@@ -1842,58 +1842,6 @@ fn refresh_device_list(
                 .filter(|device| !device.tcp_responded && device.icmp_round_trip_time.is_none()),
         )
     {
-        let mut details = Vec::new();
-
-        if let Some(mac) = device.mac_address.as_deref() {
-            details.push(format!("MAC {mac}"));
-        }
-        if device.tcp_responded {
-            details.push("TCP responsive".to_owned());
-        }
-        if let Some(rtt) = device.icmp_round_trip_time {
-            details.push(format!("ICMP {:.2} ms", rtt.as_secs_f64() * 1000.0));
-        } else if device.icmp_checked {
-            details.push("No ICMP reply (inconclusive)".to_owned());
-        }
-        if !device.tcp_responded && device.icmp_round_trip_time.is_none() {
-            details.push("Reachability unknown".to_owned());
-        }
-        if !device.open_tcp_ports.is_empty() {
-            let ports = device
-                .open_tcp_ports
-                .iter()
-                .map(|port| match scanner::service_name(*port) {
-                    Some(service) => format!("{port}/{service}"),
-                    None => port.to_string(),
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            details.push(format!("Open ports: {ports}"));
-        }
-        if !device.mdns_services.is_empty() {
-            let service_types = device
-                .mdns_services
-                .iter()
-                .map(|service| service.service_type.as_str())
-                .collect::<std::collections::BTreeSet<_>>()
-                .into_iter()
-                .collect::<Vec<_>>()
-                .join(", ");
-            details.push(format!(
-                "mDNS: {} service(s) ({service_types})",
-                device.mdns_services.len()
-            ));
-        }
-        if !device.ssdp_advertisements.is_empty() {
-            details.push(format!(
-                "SSDP: {} advertisement(s)",
-                device.ssdp_advertisements.len()
-            ));
-        }
-        if let Some(netbios) = device.netbios_info.as_ref() {
-            details.push(format!("NetBIOS: {}", netbios.hostname));
-        }
-
         let customization = preferences.customization_for(device.address);
         let display_name = customization
             .and_then(|item| item.custom_name.as_deref())
