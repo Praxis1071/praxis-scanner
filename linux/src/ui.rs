@@ -1693,7 +1693,7 @@ fn refresh_device_list(
         let customization = preferences.customization_for(address);
         let display_name = customization
             .and_then(|item| item.custom_name.as_deref())
-            .unwrap_or("This device");
+            .unwrap_or(localized(language, "This device", "Bu cihaz"));
         let icon_name = customization
             .and_then(|item| item.icon_key.as_deref())
             .map(icon_name_for_key)
@@ -1701,11 +1701,11 @@ fn refresh_device_list(
         let icon = gtk::Image::from_icon_name(icon_name);
         let row = adw::ActionRow::builder()
             .title(display_name)
-            .subtitle(format!("Local IPv4 address · {address}"))
+            .subtitle(format!("{} · {address}", localized(language, "Local IPv4", "Yerel IPv4")))
             .activatable(true)
             .build();
         row.add_prefix(&icon);
-        let badge = gtk::Label::new(Some("This device"));
+        let badge = gtk::Label::new(Some(localized(language, "This device", "Bu cihaz")));
         badge.add_css_class("dim-label");
         row.add_suffix(&badge);
 
@@ -1772,14 +1772,22 @@ fn refresh_device_list(
 
     if records.is_empty() {
         let title = if current_address.is_some() {
-            "No other devices discovered yet"
+            localized(language, "No other devices discovered yet", "Henüz başka cihaz keşfedilmedi")
         } else {
-            "No discovered devices yet"
+            localized(language, "No discovered devices yet", "Henüz cihaz keşfedilmedi")
         };
         let subtitle = if catalog.is_empty() {
-            "Run TCP, mDNS, or SSDP discovery to populate this list.".to_owned()
+            localized(
+                language,
+                "Scan your local network to discover devices.",
+                "Cihazları keşfetmek için yerel ağınızı tarayın."
+            ).to_owned()
         } else {
-            "The selected interface has no other confirmed discovery observations yet.".to_owned()
+            localized(
+                language,
+                "No additional devices were observed on this interface.",
+                "Bu arayüzde başka cihaz gözlemlenmedi."
+            ).to_owned()
         };
         let row = adw::ActionRow::builder()
             .title(title)
@@ -1798,7 +1806,8 @@ fn refresh_device_list(
 
     if responsive_count > 0 {
         let heading = gtk::Label::new(Some(&format!(
-            "TCP/ICMP-responsive devices ({responsive_count})"
+            "{} ({responsive_count})",
+            localized(language, "Responsive devices", "Yanıt veren cihazlar")
         )));
         heading.set_halign(gtk::Align::Start);
         heading.set_margin_top(8);
@@ -1808,7 +1817,12 @@ fn refresh_device_list(
     }
     if observed_count > 0 {
         let heading = gtk::Label::new(Some(&format!(
-            "Other observed devices — reachability unknown ({observed_count})"
+            "{} ({observed_count})",
+            localized(
+                language,
+                "Other observed devices · reachability unknown",
+                "Diğer gözlemlenen cihazlar · erişilebilirlik bilinmiyor"
+            )
         )));
         heading.set_halign(gtk::Align::Start);
         heading.set_margin_top(8);
@@ -1884,15 +1898,41 @@ fn refresh_device_list(
         let display_name = customization
             .and_then(|item| item.custom_name.as_deref())
             .map(str::to_owned)
+            .or_else(|| {
+                device
+                    .netbios_info
+                    .as_ref()
+                    .map(|info| info.hostname.clone())
+            })
             .unwrap_or_else(|| device.address.to_string());
         let icon_name = customization
             .and_then(|item| item.icon_key.as_deref())
             .map(icon_name_for_key)
             .unwrap_or("network-server-symbolic");
         let device_icon = gtk::Image::from_icon_name(icon_name);
+        // Keep list rows scannable: show only the highest-value facts here.
+        // Full protocol evidence belongs on the device detail page.
+        let mut summary = vec![device.address.to_string()];
+        if device.tcp_responded {
+            summary.push(localized(language, "TCP responsive", "TCP yanıtı alındı").to_owned());
+        } else if device.icmp_round_trip_time.is_some() {
+            summary.push(localized(language, "ICMP responsive", "ICMP yanıtı alındı").to_owned());
+        } else {
+            summary.push(localized(language, "Reachability unknown", "Erişilebilirlik bilinmiyor").to_owned());
+        }
+        if !device.open_tcp_ports.is_empty() {
+            summary.push(format!(
+                "{} {}",
+                device.open_tcp_ports.len(),
+                localized(language, "open ports", "açık port")
+            ));
+        }
+        if let Some(mac) = device.mac_address.as_deref() {
+            summary.push(format!("MAC {mac}"));
+        }
         let row = adw::ActionRow::builder()
             .title(&display_name)
-            .subtitle(details.join("  ·  "))
+            .subtitle(summary.join("  ·  "))
             .activatable(current_address.is_some())
             .build();
         row.add_prefix(&device_icon);
