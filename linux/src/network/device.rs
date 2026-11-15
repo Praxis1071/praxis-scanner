@@ -211,6 +211,7 @@ impl DeviceCatalog {
     }
 
     /// Return the number of unique devices collected across discovery sources.
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.devices.len()
     }
