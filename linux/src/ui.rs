@@ -1700,6 +1700,31 @@ fn refresh_device_list(
         badge.add_css_class("dim-label");
         row.add_suffix(&badge);
 
+        let scan_ports_button = gtk::Button::from_icon_name("network-transmit-receive-symbolic");
+        scan_ports_button.add_css_class("flat");
+        scan_ports_button.set_tooltip_text(Some("Scan this device's TCP ports"));
+        row.add_suffix(&scan_ports_button);
+
+        let navigation_for_port_scan = navigation.clone();
+        let active_scan_for_port_scan = Rc::clone(active_device_scan);
+        let devices_for_port_scan = list.clone();
+        let interfaces_for_port_scan = interface_list.clone();
+        let refresh_for_port_scan = refresh_button.clone();
+        let catalog_for_port_scan = Rc::clone(catalog_handle);
+        scan_ports_button.connect_clicked(move |_| {
+            let page = device_detail_page(
+                &current_device,
+                &navigation_for_port_scan,
+                Rc::clone(&active_scan_for_port_scan),
+                devices_for_port_scan.clone(),
+                Rc::clone(&catalog_for_port_scan),
+                current_address,
+                interfaces_for_port_scan.clone(),
+                refresh_for_port_scan.clone(),
+            );
+            navigation_for_port_scan.push(&page);
+        });
+
         let navigation_for_row = navigation.clone();
         let active_scan_for_row = Rc::clone(active_device_scan);
         let devices_list_for_row = list.clone();
@@ -1861,6 +1886,32 @@ fn refresh_device_list(
             .activatable(current_address.is_some())
             .build();
         row.add_prefix(&device_icon);
+        let scan_ports_button = gtk::Button::from_icon_name("network-transmit-receive-symbolic");
+        scan_ports_button.add_css_class("flat");
+        scan_ports_button.set_tooltip_text(Some("Scan this device's TCP ports"));
+        row.add_suffix(&scan_ports_button);
+
+        let navigation_for_port_scan = navigation.clone();
+        let active_scan_for_port_scan = Rc::clone(active_device_scan);
+        let devices_for_port_scan = list.clone();
+        let interfaces_for_port_scan = interface_list.clone();
+        let refresh_for_port_scan = refresh_button.clone();
+        let catalog_for_port_scan = Rc::clone(catalog_handle);
+        let device_for_port_scan = device.clone();
+        scan_ports_button.connect_clicked(move |_| {
+            let page = device_detail_page(
+                &device_for_port_scan,
+                &navigation_for_port_scan,
+                Rc::clone(&active_scan_for_port_scan),
+                devices_for_port_scan.clone(),
+                Rc::clone(&catalog_for_port_scan),
+                current_address,
+                interfaces_for_port_scan.clone(),
+                refresh_for_port_scan.clone(),
+            );
+            navigation_for_port_scan.push(&page);
+        });
+
         let navigation_for_row = navigation.clone();
         let active_scan_for_row = Rc::clone(active_device_scan);
         let selected_device = device.clone();
