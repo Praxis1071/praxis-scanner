@@ -1,7 +1,7 @@
 # Praxis Scanner — Linux Port Roadmap
 
 > **Status:** Implementation in progress  
-> **Implementation status:** The Linux source now includes GTK4/libadwaita navigation, a partial device-detail page, bounded TCP/mDNS/SSDP/NetBIOS discovery, opt-in datagram-only ICMP echo checks with RTT, a per-device deep scan with conservative banners, native Settings and Custom TCP Ports pages, and persistent theme, English/Turkish language, auto-scan, custom-port preferences and per-device custom names/icons. The home screen has been reorganized around network selection, one primary scan action and the device list; advanced discovery and detailed results are collapsed by default. Language selection and initial Turkish/English UI strings are source-implemented; restart is currently required after changing language, and full-string coverage remains open. These are source-level implementations only. The dedicated Linux CI workflow runs formatting, unit tests, strict Clippy, release build, offline Cargo-source generation, metadata validation, Flatpak build and a headless launch smoke test; no passing result has yet been verified. Host and Flatpak runtime verification remain pending.  
+> **Implementation status:** The Linux source now includes GTK4/libadwaita navigation, a partial device-detail page, bounded TCP/mDNS/SSDP/NetBIOS discovery, opt-in datagram-only ICMP echo checks with RTT, a per-device deep scan with conservative banners, native Settings and Custom TCP Ports pages, and persistent theme, English/Turkish language, auto-scan, custom-port preferences and per-device custom names/icons. The home screen has been reorganized around network selection, one primary scan action and the device list; advanced discovery and detailed results are collapsed by default. A first Material 3-inspired/libadwaita-native visual pass now groups network selection, the primary local-network scan, and device results into clearer surfaces, constrains wide layouts, and gives device port-scan details a dedicated target/progress/results section; runtime visual verification remains pending. Language selection and initial Turkish/English UI strings are source-implemented; restart is currently required after changing language, and full-string coverage remains open. These are source-level implementations only. The dedicated Linux CI workflow runs formatting, unit tests, strict Clippy, release build, offline Cargo-source generation, metadata validation, Flatpak build and a headless launch smoke test; no passing result has yet been verified. Host and Flatpak runtime verification remain pending.  
 > **Target:** Linux desktop · Rust · GTK4 · libadwaita · Flatpak · GPL-3.0  
 > **Development branch:** `linux/gtk4-port-planning`
 
@@ -14,6 +14,21 @@ Update checkboxes only after the corresponding work has been completed and verif
 The maintainer approved the research-backed strategy below on 2026-11-13. This section is an execution decision, not a replacement for the Android parity matrix or the security constraints above. Follow it in order while continuing the mandatory control → error detection → repair → re-control loop.
 
 ### Product and UX direction
+
+#### Visual design system — maintainer priority (2026-11-15)
+
+The maintainer explicitly prioritized a high-quality, understandable interface with Material 3-level visual polish. The Linux implementation must remain a native GTK4/libadwaita application rather than embedding or imitating Android widgets literally.
+
+- Use Material 3 as a visual and interaction reference: clear hierarchy, intentional surfaces/cards, strong primary actions, concise supporting text, consistent spacing, readable typography, and visible progress/empty/error states.
+- Use GNOME HIG and libadwaita as the implementation authority for native desktop behavior, keyboard accessibility, system theme integration, navigation, adaptive layouts, and controls.
+- Home-screen hierarchy: network/interface context → one prominent **Scan local network** action → progress and status → discovered devices. Advanced protocols and low-frequency configuration remain available but visually secondary.
+- A device row should make identity and IP immediately scannable. Selecting a device opens its details and starts its bounded common/custom TCP port inspection; the target IP, progress, cancellation, and open-port results must be obvious.
+- Prefer restrained Adwaita surfaces and accent colors over hard-coded Android colors. Use cards only to group meaningful tasks; avoid excessive nested cards, decorative gradients, noisy badges, and dense technical copy.
+- Constrain content width on large desktop windows and keep margins/spacing responsive. Use libadwaita adaptive widgets where they improve narrow-window behavior.
+- Keep English and Turkish labels concise and consistent. Every new visible string must be included in the localization plan.
+- Visual acceptance requires screenshots of idle, selected-network, scanning, populated-device-list, device-details/port-scan, empty-result, and error states in both light and dark themes. Source changes alone do not count as visual verification.
+
+**Research basis:** [GNOME HIG](https://developer.gnome.org/hig/), [Material 3 components](https://developer.android.com/design/ui/mobile/guides/components/material-overview), and [libadwaita adaptive layouts](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/adaptive-layouts.html).
 
 - Preserve the Android app's recognizable information hierarchy, terminology, workflows, result semantics, and useful functionality; adapt interaction patterns to a native desktop rather than copying mobile layouts literally.
 - Home: selected network interface and concise network summary, one prominent scan action, clear progress/cancel feedback, and a readable discovered-device list. Keep infrequent/advanced discovery controls out of the primary flow without removing their functionality.
