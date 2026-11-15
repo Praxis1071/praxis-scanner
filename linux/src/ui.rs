@@ -422,7 +422,7 @@ pub fn build_ui(application: &adw::Application) {
         if changed {
             catalog_for_selection.borrow_mut().clear();
             progress_for_selection.set_fraction(0.0);
-            progress_for_selection.set_text(Some("Idle"));
+            progress_for_selection.set_text(Some(localized(language, "Idle", "Boşta")));
         }
         let can_scan = selected.as_ref().is_some_and(is_scannable_interface);
         scan_button_for_selection.set_sensitive(can_scan);
@@ -526,9 +526,9 @@ pub fn build_ui(application: &adw::Application) {
         if let Some(handle) = active_for_scan.borrow().as_ref() {
             handle.cancel();
             status_for_scan.set_text(
-                "Cancellation requested. Waiting for in-flight TCP connection attempts to finish…",
+                localized(language, "Cancellation requested. Waiting for in-flight TCP connection attempts to finish…", "İptal istendi. Devam eden TCP bağlantı denemelerinin bitmesi bekleniyor…"),
             );
-            button_for_scan.set_label("Cancelling…");
+            button_for_scan.set_label(localized(language, "Cancelling…", "İptal ediliyor…"));
             return;
         }
 
@@ -537,28 +537,28 @@ pub fn build_ui(application: &adw::Application) {
             || active_netbios_for_tcp.borrow().is_some()
             || active_icmp_for_tcp.borrow().is_some()
         {
-            status_for_scan.set_text("Wait for the active service-discovery operation to finish first.");
+            status_for_scan.set_text(localized(language, "Wait for the active service-discovery operation to finish first.", "Önce devam eden servis keşfi işleminin bitmesini bekleyin."));
             return;
         }
         let Some(interface) = selected_for_scan.borrow().clone() else {
-            status_for_scan.set_text("Select an IPv4 network interface first.");
+            status_for_scan.set_text(localized(language, "Select an IPv4 network interface first.", "Önce bir IPv4 ağ arayüzü seçin."));
             return;
         };
         if !interface.is_up || interface.is_loopback || interface.address.is_unspecified() {
             status_for_scan.set_text(
-                "Select an active, non-loopback IPv4 interface with a usable address.",
+                localized(language, "Select an active, non-loopback IPv4 interface with a usable address.", "Kullanılabilir adresi olan etkin ve loopback olmayan bir IPv4 arayüzü seçin."),
             );
             return;
         }
         if !interface.address.is_private() && !interface.address.is_link_local() {
             status_for_scan.set_text(
-                "For safety, scanning is limited to private IPv4 and link-local interfaces.",
+                localized(language, "For safety, scanning is limited to private IPv4 and link-local interfaces.", "Güvenlik için tarama özel IPv4 ve link-local arayüzlerle sınırlandırılmıştır."),
             );
             return;
         }
         let Some(prefix) = interface.prefix else {
             status_for_scan.set_text(
-                "The selected interface has no valid contiguous IPv4 netmask.",
+                localized(language, "The selected interface has no valid contiguous IPv4 netmask.", "Seçilen arayüzün geçerli ve bitişik bir IPv4 ağ maskesi yok."),
             );
             return;
         };
@@ -577,7 +577,7 @@ pub fn build_ui(application: &adw::Application) {
         let mut hosts = network.hosts();
         hosts.retain(|address| *address != interface.address);
         if hosts.is_empty() {
-            status_for_scan.set_text("The selected subnet has no other candidate addresses.");
+            status_for_scan.set_text(localized(language, "The selected subnet has no other candidate addresses.", "Seçilen alt ağda taranabilecek başka adres yok."));
             return;
         }
 
@@ -605,7 +605,7 @@ pub fn build_ui(application: &adw::Application) {
         ) {
             Ok((handle, events)) => {
                 *active_for_scan.borrow_mut() = Some(handle);
-                button_for_scan.set_label("Cancel scan");
+                button_for_scan.set_label(localized(language, "Cancel scan", "Taramayı iptal et"));
                 refresh_button_for_scan.set_sensitive(false);
                 interface_list_for_scan.set_sensitive(false);
                 devices_for_scan.set_sensitive(false);
@@ -692,11 +692,11 @@ pub fn build_ui(application: &adw::Application) {
                                     finished_count as f64 / total.max(1) as f64,
                                 );
                                 progress_for_events.set_text(Some(if cancelled {
-                                    "Cancelled"
+                                    localized(language, "Cancelled", "İptal edildi")
                                 } else {
-                                    "Complete"
+                                    localized(language, "Complete", "Tamamlandı")
                                 }));
-                                button_for_events.set_label("Scan selected network");
+                                button_for_events.set_label(localized(language, "Scan selected network", "Seçili ağı tara"));
                                 refresh_for_events.set_sensitive(true);
                                 interface_list_for_events.set_sensitive(true);
                                 port_entry_for_events.set_sensitive(true);
@@ -757,7 +757,7 @@ pub fn build_ui(application: &adw::Application) {
                 });
             }
             Err(error) => {
-                progress_for_scan.set_text(Some("Could not start"));
+                progress_for_scan.set_text(Some(localized(language, "Could not start", "Başlatılamadı")));
                 status_for_scan.set_text(&format!("Could not start scan: {error}"));
             }
         }
