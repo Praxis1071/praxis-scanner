@@ -66,9 +66,9 @@ The following are targets, not claims of current implementation. Each feature mu
 
 ### Desktop experience
 
-- A GTK4/libadwaita interface inspired by the Android application's information hierarchy and workflow.
-- Device list, device details, scan progress, and preferences.
-- Responsive layouts suitable for Linux desktop windows.
+- A GTK4/libadwaita interface guided by the application-specific [design system](design.md), using Material 3 as a visual-quality reference and GNOME HIG as the desktop implementation authority.
+- Device list, device details, scan progress, and preferences with progressive disclosure and evidence-first status.
+- Adaptive layouts suitable for Linux desktop windows, keyboard use, and system light/dark appearance.
 - No advertising, tracking, or unnecessary network communication.
 
 ## Non-negotiable security requirements
@@ -110,7 +110,7 @@ The following are targets, not claims of current implementation. Each feature mu
 
 ## Project roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the phased research, architecture, implementation, testing, and release plan. The current Android source analysis and preliminary Linux feature-parity decisions are documented in [docs/linux-port-audit.md](docs/linux-port-audit.md).
+See [ROADMAP.md](ROADMAP.md) for the phased research, architecture, implementation, testing, and release plan. The application-specific UI and interaction specification is [design.md](design.md). The current Android source analysis and preliminary Linux feature-parity decisions are documented in [docs/linux-port-audit.md](docs/linux-port-audit.md).
 
 ## License
 
