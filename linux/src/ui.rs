@@ -2460,10 +2460,13 @@ fn start_device_deep_scan(
                             let fraction = completed_ports as f64 / total_ports.max(1) as f64;
                             progress_for_events.set_fraction(fraction);
                             progress_for_events.set_text(Some(&format!(
-                                "{completed_ports}/{total_ports} ports checked"
+                                "{} {completed_ports}/{total_ports}",
+                                localized(language, "Ports checked", "Kontrol edilen port")
                             )));
                             status_for_events.set_text(&format!(
-                                "Checked {completed_ports} of {total_ports} ports · {open_ports} open"
+                                "{} {completed_ports}/{total_ports} · {open_ports} {}",
+                                localized(language, "Ports checked", "Kontrol edilen port"),
+                                localized(language, "open", "açık")
                             ));
                         }
                         DeepScanEvent::Finished {
@@ -2484,9 +2487,9 @@ fn start_device_deep_scan(
                             cancel_for_events.set_sensitive(false);
                             progress_for_events.set_fraction(1.0);
                             progress_for_events.set_text(Some(if cancelled {
-                                "Cancelled"
+                                localized(language, "Cancelled", "İptal edildi")
                             } else {
-                                "Complete"
+                                localized(language, "Complete", "Tamamlandı")
                             }));
                             if open_ports == 0 && !cancelled {
                                 append_detail_row(
@@ -2520,7 +2523,10 @@ fn start_device_deep_scan(
             interface_list.set_sensitive(true);
             refresh_button.set_sensitive(true);
             progress.set_text(Some(localized(language, "Could not start", "Başlatılamadı")));
-            status.set_text(&format!("Deep scan could not start: {error}"));
+            status.set_text(&format!(
+                "{}: {error}",
+                localized(language, "Port scan could not start", "Port taraması başlatılamadı")
+            ));
         }
     }
 }
