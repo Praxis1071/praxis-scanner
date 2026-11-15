@@ -692,9 +692,9 @@ pub fn build_ui(application: &adw::Application) {
                                     finished_count as f64 / total.max(1) as f64,
                                 );
                                 progress_for_events.set_text(Some(if cancelled {
-                                    localized(language, "Cancelled", "İptal edildi")
+                                    localized(language, localized(language, "Cancelled", "İptal edildi"), "İptal edildi")
                                 } else {
-                                    localized(language, "Complete", "Tamamlandı")
+                                    localized(language, localized(language, "Complete", "Tamamlandı"), "Tamamlandı")
                                 }));
                                 button_for_events.set_label(localized(language, "Scan selected network", "Seçili ağı tara"));
                                 refresh_for_events.set_sensitive(true);
@@ -2295,6 +2295,7 @@ fn device_detail_page(
         devices_list.clone(),
         interface_list.clone(),
         refresh_button.clone(),
+        language,
     );
 
     if !device.mdns_services.is_empty() {
@@ -2384,14 +2385,15 @@ fn start_device_deep_scan(
     devices_list: gtk::ListBox,
     interface_list: gtk::ListBox,
     refresh_button: gtk::Button,
+    language: LanguageMode,
 ) {
     if let Some(previous) = active_scan.borrow_mut().take() {
         previous.cancel();
     }
     clear_list(results);
     progress.set_fraction(0.0);
-    progress.set_text(Some("0 ports checked"));
-    status.set_text("Scanning standard and enabled custom TCP ports…");
+    progress.set_text(Some(localized(language, "0 ports checked", "0 port kontrol edildi")));
+    status.set_text(localized(language, "Scanning standard and enabled custom TCP ports…", "Standart ve etkin özel TCP portları taranıyor…"));
     cancel_button.set_sensitive(true);
     devices_list.set_sensitive(false);
     interface_list.set_sensitive(false);
@@ -2414,7 +2416,7 @@ fn start_device_deep_scan(
                 if let Some(handle) = active_for_cancel.borrow().as_ref() {
                     handle.cancel();
                     button.set_sensitive(false);
-                    status_for_cancel.set_text("Cancellation requested; waiting for in-flight connections to finish…");
+                    status_for_cancel.set_text(localized(language, "Cancellation requested; waiting for in-flight connections to finish…", "İptal istendi; devam eden bağlantıların bitmesi bekleniyor…"));
                 }
             });
 
@@ -2452,7 +2454,7 @@ fn start_device_deep_scan(
                                 append_detail_row(
                                     &results_for_events,
                                     &format!("TCP {port} · {service}"),
-                                    banner.as_deref().unwrap_or("Open; no readable service banner received"),
+                                    banner.as_deref().unwrap_or(localized(language, "Open; no readable service banner received", "Açık; okunabilir servis başlığı alınmadı")),
                                 );
                             }
                             let fraction = completed_ports as f64 / total_ports.max(1) as f64;
@@ -2489,13 +2491,20 @@ fn start_device_deep_scan(
                             if open_ports == 0 && !cancelled {
                                 append_detail_row(
                                     &results_for_events,
-                                    "No open TCP ports found",
-                                    "None of the scanned common TCP ports accepted a connection.",
+                                    localized(language, "No open TCP ports found", "Açık TCP portu bulunamadı"),
+                                    localized(language, "None of the scanned common TCP ports accepted a connection.", "Taranan yaygın TCP portlarının hiçbiri bağlantı kabul etmedi."),
                                 );
                             }
-                            let state = if cancelled { "cancelled" } else { "completed" };
+                            let state = if cancelled {
+                                localized(language, "cancelled", "iptal edildi")
+                            } else {
+                                localized(language, "completed", "tamamlandı")
+                            };
                             status_for_events.set_text(&format!(
-                                "Deep scan {state}: {completed}/{total} ports checked, {open_ports} open · {:.2}s",
+                                "{} {state}: {completed}/{total} {} · {open_ports} {} · {:.2}s",
+                                localized(language, "Port scan", "Port taraması"),
+                                localized(language, "ports checked", "port kontrol edildi"),
+                                localized(language, "open", "açık"),
                                 started.elapsed().as_secs_f64()
                             ));
                             return glib::ControlFlow::Break;
@@ -2510,7 +2519,7 @@ fn start_device_deep_scan(
             devices_list.set_sensitive(true);
             interface_list.set_sensitive(true);
             refresh_button.set_sensitive(true);
-            progress.set_text(Some("Could not start"));
+            progress.set_text(Some(localized(language, "Could not start", "Başlatılamadı")));
             status.set_text(&format!("Deep scan could not start: {error}"));
         }
     }
