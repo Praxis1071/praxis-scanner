@@ -1705,6 +1705,7 @@ fn refresh_device_list(
         scan_ports_button.set_tooltip_text(Some("Scan this device's TCP ports"));
         row.add_suffix(&scan_ports_button);
 
+        let current_device_for_port_scan = current_device.clone();
         let navigation_for_port_scan = navigation.clone();
         let active_scan_for_port_scan = Rc::clone(active_device_scan);
         let devices_for_port_scan = list.clone();
@@ -1713,7 +1714,7 @@ fn refresh_device_list(
         let catalog_for_port_scan = Rc::clone(catalog_handle);
         scan_ports_button.connect_clicked(move |_| {
             let page = device_detail_page(
-                &current_device,
+                &current_device_for_port_scan,
                 &navigation_for_port_scan,
                 Rc::clone(&active_scan_for_port_scan),
                 devices_for_port_scan.clone(),
