@@ -132,14 +132,13 @@ pub fn start_discovery(
                     continue;
                 }
 
-                if let Some(info) = query_device(worker_source_address, address, timeout) {
-                    if sender
+                if let Some(info) = query_device(worker_source_address, address, timeout)
+                    && sender
                         .send(NetbiosEvent::DeviceFound { address, info })
                         .is_err()
-                    {
-                        worker_cancelled.store(true, Ordering::Relaxed);
-                        break;
-                    }
+                {
+                    worker_cancelled.store(true, Ordering::Relaxed);
+                    break;
                 }
                 worker_completed.fetch_add(1, Ordering::Relaxed);
             }));
@@ -244,10 +243,11 @@ fn parse_nbstat_response(data: &[u8]) -> Option<NetbiosInfo> {
             return None;
         }
 
-        if record_type == 33 && record_class == 1 {
-            if let Some(info) = parse_nbstat_rdata(&data[data_start..data_end]) {
-                return Some(info);
-            }
+        if record_type == 33
+            && record_class == 1
+            && let Some(info) = parse_nbstat_rdata(&data[data_start..data_end])
+        {
+            return Some(info);
         }
         offset = data_end;
     }
@@ -267,7 +267,7 @@ fn parse_nbstat_rdata(data: &[u8]) -> Option<NetbiosInfo> {
     for _ in 0..count {
         let entry = &data[offset..offset + 18];
         let name = String::from_utf8_lossy(&entry[..15])
-            .trim_end_matches(|character| character == ' ' || character == '\0')
+            .trim_end_matches([' ', '\0'])
             .chars()
             .filter(|character| character.is_ascii_graphic() || *character == ' ')
             .collect::<String>();
