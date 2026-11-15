@@ -41,15 +41,15 @@ pub fn build_ui(application: &adw::Application) {
     let list = gtk::ListBox::new();
     list.set_selection_mode(gtk::SelectionMode::Single);
     list.add_css_class("boxed-list");
-    list.set_margin_start(18);
-    list.set_margin_end(18);
+    list.set_margin_start(0);
+    list.set_margin_end(0);
 
     let system_info = gtk::Label::new(Some(localized(language, "Reading local network information…", "Yerel ağ bilgileri okunuyor…")));
     system_info.set_halign(gtk::Align::Start);
     system_info.set_wrap(true);
-    system_info.set_margin_start(18);
-    system_info.set_margin_end(18);
-    system_info.set_margin_top(8);
+    system_info.set_margin_start(0);
+    system_info.set_margin_end(0);
+    system_info.set_margin_top(0);
     system_info.add_css_class("dim-label");
 
     let devices_heading = gtk::Label::new(Some(localized(language, "Devices", "Cihazlar")));
@@ -201,10 +201,10 @@ pub fn build_ui(application: &adw::Application) {
     let status = gtk::Label::new(Some(localized(language, "Select a network interface to get started.", "Başlamak için bir ağ arayüzü seçin.")));
     status.set_halign(gtk::Align::Start);
     status.set_wrap(true);
-    status.set_margin_start(18);
-    status.set_margin_end(18);
-    status.set_margin_top(12);
-    status.set_margin_bottom(12);
+    status.set_margin_start(0);
+    status.set_margin_end(0);
+    status.set_margin_top(0);
+    status.set_margin_bottom(0);
     status.add_css_class("dim-label");
 
     let scan_progress = gtk::ProgressBar::new();
@@ -212,9 +212,9 @@ pub fn build_ui(application: &adw::Application) {
     scan_progress.set_text(Some(localized(language, "Ready", "Hazır")));
     scan_progress.set_fraction(0.0);
     scan_progress.set_hexpand(true);
-    scan_progress.set_margin_start(18);
-    scan_progress.set_margin_end(18);
-    scan_progress.set_margin_bottom(12);
+    scan_progress.set_margin_start(0);
+    scan_progress.set_margin_end(0);
+    scan_progress.set_margin_bottom(0);
 
     // Keep the home screen focused on the three things users need most:
     // choose a network, start a scan, and inspect discovered devices.
@@ -322,7 +322,6 @@ pub fn build_ui(application: &adw::Application) {
     advanced_expander.set_margin_start(16);
     advanced_expander.set_margin_end(16);
 
-    page_content.append(&heading);
     page_content.append(&network_section);
     page_content.append(&scan_section);
     page_content.append(&devices_section);
