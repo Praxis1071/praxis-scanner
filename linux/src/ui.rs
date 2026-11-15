@@ -269,7 +269,6 @@ pub fn build_ui(application: &adw::Application) {
     heading.set_margin_bottom(0);
 
     let network_section = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    network_section.add_css_class("card");
     network_section.set_spacing(10);
     heading.set_margin_start(16);
     heading.set_margin_end(16);
@@ -2231,7 +2230,6 @@ fn device_detail_page(
     content.append(&ports);
 
     let deep_scan_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    deep_scan_section.add_css_class("card");
     deep_scan_section.set_margin_top(0);
     deep_scan_section.set_margin_bottom(0);
 
