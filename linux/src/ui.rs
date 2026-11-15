@@ -82,7 +82,7 @@ pub fn build_ui(application: &adw::Application) {
     port_entry.set_margin_start(18);
     port_entry.set_margin_end(18);
 
-    let scan_button = gtk::Button::with_label(localized(language, "Scan network", "Ağı tara"));
+    let scan_button = gtk::Button::with_label(localized(language, "Scan local network", "Yerel ağı tara"));
     scan_button.add_css_class("suggested-action");
     scan_button.set_sensitive(false);
     scan_button.set_halign(gtk::Align::Start);
@@ -1623,32 +1623,34 @@ pub fn build_ui(application: &adw::Application) {
     );
     window.present();
 
-    if preferences.borrow().auto_scan_on_start {
-        let default_interface = network::system::read_ipv4_routes()
-            .ok()
-            .and_then(|routes| routes.into_iter().find(|route| route.is_default))
-            .map(|route| route.interface);
-        let selected_index = {
-            let available_interfaces = interfaces.borrow();
-            available_interfaces
-                .iter()
-                .position(|interface| {
-                    is_scannable_interface(interface)
-                        && default_interface
-                            .as_deref()
-                            .is_some_and(|name| name == interface.name.as_str())
-                })
-                .or_else(|| {
-                    available_interfaces
-                        .iter()
-                        .position(is_scannable_interface)
-                })
-        };
-        if let Some(index) = selected_index {
-            if let Some(row) = list.row_at_index(index as i32) {
-                list.select_row(Some(&row));
-                scan_button.emit_clicked();
-            }
+    // Preselect the default-route interface so the common path is one click:
+    // users can start a local scan immediately without first choosing a row.
+    let default_interface = network::system::read_ipv4_routes()
+        .ok()
+        .and_then(|routes| routes.into_iter().find(|route| route.is_default))
+        .map(|route| route.interface);
+    let selected_index = {
+        let available_interfaces = interfaces.borrow();
+        available_interfaces
+            .iter()
+            .position(|interface| {
+                is_scannable_interface(interface)
+                    && default_interface
+                        .as_deref()
+                        .is_some_and(|name| name == interface.name.as_str())
+            })
+            .or_else(|| {
+                available_interfaces
+                    .iter()
+                    .position(is_scannable_interface)
+            })
+    };
+    if let Some(index) = selected_index
+        && let Some(row) = list.row_at_index(index as i32)
+    {
+        list.select_row(Some(&row));
+        if preferences.borrow().auto_scan_on_start {
+            scan_button.emit_clicked();
         }
     }
 }
