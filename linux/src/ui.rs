@@ -248,17 +248,94 @@ pub fn build_ui(application: &adw::Application) {
     )));
     advanced_expander.set_child(Some(&advanced_content));
 
+    // The home page uses a calm, card-based hierarchy inspired by Material 3,
+    // while keeping libadwaita widgets, spacing, and system theming native.
+    let page_content = gtk::Box::new(gtk::Orientation::Vertical, 20);
+    page_content.set_margin_top(24);
+    page_content.set_margin_bottom(28);
+    page_content.set_margin_start(24);
+    page_content.set_margin_end(24);
+
+    heading.set_text(localized(language, "Your network", "Ağınız"));
+    heading.remove_css_class("title-2");
+    heading.add_css_class("title-1");
+    heading.set_margin_start(0);
+    heading.set_margin_top(0);
+    heading.set_margin_bottom(0);
+
+    let network_section = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    network_section.add_css_class("card");
+    network_section.set_margin_start(0);
+    network_section.set_margin_end(0);
+    network_section.set_margin_top(0);
+    network_section.set_margin_bottom(0);
+    network_section.set_spacing(10);
+    network_section.set_margin_start(16);
+    network_section.set_margin_end(16);
+    network_section.set_margin_top(14);
+    network_section.set_margin_bottom(14);
+    network_section.append(&heading);
+    network_section.append(&list);
+    network_section.append(&system_info);
+
+    let scan_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    scan_section.add_css_class("card");
+    scan_section.set_margin_start(16);
+    scan_section.set_margin_end(16);
+    scan_section.set_margin_top(14);
+    scan_section.set_margin_bottom(14);
+    let scan_title = gtk::Label::new(Some(localized(
+        language,
+        "Discover your local network",
+        "Yerel ağınızı keşfedin",
+    )));
+    scan_title.add_css_class("title-2");
+    scan_title.set_halign(gtk::Align::Start);
+    let scan_description = gtk::Label::new(Some(localized(
+        language,
+        "Find devices and check common TCP ports with one scan.",
+        "Tek taramayla cihazları bulun ve yaygın TCP portlarını kontrol edin.",
+    )));
+    scan_description.add_css_class("dim-label");
+    scan_description.set_halign(gtk::Align::Start);
+    scan_description.set_wrap(true);
+    scan_button.set_halign(gtk::Align::Fill);
+    scan_button.set_hexpand(true);
+    scan_button.set_size_request(-1, 48);
+    scan_button.add_css_class("pill");
+    scan_section.append(&scan_title);
+    scan_section.append(&scan_description);
+    scan_section.append(&scan_button);
+    scan_section.append(&scan_progress);
+    scan_section.append(&status);
+
+    let devices_section = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    devices_section.append(&devices_heading);
+    devices_section.append(&devices_list);
+    devices_heading.set_margin_start(0);
+    devices_heading.set_margin_top(0);
+    devices_heading.set_margin_bottom(0);
+    devices_list.set_margin_start(0);
+    devices_list.set_margin_end(0);
+
+    advanced_expander.add_css_class("card");
+    advanced_expander.set_margin_start(16);
+    advanced_expander.set_margin_end(16);
+
+    page_content.append(&heading);
+    page_content.append(&network_section);
+    page_content.append(&scan_section);
+    page_content.append(&devices_section);
+    page_content.append(&advanced_expander);
+
+    let clamp = adw::Clamp::new();
+    clamp.set_maximum_size(960);
+    clamp.set_tightening_threshold(720);
+    clamp.set_child(Some(&page_content));
+
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.append(&header);
-    content.append(&heading);
-    content.append(&list);
-    content.append(&system_info);
-    content.append(&scan_button);
-    content.append(&scan_progress);
-    content.append(&devices_heading);
-    content.append(&devices_list);
-    content.append(&status);
-    content.append(&advanced_expander);
+    content.append(&clamp);
 
     let scrolled = gtk::ScrolledWindow::builder()
         .vexpand(true)
