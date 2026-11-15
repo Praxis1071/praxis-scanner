@@ -538,7 +538,7 @@ fn probe_icmp_target(
     let packet = build_icmp_echo_request(target, identifier, sequence);
     let destination = SocketAddrV4::new(target, 0);
     let started = Instant::now();
-    socket.send_to(&packet, &destination)?;
+    socket.send_to(&packet, destination)?;
     let deadline = started + timeout;
     let mut buffer = [0u8; 128];
 
@@ -612,11 +612,11 @@ fn is_expected_icmp_echo_reply(
 
 fn icmp_checksum(packet: &[u8]) -> u16 {
     let mut sum = 0u32;
-    let mut chunks = packet.chunks_exact(2);
-    for chunk in &mut chunks {
-        sum += u16::from_be_bytes([chunk[0], chunk[1]]) as u32;
+    let (chunks, remainder) = packet.as_chunks::<2>();
+    for chunk in chunks {
+        sum += u16::from_be_bytes(*chunk) as u32;
     }
-    if let Some(byte) = chunks.remainder().first() {
+    if let Some(byte) = remainder.first() {
         sum += u32::from(*byte) << 8;
     }
     while sum >> 16 != 0 {
